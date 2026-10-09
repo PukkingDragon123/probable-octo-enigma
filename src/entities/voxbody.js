@@ -383,13 +383,13 @@ export function buildHand(def, side) {
 export function buildThigh(def) {
   const v = new VoxelModel();
   const c = def.shorts || def.skirt ? hex(def.legColor ?? def.skin) : hex(def.pants ?? def.skin);
-  rbox(v, -1, 1, -DIM.thigh, 0, -1, 1, 0.8, tx(c, 0.1, 0.05));
+  rbox(v, -1, 1, -2, 0, -1, 1, 0.8, tx(c, 0.1, 0.05));
   return v;
 }
 export function buildShin(def) {
   const v = new VoxelModel();
   const leg = def.shorts || def.skirt ? hex(def.legColor ?? def.skin) : hex(def.pants ?? def.skin);
-  const S = Math.round(DIM.shin);
+  const S = 2;
   rbox(v, -1, 1, -S + 1, 0, -1, 1, 0.7, (x, y, z) => (def.socks != null && y <= -S + 3 ? hex(def.socks) : tx(leg, 0.1, 0.05)(x, y, z)));
   // feet / shoes
   const sc = hex(def.shoe ?? 0xf2efe8);
@@ -526,11 +526,62 @@ export function buildMustache(def, faceZ) {
 }
 
 // meshing helpers
-export function geo(model, pivot = [0, 0, 0]) { return buildGeo(model, pivot, VS); }
-export function vmesh(model, pivot, { shadow = true } = {}) {
-  const g = geo(model, pivot);
+export function geo(model, pivot = [0, 0, 0], scale = VS) { return buildGeo(model, pivot, scale); }
+export function vmesh(model, pivot, { shadow = true, scale = VS } = {}) {
+  const g = geo(model, pivot, scale);
   const m = new THREE.Mesh(g, matFor(g));
   m.castShadow = shadow;
   m.receiveShadow = true;
   return m;
+}
+
+// ---------------------------------------------------------------- generic design (crowds)
+// Packs the parametric builders above into the design format the rig reads
+// (see entities/craft.js). Limbs are 3 voxels wide (centred with a 0.5 pivot).
+export function genericDesign(def) {
+  const C = [0.5, 0, 0.5];
+  const H = buildHead(def);
+  const hb = H.box;
+  const extras = [];
+  const hair = buildHair(def, hb); if (hair) extras.push({ joint: 'head', model: hair, name: 'hair' });
+  const hat = buildHat(def, hb); if (hat) extras.push({ joint: 'head', model: hat, name: 'hat', rot: def.hat?.tilt ? [def.hat.tilt, 0, 0] : null });
+  const gl = buildGlasses(def, H.faceZ + 0.6); if (gl) extras.push({ joint: 'head', model: gl, name: 'glasses', shadow: false });
+  const mu = buildMustache(def, H.faceZ + (H.snout ? 0 : 0.4)); if (mu) extras.push({ joint: 'head', model: mu, name: 'mustache', shadow: false });
+  if (def.earbuds) { const e = new VoxelModel(); e.set(0, 0, 0, 0xf4f4f8); e.set(0, -1, 0, 0xf4f4f8); extras.push({ joint: 'head', model: e, at: [hb.x1 + 1, 4, 0], shadow: false }, { joint: 'head', model: e, at: [hb.x0 - 1, 4, 0], shadow: false }); }
+  if (def.ribbons) for (const r of def.ribbons) {
+    const rm = new VoxelModel(); const c = hex(r.color ?? 0xd8342e);
+    rm.set(-2, 0, 0, c); rm.set(-1, 0, 0, c); rm.set(-2, 1, 0, c); rm.set(-2, -1, 0, c); rm.set(0, 0, 0, sh(c, 0.8)); rm.set(1, 0, 0, c); rm.set(2, 0, 0, c); rm.set(2, 1, 0, c); rm.set(2, -1, 0, c);
+    extras.push({ joint: 'head', model: rm, at: [r.x ?? 0, r.y ?? hb.y1, r.z ?? 0], rot: [r.rx ?? 0, r.ry ?? 0, r.rz ?? 0] });
+  }
+  let hood = null;
+  if (def.hood) {
+    const hm = new VoxelModel();
+    const c = hex(def.hoodColor ?? def.sleeve ?? 0x4c5b84), lin = sh(c, 0.62);
+    rbox(hm, hb.x0 - 1, hb.x1 + 1, hb.y0 + 2, hb.y1 + 2, hb.z0 - 1, hb.z1, 2.6, (x, y, z) => {
+      if (x >= hb.x0 && x <= hb.x1 && y <= hb.y1 && z >= hb.z0) return null;
+      if (y > hb.y1 + 1) return null;
+      return z >= hb.z1 ? lin : (x + y * 2 + z) % 9 === 0 ? sh(c, 0.86) : c;
+    });
+    hood = hm;
+  }
+  const hands = {};
+  for (const k of ['relax']) hands[k] = [{ model: buildHand(def, 1), pivot: C }, { model: buildHand(def, -1), pivot: C }];
+  return {
+    dims: { hipY: def.feet === 'geta' ? 7 : 6, hipX: DIM.hipX, thigh: 2, chestY: 6.5, shoulderX: DIM.shoulderX, shoulderY: -1.2, upper: 2.2, fore: 2.2, neckY: 0.4, tail: [-0.5, DIM.torso.z0 - 0.5], carry: [3.5, DIM.torso.z1 + 3], shellAt: [0, 1.2, DIM.torso.z0 + 0.2], tailTilt: def.tail === 'otter' ? 0.9 : 0.4 },
+    pelvis: buildPelvis(def), torso: buildTorso(def),
+    thigh: { model: buildThigh(def), pivot: C }, shin: { model: buildShin(def), pivot: C },
+    upper: { model: buildUpperArm(def), pivot: C }, fore: { model: buildForeArm(def), pivot: C },
+    hands,
+    head: H.model,
+    ears: H.ears.map((e) => ({ ...e, pivot: [0.5, 0, 0.5], tilt: (e.kind === 'fox' || e.kind === 'shiba' || e.kind === 'cat') ? -e.side * 0.18 : 0 })),
+    tail: buildTail(def),
+    shell: def.shell ? buildShell(def) : null,
+    hood,
+    extras,
+    face: {
+      box: hb, faceZ: H.faceZ,
+      snout: H.snout ? { z: H.snout.z, y: H.snout.y, h: 3, w: 6, beak: H.snout.beak, my: H.snout.beak ? 4 : 5, x: 0 } : null,
+      cfg: { ...(def.glasses ? { glasses: { color: '#' + hex(def.glasses.frame ?? 0x5a3a24).toString(16).padStart(6, '0') } } : {}), ...(def.face || {}) },
+    },
+  };
 }

@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#8a9a7a">
+<script type="module">
+import { buildNatureAtlas } from '/src/art/nature/natureArt.js';
+const want = (new URLSearchParams(location.search).get('only') || '').split(',').filter(Boolean);
+const a = buildNatureAtlas();
+const S = +(new URLSearchParams(location.search).get('s') || 3);
+const c = document.createElement('canvas'); c.width = 1600; c.height = 1000; document.body.appendChild(c);
+const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.font = '10px monospace';
+let x = 4, y = 14, row = 0;
+for (const [name, fr] of Object.entries(a.frames)) {
+  if (want.length && !want.some((w) => name.startsWith(w))) continue;
+  const f = fr[0]; if (!f) continue;
+  if (x + f.w * S > 1600) { x = 4; y += row + 16; row = 0; }
+  g.drawImage(a.canvas, f.x, f.y, f.w, f.h, x, y, f.w * S, f.h * S);
+  g.fillStyle = '#000'; g.fillText(name, x, y + f.h * S + 10);
+  x += Math.max(f.w * S, name.length * 6) + 8; row = Math.max(row, f.h * S);
+}
+window.__ready = true;
+</script>

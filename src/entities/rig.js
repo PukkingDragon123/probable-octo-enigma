@@ -37,9 +37,11 @@ function zeroPose() {
   return o;
 }
 
-// default body proportions (metres, before def.scale)
-// leg metrics used by the seated / kneeling poses (metres, voxel chibi)
-const BODY = { hipY: 0.275, thigh: 0.1, shin: 0.15 };
+// leg metrics used by the seated / kneeling poses (metres, voxel chibi; set from the design)
+const BODY = { hipY: 0.3, thigh: 0.15, shin: 0.15 };
+// default skeleton (voxels): hip joint height above the sole, hip spread, thigh
+// length, chest pivot above the spine, shoulders, arm segments, neck
+const DEFAULT_DIMS = { hipY: 6, hipX: 2, thigh: 3, spineY: 0, chestY: 6.5, shoulderX: 4.6, shoulderY: -1.2, shoulderZ: 0, upper: 2.2, fore: 2.2, grip: 2.2, neckY: 0.4, headScale: 1, tail: [-0.5, -3.5], carry: [3.5, 6], shellAt: [0, 1.2, -3] };
 
 export class Character {
   constructor(def) {
@@ -74,183 +76,194 @@ export class Character {
     this.idleAnim = null;
     this.visible = true;
     this.springs = { tail: { x: 0, v: 0 }, tailY: { x: 0, v: 0 }, earL: { x: 0, v: 0 }, earR: { x: 0, v: 0 } };
+    this.tailBase = 0;
     this._lastX = 0; this._lastZ = 0; this._vel = new THREE.Vector2();
     this.build();
   }
 
   // ------------------------------------------------------------ construction
-  // Voxel chibi (The Bear Must Eat style): every part is a voxel model with
-  // grain shading; the face is a 2D pixel canvas on a flat plane at the front
-  // of the big voxel head (plus a mouth plane on snouts / beaks).
+  // Voxel chibi (The Bear Must Eat style). The character's look comes from a
+  // design: hand-made models for the main cast (src/entities/cast/*.js) or the
+  // generic builder for crowds (voxbody.genericDesign). Every part is a voxel
+  // model with grain shading; the face is a 2D pixel canvas on a flat plane at
+  // the front of the head (plus a mouth plane on snouts / beaks).
   build() {
     const d = this.def;
+    const des = (this.des = typeof d.design === 'function' ? d.design(d) : VB.genericDesign(d));
+    const D = (this.dims = { ...DEFAULT_DIMS, ...(des.dims || {}) });
     const J = (this.j = {});
-    const D = VB.DIM, U = VB.VS;
-    const add = (parent, model, pivot = [0, 0, 0], at = [0, 0, 0], shadow = true) => {
-      if (!model) return null;
-      const m = VB.vmesh(model, pivot, { shadow });
+    const U = VB.VS;
+    // seated / kneeling poses read leg metrics in metres
+    this.b = { ...this.b, hipY: D.hipY * U, thigh: D.thigh * U, shin: (D.hipY - D.thigh) * U };
+    const part = (p) => (p && p.model ? p : p ? { model: p } : null);
+    const add = (parent, p, at = [0, 0, 0], o = {}) => {
+      p = part(p);
+      if (!p || !p.model || !p.model.vox?.size) return null;
+      const m = VB.vmesh(p.model, p.pivot || o.pivot || [0, 0, 0], { shadow: o.shadow ?? p.shadow ?? true, scale: p.scale || o.scale || U });
       m.position.set(at[0] * U, at[1] * U, at[2] * U);
+      if (p.rot) m.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
       parent.add(m);
       return m;
     };
-    const legLen = 5; // hip to sole (voxels)
-    const pelvis = (J.pelvis = P.pivot('pelvis', null, [0, (legLen + 0.5) * U, 0]));
+    const LR = (key, side) => des[key + side] ?? (Array.isArray(des[key]) ? des[key][side === 'L' ? 0 : 1] : des[key]);
+    // ---- pelvis + legs
+    const pelvis = (J.pelvis = P.pivot('pelvis', null, [0, (D.hipY + 0.5) * U, 0]));
     this.body.add(pelvis);
-    add(pelvis, VB.buildPelvis(d));
+    add(pelvis, des.pelvis);
     for (const side of [-1, 1]) {
       const s = side < 0 ? 'R' : 'L';
       const hip = (J['hip' + s] = P.pivot('hip' + s, null, [side * D.hipX * U, -0.5 * U, 0]));
       pelvis.add(hip);
-      add(hip, VB.buildThigh(d), [-0.5, 0, -0.5]);
-      const knee = (J['knee' + s] = P.pivot('knee' + s, null, [0, -2 * U, 0]));
+      add(hip, LR('thigh', s));
+      const knee = (J['knee' + s] = P.pivot('knee' + s, null, [0, -D.thigh * U, 0]));
       hip.add(knee);
       const foot = (J['foot' + s] = P.pivot('foot' + s, null, [0, 0, 0]));
       knee.add(foot);
-      add(foot, VB.buildShin(d), [-0.5, 0, -0.5]);
+      add(foot, LR('shin', s));
     }
-    // tail
-    const tailSegs = VB.buildTail(d);
-    if (tailSegs.length) {
-      const tr = (J.tail = P.pivot('tail', null, [0, -0.5 * U, (VB.DIM.torso.z0 - 0.5) * U]));
-      tr.rotation.x = d.tail === 'otter' ? 0.9 : 0.4;
+    // ---- tail (chain of segments, each pivots at its base and extends to -z)
+    if (des.tail && des.tail.length) {
+      const ta = D.tail || [-0.5, -3.5];
+      const tr = (J.tail = P.pivot('tail', null, [0, ta[0] * U, ta[1] * U]));
+      this.tailBase = tr.rotation.x = D.tailTilt ?? 0.4;
       pelvis.add(tr);
       this.tailSegs = [];
       let parent = tr;
-      for (const m of tailSegs) {
+      for (const seg of des.tail) {
+        const sp = part(seg);
         const g = new THREE.Group();
-        add(g, m, [0, 0, 0]);
+        add(g, sp);
         parent.add(g);
         this.tailSegs.push(g);
         const nx = new THREE.Group();
-        let minZ = 0; for (const [k] of m.vox) { const z = ((k >> 20) & 1023) - 512; if (z < minZ) minZ = z; }
-        nx.position.z = (minZ + 0.5) * U;
+        let minZ = 0; for (const [k] of sp.model.vox) { const z = ((k >> 20) & 1023) - 512; if (z < minZ) minZ = z; }
+        nx.position.z = (sp.len != null ? -sp.len : minZ + 0.5) * U;
         g.add(nx);
         parent = nx;
       }
     }
-    // spine + torso
-    const spine = (J.spine = P.pivot('spine'));
+    // ---- spine + torso + chest
+    const spine = (J.spine = P.pivot('spine', null, [0, (D.spineY ?? 0) * U, 0]));
     pelvis.add(spine);
-    this.torsoMesh = add(spine, VB.buildTorso(d));
-    J.carry = P.pivot('carry', null, [0, 3.5 * U, (VB.DIM.torso.z1 + 3) * U]);
+    this.torsoMesh = add(spine, des.torso);
+    J.carry = P.pivot('carry', null, [0, (D.carry?.[0] ?? 3.5) * U, (D.carry?.[1] ?? 6) * U]);
     spine.add(J.carry);
-    const chest = (J.chest = P.pivot('chest', null, [0, 6.5 * U, 0]));
+    const chest = (J.chest = P.pivot('chest', null, [0, D.chestY * U, 0]));
     spine.add(chest);
-    if (d.shell) {
-      const shm = add(spine, VB.buildShell(d), [0, 0, 0], [-0.0, 1.2, VB.DIM.torso.z0 + 0.2]);
-      this.shell = shm;
-    }
+    if (des.shell) this.shell = add(spine, des.shell, D.shellAt || [0, 1.2, -3]);
+    if (des.hoodDown) { this.hoodDownMesh = add(chest, des.hoodDown); }
     if (d.wings) {
       this.wings = [];
       for (const side of [-1, 1]) {
         const w = P.wingMesh(d.wings, side, 1);
-        const pv = P.pivot('wing', w, [side * 0.05, 0.3, VB.DIM.torso.z0 * U]);
+        const pv = P.pivot('wing', w, [side * 0.05, 0.3, (D.wingZ ?? -3) * U]);
         pv.rotation.y = side * 0.5;
         spine.add(pv);
         this.wings.push(pv);
       }
     }
-    // arms
+    // ---- arms
+    this.handMeshes = { L: {}, R: {} };
     for (const side of [-1, 1]) {
       const s = side < 0 ? 'R' : 'L';
-      const sh = (J['shoulder' + s] = P.pivot('shoulder' + s, null, [side * D.shoulderX * U, -1.2 * U, 0]));
+      const sh = (J['shoulder' + s] = P.pivot('shoulder' + s, null, [side * D.shoulderX * U, D.shoulderY * U, D.shoulderZ * U]));
       chest.add(sh);
-      add(sh, VB.buildUpperArm(d), [-0.5, 0, -0.5]);
-      const el = (J['elbow' + s] = P.pivot('elbow' + s, null, [0, -2.2 * U, 0]));
+      add(sh, LR('upper', s));
+      const el = (J['elbow' + s] = P.pivot('elbow' + s, null, [0, -D.upper * U, 0]));
       sh.add(el);
-      add(el, VB.buildForeArm(d), [-0.5, 0, -0.5]);
-      const hand = (J['hand' + s] = P.pivot('hand' + s, null, [0, -2.2 * U, 0]));
-      el.add(hand);
-      add(hand, VB.buildHand(d, side), [-0.5, 0, -0.5]);
-      J['grip' + s] = P.pivot('grip' + s, null, [0, -2.2 * U, 0.8 * U]);
-      hand.add(J['grip' + s]);
+      add(el, LR('fore', s));
+      const hd = (J['hand' + s] = P.pivot('hand' + s, null, [0, -D.fore * U, 0]));
+      el.add(hd);
+      const hands = des.hands || { relax: [des.hand?.[0], des.hand?.[1]] };
+      for (const k of Object.keys(hands)) {
+        const m = add(hd, hands[k][side < 0 ? 1 : 0]);
+        if (m) { m.visible = k === 'relax'; this.handMeshes[s][k] = m; }
+      }
+      J['grip' + s] = P.pivot('grip' + s, null, [0, -(D.grip ?? 2.2) * U, 0.8 * U]);
+      hd.add(J['grip' + s]);
     }
-    // neck + head
-    const neck = (J.neck = P.pivot('neck', null, [0, 0.4 * U, 0]));
+    // ---- neck + head (head contents in a scalable group: chibi proportions)
+    const neck = (J.neck = P.pivot('neck', null, [0, D.neckY * U, (D.neckZ ?? 0) * U]));
     chest.add(neck);
     const head = (J.head = P.pivot('head'));
     neck.add(head);
-    const H = VB.buildHead(d);
-    const hb = H.box;
-    this.headY = 0;
-    add(head, H.model, [0, 0, 0]);
+    const hfx = (this.headFx = new THREE.Group());
+    hfx.scale.setScalar(D.headScale ?? 1);
+    head.add(hfx);
+    this.headScale = D.headScale ?? 1;
+    this.headMesh = add(hfx, des.head);
     // ears
-    for (const e of H.ears) {
+    for (const e of des.ears || []) {
       const s = e.side < 0 ? 'R' : 'L';
       const ep = (J['ear' + s] = P.pivot('ear' + s, null, [e.at[0] * U, e.at[1] * U, e.at[2] * U]));
-      add(ep, e.model, [0.5, 0, 0.5]);
-      if (e.kind === 'fox' || e.kind === 'shiba' || e.kind === 'cat') ep.rotation.z = -e.side * 0.18;
-      head.add(ep);
+      add(ep, e.pivot ? { model: e.model, pivot: e.pivot } : e.model);
+      if (e.tilt) ep.rotation.z = e.tilt;
+      hfx.add(ep);
     }
     // the face: one pixel canvas on a flat plane at the head front
-    const fw = (hb.x1 - hb.x0 + 1), fh = (hb.y1 - hb.y0 + 1) - 1;
-    const snout = H.snout;
+    const F = des.face;
+    const hb = F.box;
+    const fw = (hb.x1 - hb.x0 + 1), fh = (hb.y1 - hb.y0 + 1) - (F.trim ?? 1);
+    const snout = F.snout;
     const fs = {
       skin: d.skin, w: fw * 4, h: fh * 4,
-      ...(snout ? { mouthCanvas: { w: 24, h: 12, my: snout.beak ? 4 : 5 } } : {}),
-      ...(d.glasses ? { glasses: { color: '#' + VB.hex(d.glasses.frame ?? 0x5a3a24).toString(16).padStart(6, '0') } } : {}),
-      ...(d.face || {}),
+      ...(snout ? { mouthCanvas: { w: (snout.w ?? 6) * 4, h: (snout.h ?? 3) * 4, my: snout.my ?? (snout.beak ? 4 : 5) } } : {}),
+      ...(F.cfg || {}),
     };
     this.face = new Face(fs);
     const fp = makeFacePlane(this.face.texture, fs.w, fs.h);
-    fp.position.set(((hb.x0 + hb.x1 + 1) / 2) * U, (hb.y0 + 0.5 + fh / 2) * U, (H.faceZ + 0.04) * U);
-    head.add(fp);
+    fp.position.set(((hb.x0 + hb.x1 + 1) / 2) * U, (hb.y0 + (F.trim ?? 1) * 0.5 + fh / 2 + (F.lift ?? 0)) * U, (F.faceZ + 0.04) * U);
+    hfx.add(fp);
     this.decal = fp;
     if (snout && this.face.mtexture) {
-      const mp = makeFacePlane(this.face.mtexture, 24, 12);
-      mp.position.set(0, (snout.y + snout.h / 2) * U - (snout.beak ? 0.2 * U : 0.6 * U), (snout.z + 0.04) * U);
-      head.add(mp);
+      const mp = makeFacePlane(this.face.mtexture, fs.mouthCanvas.w, fs.mouthCanvas.h);
+      mp.position.set((snout.x ?? 0) * U, (snout.y + (snout.h ?? 3) / 2) * U, (snout.z + 0.04) * U);
+      hfx.add(mp);
       this.mouthPlane = mp;
     }
-    add(head, VB.buildHair(d, hb));
-    this.hat = add(head, VB.buildHat(d, hb));
-    if (this.hat && d.hat?.tilt) this.hat.rotation.x = d.hat.tilt;
-    this.glasses = add(head, VB.buildGlasses(d, H.faceZ + 0.6), [0, 0, 0], [0, 0, 0], false);
-    add(head, VB.buildMustache(d, H.faceZ + (snout ? 0 : 0.4)), [0, 0, 0], [0, 0, 0], false);
-    if (d.earbuds) {
-      const ebm = new VoxelModel(); ebm.set(0, 0, 0, 0xf4f4f8); ebm.set(0, -1, 0, 0xf4f4f8);
-      add(head, ebm, [0, 0, 0], [hb.x1 + 1, 4, 0], false); add(head, ebm, [0, 0, 0], [hb.x0 - 1, 4, 0], false);
-    }
-    if (d.hood) {
-      // a soft rounded hood: shell around the head, open at the front, a darker
-      // lining framing the face, bunched folds at the back, two drawstrings
-      const hm = new VoxelModel();
-      const c = VB.hex(d.hoodColor ?? d.sleeve ?? 0x4c5b84), lin = VB.sh(c, 0.62), fold = VB.sh(c, 0.86), hiC = VB.sh(c, 1.08);
-      const X0 = hb.x0 - 1, X1 = hb.x1 + 1, Y0 = hb.y0 + 2, Y1 = hb.y1 + 1, Z0 = hb.z0 - 1, Z1 = hb.z1;
-      VB.rboxFn(hm, X0, X1, Y0, Y1 + 1, Z0, Z1, 2.6, (x, y, z) => {
-        const inside = x >= hb.x0 && x <= hb.x1 && y <= hb.y1 && z >= hb.z0;
-        if (inside) return null;
-        if (y > Y1) return null;
-        const rim = z >= Z1 - 0;
-        if (rim) return lin;
-        if (z <= Z0 + 1 && (x + y) % 4 === 0) return fold;
-        if (y === Y1 && (x * 3 + z) % 7 === 0) return hiC;
-        return (x + y * 2 + z) % 9 === 0 ? fold : c;
-      });
-      // drawstrings
-      const str = VB.hex(d.outfit?.accent ?? 0xefe6d2);
-      for (const sx of [-3, 2]) for (let k = 0; k < 3; k++) hm.set(sx, Y0 - 1 - k, Z1 + 1, str);
-      const hood = add(head, hm);
-      hood.visible = false;
-      this.hoodMesh = hood;
-    }
-    if (d.ribbons) for (const r of d.ribbons) {
-      const rm = new VoxelModel(); const c = VB.hex(r.color ?? 0xd8342e);
-      rm.set(-2, 0, 0, c); rm.set(-1, 0, 0, c); rm.set(-2, 1, 0, c); rm.set(-2, -1, 0, c); rm.set(0, 0, 0, VB.sh(c, 0.8)); rm.set(1, 0, 0, c); rm.set(2, 0, 0, c); rm.set(2, 1, 0, c); rm.set(2, -1, 0, c);
-      const rmm = add(head, rm, [0, 0, 0], [r.x ?? 0, r.y ?? hb.y1, r.z ?? 0]);
-      if (rmm) rmm.rotation.set(r.rx ?? 0, r.ry ?? 0, r.rz ?? 0);
+    // hood (toggled), hats, glasses, hair, accessories
+    if (des.hood) { this.hoodMesh = add(hfx, des.hood); if (this.hoodMesh) this.hoodMesh.visible = false; }
+    this.extras = [];
+    this.springExtras = [];
+    const jointOf = (name) => (name === 'head' ? hfx : name === 'body' ? this.body : J[name]);
+    for (const x of des.extras || []) {
+      const parent = jointOf(x.joint || 'head');
+      if (!parent) continue;
+      const holder = new THREE.Group();
+      holder.position.set((x.at?.[0] ?? 0) * U, (x.at?.[1] ?? 0) * U, (x.at?.[2] ?? 0) * U);
+      if (x.rot) holder.rotation.set(x.rot[0], x.rot[1], x.rot[2]);
+      parent.add(holder);
+      const m = add(holder, { model: x.model, pivot: x.pivot, scale: x.scale, shadow: x.shadow });
+      if (x.plane) holder.add(x.plane);
+      holder.name = x.name || 'extra';
+      if (x.hidden) holder.visible = false;
+      const rec = { ...x, holder, mesh: m };
+      this.extras.push(rec);
+      if (x.spring) { rec.sp = { x: 0, v: 0, z: 0, vz: 0 }; this.springExtras.push(rec); }
     }
     // blob shadow
     const bs = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), blobShadowMat(0.3));
     bs.rotation.x = -Math.PI / 2;
     bs.position.y = 0.012;
     bs.renderOrder = 1;
-    bs.scale.setScalar(0.62 * this.scale / 0.5 * (d.belly ? 1.25 : 1));
+    bs.scale.setScalar((D.blob ?? 0.62) * this.scale / 0.5);
     this.blob = bs;
     this.root.add(bs);
-    this.height = (legLen + 0.5 + 6.5 + 0.4 + (hb.y1 + 1)) * U * this.scale;
-    this.headTop = (hb.y1 + 1) * U;
+    const headTop = (hb.y1 + 1 + (D.hatH ?? 0)) * (D.headScale ?? 1);
+    this.height = (D.hipY + 0.5 + (D.spineY ?? 0) + D.chestY + D.neckY + headTop) * U * this.scale;
+    this.headTop = headTop * U;
+    this._prevHeadQ = new THREE.Quaternion();
     this.root.traverse((o) => { if (o.isMesh) o.userData.character = this; });
+  }
+  extra(name) { return this.extras.find((e) => e.name === name)?.holder || null; }
+  showExtra(name, on = true) { for (const e of this.extras) if (e.name === name) e.holder.visible = on; return this; }
+  setHand(kind = 'relax', which = 'both') {
+    for (const s of which === 'both' ? ['L', 'R'] : [which]) {
+      const hs = this.handMeshes?.[s]; if (!hs) continue;
+      const k = hs[kind] ? kind : 'relax';
+      for (const n of Object.keys(hs)) hs[n].visible = n === k;
+    }
+    return this;
   }
 
   // ------------------------------------------------------------ placement
@@ -275,7 +288,7 @@ export class Character {
   }
   lookAt(target, w = 1) { this.lookTarget = target; this.lookW = w; return this; }
   squash(k) { this.sq.v += k * 14; return this; }
-  setHood(up) { if (this.hoodMesh) this.hoodMesh.visible = !!up; return this; }
+  setHood(up) { if (this.hoodMesh) this.hoodMesh.visible = !!up; if (this.hoodDownMesh) this.hoodDownMesh.visible = !up; this.hoodUp = !!up; return this; }
   setPose(p) { this.poseTarget = p; return this; }
 
   // ------------------------------------------------------------ movement
@@ -482,7 +495,7 @@ export class Character {
       const c = C[j], t = T[j];
       c[0] += (t[0] - c[0]) * k; c[1] += (t[1] - c[1]) * k; c[2] += (t[2] - c[2]) * k;
       const g = this.j[j];
-      if (g) g.rotation.set(c[0], c[1], c[2]);
+      if (g) g.rotation.set(c[0] + (j === 'tail' ? this.tailBase : 0), c[1], c[2]);
     }
     C.root.y += (T.root.y - C.root.y) * k;
     // squash & stretch spring
@@ -501,6 +514,28 @@ export class Character {
     const eb = spring(this.springs.earL, clamp(accel * 0.1, 0, 0.4) + (this.squashEars ?? 0), 90, 0.2, dt);
     if (this.j.earL) this.j.earL.rotation.x = -eb * 0.5 + C.earL[0];
     if (this.j.earR) this.j.earR.rotation.x = -eb * 0.5 + C.earR[0];
+    // accessory springs (braids, bushy brows, charms, pom-poms): swing with
+    // acceleration, body bob and head turns, plus a little idle sway
+    if (this.springExtras.length && dt > 0) {
+      const fwdV = Math.sin(this.yaw) * mvx + Math.cos(this.yaw) * mvz;
+      const sideV = Math.cos(this.yaw) * mvx - Math.sin(this.yaw) * mvz;
+      const pv = this._springPrev || (this._springPrev = { f: 0, s: 0, hy: 0, hx: 0, by: 0 });
+      const aF = (fwdV - pv.f) / dt, aS = (sideV - pv.s) / dt;
+      const wHy = (C.head[1] - pv.hy) / dt, wHx = (C.head[0] - pv.hx) / dt, vB = (C.root.y - pv.by) / dt;
+      pv.f = fwdV; pv.s = sideV; pv.hy = C.head[1]; pv.hx = C.head[0]; pv.by = C.root.y;
+      for (const e of this.springExtras) {
+        const S = e.spring, amp = S.amp ?? 1;
+        const idle = Math.sin(this.t * (S.idleF ?? 1.7) + (S.phase ?? 0)) * (S.idle ?? 0.04);
+        const tX = clamp((aF * 0.035 + fwdV * 0.25 + wHx * 0.05 + vB * 0.9) * amp, -1.1, 1.1) + idle;
+        const tZ = clamp((-aS * 0.035 - sideV * 0.2 + wHy * 0.06) * amp, -1.1, 1.1) + idle * 0.5;
+        const sx = { x: e.sp.x, v: e.sp.v }, sz = { x: e.sp.z, v: e.sp.vz };
+        spring(sx, tX, S.k ?? 70, S.damp ?? 0.16, dt); spring(sz, tZ, S.k ?? 70, S.damp ?? 0.16, dt);
+        e.sp.x = sx.x; e.sp.v = sx.v; e.sp.z = sz.x; e.sp.vz = sz.v;
+        const r0 = e.rot || [0, 0, 0];
+        e.holder.rotation.x = r0[0] + (S.axis === 'z' ? 0 : e.sp.x);
+        e.holder.rotation.z = r0[2] + (S.axis === 'x' ? 0 : e.sp.z);
+      }
+    }
     // wings idle flutter
     if (this.wings) this.wings.forEach((w, i) => { const s = i ? 1 : -1; w.rotation.y = s * (0.45 + (this.flap || 0) * Math.sin(this.t * 14) * 0.6) + s * Math.sin(this.t * 1.3) * 0.03; });
     // face
@@ -734,6 +769,21 @@ def('beHugged', (r, u, A, o) => {
 }, { loop: true, mask: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'head'] });
 
 // turning a gacha handle with the right hand (opts.turns)
+// patting someone's head (reaches up-forward, three little taps)
+def('pat', (r, u, A, o) => {
+  const k = Math.min(1, u * 4) * Math.min(1, (1 - u) * 4);
+  const tap = Math.max(0, sin(u * PI * 6)) * 0.25;
+  o.shoulderR = [(-2.0 - tap) * k, 0, -0.2 * k]; o.elbowR = [(-0.6 + tap) * k, 0, 0];
+  o.head = [0.12 * k, 0, -0.12 * k];
+}, { dur: 1.6, additive: true, mask: ['shoulderR', 'elbowR', 'head'] });
+// straining under something heavy held in front (loop): knees wobble, back bends
+def('strain', (r, u, A, o) => {
+  const w = sin(u * 22) * 0.06;
+  o.spine = [0.35, 0, w]; o.head = [-0.2, 0, -w];
+  o.shoulderL = [-0.7, 0, 0.35]; o.shoulderR = [-0.7, 0, -0.35]; o.elbowL = [-0.3, 0, 0]; o.elbowR = [-0.3, 0, 0];
+  o.hipL = [-0.35, 0, 0.12]; o.hipR = [-0.35, 0, -0.12]; o.kneeL = [0.6 + w * 2, 0, 0]; o.kneeR = [0.6 - w * 2, 0, 0];
+  o.root.y = -0.04 * r.scale;
+}, { loop: true });
 def('crank', (r, u, A, o) => {
   const turns = A.opts.turns ?? 1;
   const a = u * turns * PI * 2;

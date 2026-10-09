@@ -63,7 +63,8 @@ function frame(now) {
   WORLD.uTime.value = t;
   if (q.has('cycle')) { eT += dt; if (eT > 1.6) { eT = 0; ei = (ei + 1) % EXPRESSION_NAMES.length; chars.forEach((c) => c.setExpr(EXPRESSION_NAMES[ei])); } }
   for (const c of chars) c.update(dt);
-  L.update(hour, new THREE.Vector3(0, 0, 0));
+  L.camYaw = rig.yaw;
+  L.update(hour, new THREE.Vector3(0, 0, 0), dt, t);
   rig.update(dt, R);
   updateSpriteUniforms(rig.camera, { sunDir: L.sunDir() });
   fx.update(dt, t);

@@ -60,7 +60,8 @@ export async function harness(o = {}) {
     H.t += dt;
     WORLD.uTime.value = H.t;
     for (const f of H.updaters) f(dt, H.t);
-    L.update(H.hour, H.focus.set(rig.target.x, 0, rig.target.z));
+    L.camYaw = rig.yaw;
+    L.update(H.hour, H.focus.set(rig.target.x, 0, rig.target.z), dt, H.t);
     rig.update(dt, R);
     updateSpriteUniforms(rig.camera, { sunDir: L.sunDir(), pushers: H.pushers });
     fx.update(dt, H.t);

@@ -5,12 +5,19 @@
 //              waitress | sailor | suit | attendant | chef | yamabushi | dress | plain | bare
 // Face options are passed to entities/face.js (eyeStyle anime|bead|dot, colours...).
 
+import { design as mamoruDesign } from '../entities/cast/mamoru.js';
+import { design as genzoDesign } from '../entities/cast/genzo.js';
+import { design as yukiDesign } from '../entities/cast/yuki.js';
+import { design as bendoDesign } from '../entities/cast/bendo.js';
+import { design as mioDesign } from '../entities/cast/mio.js';
+import { design as kanakoDesign } from '../entities/cast/kanako.js';
+
 const TURTLE_FACE = { eyeStyle: 'anime', beak: true, nostrils: true, mouthW: 9, mouthY: 33, eyeY: 21, eyeDX: 10, eyeW: 9, eyeH: 10, blushDX: 16, blushY: 28, browY: 12 };
 
 export const CHARACTERS = {
   // ------------------------------------------------------------ the family
   mamoru: {
-    id: 'mamoru', name: 'Mamoru', voice: { pitch: 1.05, kind: 'boy' }, scale: 0.84,
+    id: 'mamoru', name: 'Mamoru', voice: { pitch: 1.05, kind: 'boy' }, scale: 0.84, design: mamoruDesign,
     species: 'turtle', skin: 0x94bf6c, light: 0xd8e2a2, stripe: 0xe0d870,
     shell: { base: 0x8a7046, seam: 0x4a361e, light: 0xb09a5c, rim: 0x6a5230 },
     outfit: { kind: 'hoodie', color: 0xd99a3c, accent: 0xfff2d8 },
@@ -20,7 +27,7 @@ export const CHARACTERS = {
     idles: ['lookAround', 'shift', 'checkPhone', 'sigh'],
   },
   genzo: {
-    id: 'genzo', name: 'Grandpa Genzō', voice: { pitch: 0.72, kind: 'old' }, scale: 0.92, hunch: 0.1,
+    id: 'genzo', name: 'Grandpa Genzō', voice: { pitch: 0.72, kind: 'old' }, scale: 0.92, hunch: 0.1, design: genzoDesign,
     species: 'turtle', skin: 0x7d9258, light: 0xc8cc92, stripe: 0xb8b060,
     shell: { base: 0x6e5a3a, seam: 0x3a2a18, light: 0x8e7a4e, rim: 0x544028, moss: 0.8, r: 5.6 },
     outfit: { kind: 'samue', color: 0x2f3e66, tie: 0xe8dcc0 },
@@ -40,7 +47,7 @@ export const CHARACTERS = {
   },
   // ------------------------------------------------------------ Bendy's
   bendo: {
-    id: 'bendo', name: 'Bendo', voice: { pitch: 0.8, kind: 'big' }, scale: 1.0, belly: 1,
+    id: 'bendo', name: 'Bendo', voice: { pitch: 0.8, kind: 'big' }, scale: 0.98, belly: 1, design: bendoDesign,
     species: 'fox', skin: 0xc8ccd4, light: 0xf4f4f6, nose: 0x2a2228, earInner: 0xf4e8ec, earTip: 0x8a8e98,
     outfit: { kind: 'chef', color: 0xfbfaf6, scarf: 0xd8342e }, sleeve: 0xfbfaf6, pants: 0x3a3a44, shoe: 0x2a2a30,
     face: { eyeStyle: 'bead', iris: '#3a2a20', brow: '#8a8e98', browThick: 3, whiskers: false },
@@ -48,7 +55,7 @@ export const CHARACTERS = {
     mustache: 0x8a8e98, hat: { type: 'chef' },
   },
   yuki: {
-    id: 'yuki', name: 'Yuki', voice: { pitch: 1.3, kind: 'girl' }, scale: 0.84,
+    id: 'yuki', name: 'Yuki', voice: { pitch: 1.3, kind: 'girl' }, scale: 0.84, design: yukiDesign,
     species: 'fox', skin: 0xf6f2ee, light: 0xffffff, nose: 0x3a2a30, earInner: 0xffd8e0, earTip: 0xe8dcd8,
     outfit: { kind: 'waitress', dress: 0xd8342e }, sleeve: 0xd8342e, sleeveLen: 0.45, cuff: 0xffffff,
     skirt: { color: 0xd8342e, len: 3, flare: 1.4 }, shorts: true, legColor: 0xf6f2ee, socks: 0xffffff, shoe: 0x2a2228,
@@ -59,7 +66,7 @@ export const CHARACTERS = {
   },
   // ------------------------------------------------------------ romance
   mio: {
-    id: 'mio', name: 'Mio', voice: { pitch: 1.35, kind: 'girl' }, scale: 0.82,
+    id: 'mio', name: 'Mio', voice: { pitch: 1.35, kind: 'girl' }, scale: 0.82, design: mioDesign,
     species: 'otter', skin: 0x9a6a48, light: 0xe8d0b4, nose: 0x2a1a18, earInner: 0xc89a78,
     outfit: { kind: 'sailor', color: 0xf4f2f2, collar: 0x27365e, scarf: 0xd8343a }, sleeve: 0xf4f2f2, cuff: 0x27365e,
     skirt: { color: 0x27365e, len: 3, flare: 1.6, pleats: true }, shorts: true, legColor: 0x9a6a48, socks: 0xf4f4f4, shoe: 0x3a2a28,
@@ -69,7 +76,7 @@ export const CHARACTERS = {
     clumsy: true,
   },
   kanako: {
-    id: 'kanako', name: 'Kanako', voice: { pitch: 1.15, kind: 'lady' }, scale: 0.84,
+    id: 'kanako', name: 'Kanako', voice: { pitch: 1.15, kind: 'lady' }, scale: 0.84, design: kanakoDesign,
     species: 'crab', skin: 0xe8705a, light: 0xf8c0a8,
     outfit: { kind: 'kimono', color: 0xf2e8f0, patCol: 0xe88aa8, obi: 0x5a2a48, cord: 0xe8c060 }, sleeve: 0xf2e8f0, wideSleeves: true,
     skirt: { color: 0xf2e8f0, len: 5, flare: 0.5 }, legColor: 0xe8705a, feet: 'geta', shoe: 0x8a5a3a,

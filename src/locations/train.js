@@ -113,6 +113,7 @@ export class TrainLocation extends Location {
     super(game, 'train', { bg: 0x101018, lightMode: 'interior', grade: 'melancholy', music: undefined, ambience: 'train' });
     this.camCfg = { wupp: 0.0085, pitch: 18, yaw: 58 };
     this.clock = false;
+    this.sky = false;
     this.speed = 1;
     this.speedGoal = 1;
     this.shadowSize = 9;
@@ -204,9 +205,9 @@ export class TrainLocation extends Location {
     g.rig.setFollow(null);
     g.rig.play({ x: 0.2, y: 0.9, z: -0.6, wupp: c.wupp, pitch: c.pitch, yaw: c.yaw, dur: 0 });
     g.lighting.override = { elev: 0.55 };
-    g.lighting.sunAzimuth = Math.PI + 0.5; // sun outside, behind the far wall
+    g.lighting.fixedAzimuth = Math.PI + 0.5; // sun outside, behind the far wall
   }
-  exit() { this.game.lighting.override = null; this.game.lighting.sunAzimuth = 0.6; }
+  exit() { const l = this.game.lighting; l.override = null; l.fixedAzimuth = null; }
   setTicker(text) { this.tickerText = text; this.tickerX = 160; }
   drawTicker(dt) {
     const p = this.led.p;

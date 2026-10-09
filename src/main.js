@@ -21,7 +21,15 @@ game.start();
 
 const params = new URLSearchParams(location.search);
 const startChapter = params.get('chapter');
-if (startChapter) {
+const viewLoc = params.get('loc');
+if (viewLoc) {
+  // dev: open a location with the player standing in it (free walk)
+  const L = await game.goTo(viewLoc, {}, { transition: null });
+  const p = (params.get('at') || '').split(',').map(Number);
+  game.place(game.player, p[0] || 0, p[1] || 2, 0);
+  game.rig.setFollow(game.player);
+  if (params.get('hour')) game.state.hour = +params.get('hour');
+} else if (startChapter) {
   game.story.start(startChapter);
 } else {
   // title: the train speeding through the fields at golden hour behind the logo

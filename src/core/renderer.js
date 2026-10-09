@@ -323,16 +323,18 @@ function fogNoiseTexture() {
 // Colour-grade presets. The game blends between them (world changes, time of
 // day, story moods).
 export const GRADES = {
-  // Human World: grounded, a touch desaturated, cool shadows
-  human: { saturation: 1.02, grade: [1.02, 1.0, 0.97], lift: [0.012, 0.012, 0.04], contrast: 1.06, vignette: 0.32, vignetteColor: [0.42, 0.4, 0.55], haze: 0.18, hazeColor: [0.92, 0.9, 0.88], outlineTint: [0.36, 0.32, 0.42], warmth: 0.0, bloom: 0.38 },
-  humanNight: { saturation: 1.08, grade: [0.96, 0.98, 1.06], lift: [0.02, 0.018, 0.07], contrast: 1.08, vignette: 0.45, vignetteColor: [0.25, 0.22, 0.45], haze: 0.22, hazeColor: [0.3, 0.32, 0.5], outlineTint: [0.3, 0.28, 0.42], warmth: 0.0, bloom: 0.62 },
-  // Spirit Realm: warm, saturated, soft
-  spirit: { saturation: 1.14, grade: [1.05, 1.01, 0.93], lift: [0.03, 0.012, 0.045], contrast: 1.03, vignette: 0.26, vignetteColor: [0.62, 0.45, 0.6], haze: 0.28, hazeColor: [1.0, 0.9, 0.78], outlineTint: [0.42, 0.3, 0.38], warmth: 0.35, bloom: 0.5 },
-  spiritDusk: { saturation: 1.12, grade: [1.08, 0.97, 0.9], lift: [0.04, 0.012, 0.06], contrast: 1.04, vignette: 0.36, vignetteColor: [0.55, 0.35, 0.55], haze: 0.32, hazeColor: [1.0, 0.75, 0.62], outlineTint: [0.42, 0.28, 0.4], warmth: 0.6, bloom: 0.66 },
-  // sad train ride: washed out, blue
-  melancholy: { saturation: 0.9, grade: [0.98, 1.0, 1.05], lift: [0.03, 0.032, 0.06], contrast: 1.02, vignette: 0.4, vignetteColor: [0.35, 0.38, 0.55], haze: 0.2, hazeColor: [0.75, 0.8, 0.9], outlineTint: [0.36, 0.36, 0.46], warmth: 0.0, bloom: 0.35 },
-  // interiors lit by warm bulbs
-  cozy: { saturation: 1.08, grade: [1.06, 1.0, 0.92], lift: [0.035, 0.015, 0.05], contrast: 1.05, vignette: 0.38, vignetteColor: [0.5, 0.36, 0.5], haze: 0.14, hazeColor: [1.0, 0.85, 0.7], outlineTint: [0.4, 0.3, 0.38], warmth: 0.4, bloom: 0.5 },
+  // The Bear Must Eat's cozy grade is the base for everything: warm gain,
+  // lifted violet shadows, tinted outlines, tilt-shift haze, soft bloom.
+  // Human World: the same warmth, a hair less saturated, slightly cooler lift
+  human: { saturation: 1.08, grade: [1.03, 1.0, 0.95], lift: [0.018, 0.012, 0.045], contrast: 1.04, vignette: 0.3, vignetteColor: [0.55, 0.42, 0.62], haze: 0.22, hazeColor: [1.0, 0.9, 0.8], outlineTint: [0.36, 0.3, 0.42], warmth: 0.05, bloom: 0.42 },
+  humanNight: { saturation: 1.12, grade: [0.97, 0.98, 1.06], lift: [0.02, 0.018, 0.07], contrast: 1.06, vignette: 0.42, vignetteColor: [0.3, 0.26, 0.5], haze: 0.24, hazeColor: [0.36, 0.36, 0.6], outlineTint: [0.3, 0.28, 0.44], warmth: 0.0, bloom: 0.62 },
+  // Spirit Realm: warmer, more saturated, golden haze
+  spirit: { saturation: 1.18, grade: [1.05, 1.0, 0.93], lift: [0.03, 0.012, 0.05], contrast: 1.04, vignette: 0.28, vignetteColor: [0.62, 0.45, 0.62], haze: 0.28, hazeColor: [1.0, 0.88, 0.74], outlineTint: [0.42, 0.3, 0.4], warmth: 0.3, bloom: 0.5 },
+  spiritDusk: { saturation: 1.16, grade: [1.08, 0.97, 0.9], lift: [0.04, 0.012, 0.06], contrast: 1.05, vignette: 0.36, vignetteColor: [0.55, 0.35, 0.55], haze: 0.32, hazeColor: [1.0, 0.75, 0.62], outlineTint: [0.42, 0.28, 0.4], warmth: 0.55, bloom: 0.66 },
+  // the sad train ride: still warm and readable, a touch quieter and bluer
+  melancholy: { saturation: 0.98, grade: [1.0, 1.0, 1.02], lift: [0.026, 0.026, 0.06], contrast: 1.03, vignette: 0.38, vignetteColor: [0.42, 0.4, 0.6], haze: 0.22, hazeColor: [0.9, 0.88, 0.92], outlineTint: [0.36, 0.32, 0.44], warmth: 0.0, bloom: 0.4 },
+  // interiors lit by warm bulbs (TBME's homes / lab)
+  cozy: { saturation: 1.1, grade: [1.04, 1.0, 0.94], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.4, 0.55], haze: 0.18, hazeColor: [1.0, 0.86, 0.72], outlineTint: [0.4, 0.3, 0.38], warmth: 0.3, bloom: 0.48 },
 };
 
 

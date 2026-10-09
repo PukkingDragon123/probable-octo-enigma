@@ -245,7 +245,9 @@ export class Game extends Emitter {
     this.letterbox = damp(this.letterbox, this.letterboxGoal, 6, rawDt);
     this.renderer.uniforms.letterbox.value = this.letterbox;
     const f = this.rig.target;
-    this.lighting.update(L.hourOverride ?? this.hour, new THREE.Vector3(f.x, f.y, f.z));
+    this.lighting.camYaw = this.rig.yaw;
+    this.lighting.skyOn = L.sky !== false;
+    this.lighting.update(L.hourOverride ?? this.hour, new THREE.Vector3(f.x, f.y, f.z), rawDt, this.time);
     const pushers = [];
     for (const c of L.chars) { if (pushers.length >= 8) break; pushers.push({ x: c.x, y: c.y, z: c.z, r: 0.45 }); }
     updateSpriteUniforms(this.rig.camera, { sunDir: this.lighting.sunDir(), pushers, cut: L.cut || null });

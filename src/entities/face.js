@@ -205,6 +205,16 @@ export class Face {
     if (s.mask) for (const side of [-1, 1]) { P.ellipse(cx + side * s.eyeDX, s.eyeY + 1, s.eyeW * 0.8, s.eyeH * 0.65, s.mask); }
     if (fx.blush) this.drawBlush(fx.blush, fx.blushLines);
     if (fx.bags) { for (const side of [-1, 1]) P.hline(Math.round(cx + side * s.eyeDX - 3), Math.round(cx + side * s.eyeDX + 2), Math.round(s.eyeY + s.eyeH / 2 + 2), mix(s.skin, '#5a3a6a', 0.45)); }
+    if (s.decor) for (const dc of s.decor) {
+      const x = Math.round(cx + dc.x), y = Math.round(dc.y);
+      if (dc.type === 'bandaid') { // a little sticking plaster, slightly crooked
+        P.rect(x - 4, y - 1, 9, 3, '#f2c8a0'); P.rect(x - 1, y - 1, 3, 3, '#fbe4cc');
+        P.px(x - 4, y - 1, '#d8a478'); P.px(x + 4, y + 1, '#d8a478'); P.px(x - 3, y, '#e0b088'); P.px(x + 3, y, '#e0b088');
+        P.px(x, y, '#f0d0b0');
+      } else if (dc.type === 'mole') P.px(x, y, dc.color || '#5a3a2a');
+      else if (dc.type === 'scar') { P.line(x - 2, y - 2, x + 2, y + 2, '#c8a090'); P.px(x - 1, y + 1, '#c8a090'); P.px(x + 1, y - 1, '#c8a090'); }
+      else if (dc.type === 'whiskerDots') for (const sd of [-1, 1]) for (const [ddx, ddy] of [[0, 0], [2, -1], [2, 1]]) P.px(x + sd * (dc.dx ?? 8) + sd * ddx, y + ddy, dc.color || '#5a3a2a');
+    }
     if (s.freckles) for (const side of [-1, 1]) for (const [dx, dy] of [[0, 0], [2, 1], [-2, 1], [1, 2]]) P.px(Math.round(cx + side * (s.blushDX - 1) + dx), Math.round(s.blushY + dy - 1), mix(s.skin, '#a0583a', 0.5));
     // eyes
     for (const side of [-1, 1]) this.drawEye(side, cx + side * s.eyeDX, s.eyeY, bl, gx, gy, frame);
@@ -342,6 +352,67 @@ export class Face {
       default: break;
     }
     // ---- open eyes ('normal', 'teary', 'sparkle', 'tiny', 'wide')
+    if (s.eyeStyle === 'gloss') {
+      // The Bear Must Eat's glossy bead: a dark oval with an ink rim, a warm
+      // iris glow in the lower half, a 2x2 highlight up-left and a dot down-right.
+      // Lids cut it from the top (sleepy / sad / angry tilt) and the cheeks push
+      // it up from below (smiles).
+      const big = shape === 'wide' ? 1.15 : shape === 'tiny' ? 0.62 : 1;
+      const rx = (W / 2) * big, ry = (H / 2) * big;
+      const ocx = ex + 0.5 + gx * 0.6, ocy = ey + 0.5 + gy * 0.5;
+      const tilt = e.tilt, lower = e.lower;
+      const opn = clamp(open, 0, 1.3);
+      const lidTop = (px) => {
+        const u = (px + 0.5 - ex - 0.5) / Math.max(1, rx); // -1..1 viewer left..right
+        const it = u * (fl ? -1 : 1); // -1 inner .. +1 outer
+        let y = ocy - ry + (1 - Math.min(1, opn)) * ry * 2.05;
+        if (tilt > 0) y += (1 - it) * tilt * 1.4; // angry: inner corner drops
+        else if (tilt < 0) y += (1 + it) * -tilt * 1.2; // sad: outer corner drops
+        return y;
+      };
+      const botY = ocy + ry - lower * ry * 0.9;
+      const inside = (px, py) => {
+        const dx = (px + 0.5 - ocx) / rx, dy = (py + 0.5 - ocy) / ry;
+        return dx * dx + dy * dy <= 1 && py + 0.5 >= lidTop(px) && py + 0.5 <= botY;
+      };
+      const x0 = Math.floor(ocx - rx - 1), x1 = Math.ceil(ocx + rx + 1), y0 = Math.floor(ocy - ry - 1), y1 = Math.ceil(ocy + ry + 1);
+      let any = false;
+      for (let py = y0; py <= y1; py++) for (let px = x0; px <= x1; px++) {
+        if (!inside(px, py)) continue;
+        any = true;
+        const dx = (px + 0.5 - ocx) / rx, dy = (py + 0.5 - ocy) / ry;
+        let col = dy > 0.55 && Math.abs(dx) < 0.55 ? s.irisLight : dy > 0.18 ? s.iris : s.pupil;
+        if (shape === 'teary' && dy > 0.1) col = dy > 0.5 ? '#9ad8ff' : '#5aa8e8';
+        const edge = !inside(px - 1, py) || !inside(px + 1, py) || !inside(px, py - 1) || !inside(px, py + 1);
+        P.px(px, py, edge && !(dy > 0.6 && Math.abs(dx) < 0.3) ? ink : col);
+      }
+      if (!any) { // fully lidded: a soft closed line
+        for (let i = -Math.floor(rx); i <= Math.floor(rx); i++) P.px(ex + i, Math.round(ocy + 0.5 + (i / rx) ** 2 * 0.6), ink);
+        return;
+      }
+      // highlights (only where the eye is open)
+      const hl = (x, y, c = '#ffffff') => { if (inside(x, y)) P.px(x, y, c); };
+      const hx = Math.floor(ocx - rx * 0.45), hy = Math.floor(ocy - ry * 0.5);
+      if (shape === 'sparkle') {
+        for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [2, 1], [0, -1], [1, 2]]) hl(hx + dx + 1, hy + dy, dx === 0 && dy === 0 ? '#ffffff' : '#fff6c8');
+        hl(Math.floor(ocx + rx * 0.35), Math.floor(ocy + ry * 0.3));
+      } else if (shape !== 'tiny') {
+        hl(hx, hy); hl(hx + 1, hy); hl(hx, hy + 1); if (rx >= 3) hl(hx + 1, hy + 1);
+        hl(Math.floor(ocx + rx * 0.38), Math.floor(ocy + ry * 0.3));
+        if (shape === 'teary') { hl(Math.floor(ocx - 1), Math.floor(ocy + ry * 0.55), '#e8f8ff'); }
+      } else hl(Math.floor(ocx - 0.5), Math.floor(ocy - 0.5));
+      // the lid line when it cuts the eye + a lash flick at the outer corner
+      if (opn < 0.98 || Math.abs(tilt) > 0.2) {
+        for (let px = x0; px <= x1; px++) {
+          const dx = (px + 0.5 - ocx) / (rx + 0.6);
+          if (Math.abs(dx) > 1) continue;
+          const yy = Math.floor(lidTop(px)) - 1;
+          if (yy + 1 > ocy - ry * Math.sqrt(Math.max(0, 1 - dx * dx)) - 0.5) P.px(px, yy + 1, ink);
+        }
+      }
+      if (s.girl) { const ox = Math.round(ocx + (fl ? -1 : 1) * (rx + 0.2)), oy = Math.round(Math.max(lidTop(ox), ocy - ry * 0.6)); P.px(ox, oy, ink); P.px(ox + (fl ? -1 : 1), oy - 1, ink); }
+      return;
+    }
     if (s.eyeStyle === 'dot' || s.eyeStyle === 'bead') {
       // compact animal eyes: a dark oval with highlight, lids cut it
       const w = s.eyeStyle === 'dot' ? Math.max(3, Math.round(W * 0.55)) : Math.max(4, Math.round(W * 0.75));
