@@ -1,0 +1,30 @@
+{
+  "name": "kodamaya",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Kodamaya: a cozy low-poly + pixel-art game. Run Grandpa's old gachapon shop in the Human World by day, and brew tea with yokai in the Spirit Realm by night.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "vite build --mode single",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@fontsource/dela-gothic-one": "^5.3.0",
+    "@fontsource/dotgothic16": "^5.3.0",
+    "@fontsource/hachi-maru-pop": "^5.3.0",
+    "@fontsource/mochiy-pop-one": "^5.3.0",
+    "@fontsource/potta-one": "^5.3.0",
+    "@fontsource/rampart-one": "^5.3.0",
+    "@fontsource/reggae-one": "^5.3.0",
+    "@fontsource/rocknroll-one": "^5.3.0",
+    "@fontsource/yusei-magic": "^5.3.0",
+    "galmuri": "^2.40.3",
+    "vite": "^7.0.0",
+    "vite-plugin-singlefile": "^2.3.0"
+  }
+}

@@ -1,0 +1,20 @@
+:root {
+  --ink: #2a1828;
+  --paper: #fff8ea;
+  --paper-dark: #e8dcc0;
+  --accent: #e8443a;
+  --night: #1b1420;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+  background: var(--night); color: var(--ink);
+  font-family: 'Galmuri11', monospace;
+  -webkit-font-smoothing: none; font-smooth: never;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
+#ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+#ui > * { pointer-events: auto; }
+canvas.pix { image-rendering: pixelated; }
