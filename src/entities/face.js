@@ -105,6 +105,14 @@ export class Face {
     this.texture.minFilter = THREE.NearestMipmapLinearFilter;
     this.texture.generateMipmaps = true;
     this.texture.colorSpace = THREE.SRGBColorSpace;
+    if (this.s.mouthCanvas) {
+      const M = this.s.mouthCanvas;
+      this.mpc = new PixCanvas(M.w, M.h);
+      this.mtexture = new THREE.CanvasTexture(this.mpc.c);
+      this.mtexture.magFilter = THREE.NearestFilter;
+      this.mtexture.minFilter = THREE.NearestMipmapLinearFilter;
+      this.mtexture.colorSpace = THREE.SRGBColorSpace;
+    }
     // live state
     this.exprName = 'neutral';
     this.cur = resolve('neutral');
@@ -187,18 +195,33 @@ export class Face {
       const x = Math.round(cx - 14 + i * 4.6);
       P.vline(x, 1, Math.round(3 + (i % 3) * 2 + fx.gloom * 5), '#7a68c8');
     }
+    if (s.patch) { P.ellipse(cx, s.eyeY + 2, s.eyeDX + s.eyeW * 0.9, s.eyeH * 0.95, s.patch); P.ellipse(cx, s.mouthY - 1, s.mouthW * 0.9, 4, s.patch); }
+    if (s.mask) for (const side of [-1, 1]) { P.ellipse(cx + side * s.eyeDX, s.eyeY + 1, s.eyeW * 0.8, s.eyeH * 0.65, s.mask); }
     if (fx.blush) this.drawBlush(fx.blush, fx.blushLines);
     if (fx.bags) { for (const side of [-1, 1]) P.hline(Math.round(cx + side * s.eyeDX - 3), Math.round(cx + side * s.eyeDX + 2), Math.round(s.eyeY + s.eyeH / 2 + 2), mix(s.skin, '#5a3a6a', 0.45)); }
     if (s.freckles) for (const side of [-1, 1]) for (const [dx, dy] of [[0, 0], [2, 1], [-2, 1], [1, 2]]) P.px(Math.round(cx + side * (s.blushDX - 1) + dx), Math.round(s.blushY + dy - 1), mix(s.skin, '#a0583a', 0.5));
     // eyes
     for (const side of [-1, 1]) this.drawEye(side, cx + side * s.eyeDX, s.eyeY, bl, gx, gy, frame);
+    // glasses: thin round frames with a lens glint
+    if (s.glasses) {
+      const gc = s.glasses.color || '#5a3a24';
+      const r = Math.max(s.eyeW, s.eyeH) * 0.62 + 1.5;
+      for (const side of [-1, 1]) {
+        const gx = cx + side * s.eyeDX;
+        P.ring(gx, s.eyeY + 0.5, r, gc);
+        P.px(Math.round(gx - r * 0.45), Math.round(s.eyeY - r * 0.4), '#ffffffc0');
+      }
+      P.hline(Math.round(cx - s.eyeDX + r - 1), Math.round(cx + s.eyeDX - r + 1), Math.round(s.eyeY - 1), gc);
+    }
     // brows
     if (s.brow) for (const side of [-1, 1]) this.drawBrow(side, cx + side * s.eyeDX, s.browY);
     // nose / nostrils
     if (s.nostrils) { P.px(Math.round(cx - 2), s.mouthY - 5, darken(s.skin, 0.55)); P.px(Math.round(cx + 1), s.mouthY - 5, darken(s.skin, 0.55)); }
     if (s.whiskers) for (const side of [-1, 1]) for (let k = 0; k < 3; k++) P.px(Math.round(cx + side * (s.mouthW / 2 + 4 + k * 2)), s.mouthY - 2 + (k % 2), darken(s.skin, 0.4));
     // mouth
+    if (this.mpc) this.mpc.clear();
     this.drawMouth(this.override.mouth || this.viseme || c.mouth, frame);
+    if (this.mtexture) this.mtexture.needsUpdate = true;
     // overlays: tears, sweat, vein, sparkle
     if (fx.tears) this.drawTears(fx.tears, frame);
     if (fx.sweat) this.drawSweat(frame);
@@ -425,7 +448,11 @@ export class Face {
   }
 
   drawMouth(shape, frame) {
-    const s = this.s, P = this.pc, cx = Math.round(s.w / 2), my = s.mouthY;
+    const s = this.s;
+    // snouts / beaks get their own small canvas on the front of the muzzle
+    const P = this.mpc || this.pc;
+    const cx = this.mpc ? Math.round(this.mpc.w / 2) : Math.round(s.w / 2);
+    const my = this.mpc ? s.mouthCanvas.my : s.mouthY;
     const ink = s.mouthCol, inn = s.mouthIn, W = s.mouthW;
     const hw = Math.floor(W / 2);
     const beak = s.beak;
@@ -575,6 +602,15 @@ export class Face {
       else P.px(x, y, '#fff6b0');
     });
   }
+}
+
+// flat face plane for voxel heads (4 texels per 0.05 voxel, like TBME)
+export function makeFacePlane(tex, wTex, hTex, texPerUnit = 80) {
+  const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.14 });
+  mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -1;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(wTex / texPerUnit, hTex / texPerUnit), mat);
+  m.castShadow = false; m.receiveShadow = true; m.name = 'face';
+  return m;
 }
 
 // curved decal mesh that sits on the front of an ellipsoid head.

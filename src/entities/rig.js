@@ -16,9 +16,10 @@
 // from the current expression + idle breathing + look-at + the active action
 // (sweep, carry, hug, crank, ...) + secondary springs (ears, tail, squash).
 import * as THREE from 'three';
-import { Face, makeFaceDecal, visemeFor } from './face.js';
-import { TORSO, sleeve, legTex, skinTex, shellTex } from './outfits.js';
+import { Face, makeFacePlane, visemeFor } from './face.js';
 import * as P from './parts.js';
+import * as VB from './voxbody.js';
+import { VoxelModel } from '../vox/voxel.js';
 import { blobShadowMat } from '../core/materials.js';
 import { clamp, lerp, damp, dampAngle, angleDiff, smooth, EASE, spring } from '../core/util.js';
 import { darken, lighten } from '../core/pixtex.js';
@@ -37,12 +38,8 @@ function zeroPose() {
 }
 
 // default body proportions (metres, before def.scale)
-const BODY = {
-  headR: 0.2, headScale: [1.1, 0.93, 1.0], neckY: 0.03,
-  torsoH: 0.25, torsoTop: 0.115, torsoBot: 0.14, torsoDepth: 0.82,
-  hipY: 0.19, hipX: 0.062, thigh: 0.1, shin: 0.095, legR: 0.045,
-  shoulderX: 0.13, upperArm: 0.11, foreArm: 0.1, armR: 0.036, handR: 0.04,
-};
+// leg metrics used by the seated / kneeling poses (metres, voxel chibi)
+const BODY = { hipY: 0.275, thigh: 0.1, shin: 0.15 };
 
 export class Character {
   constructor(def) {
@@ -50,7 +47,6 @@ export class Character {
     this.id = def.id || 'npc';
     this.name = def.name || '';
     const b = (this.b = { ...BODY, ...(def.body || {}) });
-    if (def.headScale) b.headScale = def.headScale;
     const S = (this.scale = def.scale ?? 1);
     this.root = new THREE.Group();
     this.root.name = 'char:' + this.id;
@@ -83,335 +79,168 @@ export class Character {
   }
 
   // ------------------------------------------------------------ construction
+  // Voxel chibi (The Bear Must Eat style): every part is a voxel model with
+  // grain shading; the face is a 2D pixel canvas on a flat plane at the front
+  // of the big voxel head (plus a mouth plane on snouts / beaks).
   build() {
-    const d = this.def, b = this.b;
-    const skin = d.skin || '#8ac070';
+    const d = this.def;
     const J = (this.j = {});
-    const pelvis = (J.pelvis = P.pivot('pelvis', null, [0, b.hipY, 0]));
+    const D = VB.DIM, U = VB.VS;
+    const add = (parent, model, pivot = [0, 0, 0], at = [0, 0, 0], shadow = true) => {
+      if (!model) return null;
+      const m = VB.vmesh(model, pivot, { shadow });
+      m.position.set(at[0] * U, at[1] * U, at[2] * U);
+      parent.add(m);
+      return m;
+    };
+    const legLen = 5; // hip to sole (voxels)
+    const pelvis = (J.pelvis = P.pivot('pelvis', null, [0, (legLen + 0.5) * U, 0]));
     this.body.add(pelvis);
-    // legs
-    const legPc = legTex({ color: d.pants || skin, shorts: d.shorts, skin, socks: d.socks, skirt: !!d.skirt });
-    const legMat = P.texMat(legPc);
-    const footKind = d.feet || 'sneaker';
-    const footMat = d.shoeTex ? P.texMat(d.shoeTex) : P.toon(d.shoe || '#f4f0e8');
+    add(pelvis, VB.buildPelvis(d));
     for (const side of [-1, 1]) {
-      const s = side < 0 ? 'R' : 'L'; // character's right is -x
-      const hip = (J['hip' + s] = P.pivot('hip' + s, null, [side * b.hipX, 0, 0]));
+      const s = side < 0 ? 'R' : 'L';
+      const hip = (J['hip' + s] = P.pivot('hip' + s, null, [side * D.hipX * U, -0.5 * U, 0]));
       pelvis.add(hip);
-      hip.add(P.mesh(P.limbGeo(b.legR * 1.08, b.legR, b.thigh), legMat));
-      const knee = (J['knee' + s] = P.pivot('knee' + s, null, [0, -b.thigh, 0]));
+      add(hip, VB.buildThigh(d), [-0.5, 0, -0.5]);
+      const knee = (J['knee' + s] = P.pivot('knee' + s, null, [0, -2 * U, 0]));
       hip.add(knee);
-      knee.add(P.mesh(P.limbGeo(b.legR, b.legR * 0.92, b.shin), legMat));
-      const foot = (J['foot' + s] = P.pivot('foot' + s, null, [0, -b.shin, 0]));
+      const foot = (J['foot' + s] = P.pivot('foot' + s, null, [0, 0, 0]));
       knee.add(foot);
-      foot.add(P.mesh(P.footGeo(footKind, (d.footScale ?? 1)), footMat));
-      if (d.shoeStripe) {
-        const st = P.footGeo(footKind, (d.footScale ?? 1) * 1.01);
-        st.scale(1.02, 0.35, 1.0); st.translate(0, -0.012, 0);
-        foot.add(P.mesh(st, P.toon(d.shoeStripe), { cast: false }));
-      }
-    }
-    // skirt / hakama / robe skirt
-    if (d.skirt) {
-      const sk = d.skirt;
-      const g = new THREE.CylinderGeometry(b.torsoBot * 0.95, b.torsoBot * (sk.flare ?? 1.6), sk.len ?? 0.14, 10, 1, true);
-      g.translate(0, -(sk.len ?? 0.14) / 2 + 0.03, 0);
-      const m = P.mesh(g, sk.tex ? P.texMat(sk.tex, { side: THREE.DoubleSide }) : P.toon(sk.color, { side: THREE.DoubleSide }));
-      pelvis.add(m);
-      this.skirtMesh = m;
+      add(foot, VB.buildShin(d), [-0.5, 0, -0.5]);
     }
     // tail
-    if (d.tail && d.tail !== 'none') {
-      const t = P.tailChain(d.tail, d.tailColor || skin, d.tailTip || lighten(skin, 0.5), d.tailScale ?? 1);
-      t.root.position.set(0, 0.02, -b.torsoBot * 0.8);
-      t.root.rotation.x = d.tail === 'otter' ? 0.9 : d.tail === 'shiba' ? 0 : 0.5;
-      J.tail = t.root;
-      this.tailSegs = t.segs;
-      pelvis.add(t.root);
+    const tailSegs = VB.buildTail(d);
+    if (tailSegs.length) {
+      const tr = (J.tail = P.pivot('tail', null, [0, -0.5 * U, (VB.DIM.torso.z0 - 0.5) * U]));
+      tr.rotation.x = d.tail === 'otter' ? 0.9 : 0.4;
+      pelvis.add(tr);
+      this.tailSegs = [];
+      let parent = tr;
+      for (const m of tailSegs) {
+        const g = new THREE.Group();
+        add(g, m, [0, 0, 0]);
+        parent.add(g);
+        this.tailSegs.push(g);
+        const nx = new THREE.Group();
+        let minZ = 0; for (const [k] of m.vox) { const z = ((k >> 20) & 1023) - 512; if (z < minZ) minZ = z; }
+        nx.position.z = (minZ + 0.5) * U;
+        g.add(nx);
+        parent = nx;
+      }
     }
     // spine + torso
     const spine = (J.spine = P.pivot('spine'));
     pelvis.add(spine);
-    const torsoTex = d.torso || TORSO.plain({ color: skin });
-    const tg = new THREE.CylinderGeometry(b.torsoTop, b.torsoBot, b.torsoH, 12, 2, false, Math.PI);
-    // round the shoulders: pull the top ring in & up
-    const pos = tg.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      if (y > b.torsoH * 0.49) pos.setXYZ(i, pos.getX(i) * 0.82, y + 0.012, pos.getZ(i) * 0.82);
-    }
-    tg.computeVertexNormals();
-    tg.scale(1, 1, b.torsoDepth);
-    tg.translate(0, b.torsoH / 2, 0);
-    const torso = P.mesh(tg, P.texMat(torsoTex));
-    torso.name = 'torso';
-    spine.add(torso);
-    this.torsoMesh = torso;
-    // belly bulge (big characters)
-    if (d.belly) {
-      const bg = P.ellipsoid(b.torsoBot * 0.95, 1, 0.9, 0.8 * d.belly);
-      bg.translate(0, b.torsoH * 0.32, b.torsoBot * 0.25 * d.belly);
-      spine.add(P.mesh(bg, P.texMat(torsoTex)));
-    }
-    // carry anchor (boxes held in front of the chest)
-    J.carry = P.pivot('carry', null, [0, b.torsoH * 0.62, b.torsoBot + 0.11]);
+    this.torsoMesh = add(spine, VB.buildTorso(d));
+    J.carry = P.pivot('carry', null, [0, 3.5 * U, (VB.DIM.torso.z1 + 3) * U]);
     spine.add(J.carry);
-    // chest
-    const chest = (J.chest = P.pivot('chest', null, [0, b.torsoH, 0]));
+    const chest = (J.chest = P.pivot('chest', null, [0, 6.5 * U, 0]));
     spine.add(chest);
-    // shell
     if (d.shell) {
-      const sh = P.shellMesh(shellTex(d.shell), d.shell.scale ?? 1, { rimCol: d.shell.rim });
-      sh.position.set(0, b.torsoH * 0.5, -b.torsoBot * b.torsoDepth * 0.72);
-      sh.scale.set(1.05, 1, 0.82);
-      spine.add(sh);
-      this.shell = sh;
+      const shm = add(spine, VB.buildShell(d), [0, 0, 0], [-0.0, 1.2, VB.DIM.torso.z0 + 0.2]);
+      this.shell = shm;
     }
-    // wings
     if (d.wings) {
       this.wings = [];
       for (const side of [-1, 1]) {
         const w = P.wingMesh(d.wings, side, 1);
-        const pv = P.pivot('wing', w, [side * 0.05, b.torsoH * 0.8, -b.torsoBot * 0.7]);
+        const pv = P.pivot('wing', w, [side * 0.05, 0.3, VB.DIM.torso.z0 * U]);
         pv.rotation.y = side * 0.5;
         spine.add(pv);
         this.wings.push(pv);
       }
     }
     // arms
-    const slTex = sleeve({ color: d.sleeve || d.shirt || skin, cuff: d.cuff, length: d.sleeveLen ?? 1, skin, stripe: d.sleeveStripe });
-    const slMat = P.texMat(slTex);
-    const handMat = P.toon(d.handColor || skin);
     for (const side of [-1, 1]) {
       const s = side < 0 ? 'R' : 'L';
-      const sh = (J['shoulder' + s] = P.pivot('shoulder' + s, null, [side * b.shoulderX, -0.035, 0]));
+      const sh = (J['shoulder' + s] = P.pivot('shoulder' + s, null, [side * D.shoulderX * U, -1.2 * U, 0]));
       chest.add(sh);
-      sh.add(P.mesh(P.limbGeo(b.armR * 1.15, b.armR, b.upperArm), slMat));
-      // wide kimono / happi sleeves
-      if (d.wideSleeves) {
-        const ws = new THREE.BoxGeometry(0.035, 0.16, 0.16);
-        ws.translate(side * 0.025, -0.1, 0);
-        sh.add(P.mesh(ws, slMat));
-      }
-      const el = (J['elbow' + s] = P.pivot('elbow' + s, null, [0, -b.upperArm, 0]));
+      add(sh, VB.buildUpperArm(d), [-0.5, 0, -0.5]);
+      const el = (J['elbow' + s] = P.pivot('elbow' + s, null, [0, -2.2 * U, 0]));
       sh.add(el);
-      const foreLen = (d.sleeveLen ?? 1) < 0.6 ? b.foreArm : b.foreArm;
-      el.add(P.mesh(P.limbGeo(b.armR, b.armR * 0.95, foreLen), (d.sleeveLen ?? 1) < 0.6 ? handMat : slMat));
-      const hand = (J['hand' + s] = P.pivot('hand' + s, null, [0, -foreLen, 0]));
+      add(el, VB.buildForeArm(d), [-0.5, 0, -0.5]);
+      const hand = (J['hand' + s] = P.pivot('hand' + s, null, [0, -2.2 * U, 0]));
       el.add(hand);
-      const hk = d.hands || 'mitt';
-      const hm = P.mesh(P.handGeo(hk, b.handR), handMat);
-      hand.add(hm);
-      if (hk === 'claw') {
-        const up = new THREE.SphereGeometry(b.handR * 1.1, 7, 5); up.scale(0.8, 0.55, 1.3); up.translate(0, 0, b.handR * 0.9);
-        const pin = P.pivot('pincer', P.mesh(up, P.toon(d.clawTip || darken(d.handColor || skin, 0.1))), [0, b.handR * 0.4, 0]);
-        hand.add(pin);
-        this['pincer' + s] = pin;
-      }
-      // grip point for held props
-      J['grip' + s] = P.pivot('grip' + s, null, [0, -b.handR * 0.9, b.handR * 0.25]);
+      add(hand, VB.buildHand(d, side), [-0.5, 0, -0.5]);
+      J['grip' + s] = P.pivot('grip' + s, null, [0, -2.2 * U, 0.8 * U]);
       hand.add(J['grip' + s]);
     }
     // neck + head
-    const neck = (J.neck = P.pivot('neck', null, [0, b.neckY, 0]));
+    const neck = (J.neck = P.pivot('neck', null, [0, 0.4 * U, 0]));
     chest.add(neck);
     const head = (J.head = P.pivot('head'));
     neck.add(head);
-    const hr = b.headR, hs = b.headScale;
-    const headY = hr * hs[1] * 0.92;
-    this.headY = headY;
-    const hg = new THREE.SphereGeometry(hr, 18, 13);
-    hg.rotateY(-Math.PI / 2); // texture front (u = 0.5) faces +z
-    hg.scale(hs[0], hs[1], hs[2]);
-    hg.translate(0, headY, 0);
-    const headSkin = skinTex({ color: skin, ...(d.skinMarks || {}) });
-    const hm = P.mesh(hg, P.texMat(headSkin));
-    hm.name = 'headMesh';
-    head.add(hm);
-    // face
-    const fs = { skin, ...(d.face || {}) };
-    this.face = new Face(fs);
-    const decal = makeFaceDecal(this.face, { r: hr, scale: hs, azi: d.faceAzi ?? 1.1, elevLo: d.faceLo ?? -0.45, elevHi: d.faceHi ?? 1.15 });
-    decal.position.y = headY;
-    head.add(decal);
-    this.decal = decal;
+    const H = VB.buildHead(d);
+    const hb = H.box;
+    this.headY = 0;
+    add(head, H.model, [0, 0, 0]);
     // ears
-    if (d.ears && d.ears !== 'none') {
-      const ek = d.ears;
-      const earY = headY + hr * hs[1] * (ek === 'monkey' || ek === 'deer' ? 0.1 : 0.62);
-      const earX = hr * hs[0] * (ek === 'monkey' ? 1.0 : ek === 'deer' ? 0.82 : ek === 'otter' ? 0.72 : 0.58);
-      for (const side of [-1, 1]) {
-        const s = side < 0 ? 'R' : 'L';
-        const em = P.earMesh(ek, d.earColor || skin, d.earInner || lighten(skin, 0.35), side, d.earScale ?? 1);
-        const ep = (J['ear' + s] = P.pivot('ear' + s, em, [side * earX, earY, -0.01]));
-        if (ek === 'otter' || ek === 'round' || ek === 'tanuki' || ek === 'bear') ep.rotation.z = -side * 0.5;
-        head.add(ep);
-      }
+    for (const e of H.ears) {
+      const s = e.side < 0 ? 'R' : 'L';
+      const ep = (J['ear' + s] = P.pivot('ear' + s, null, [e.at[0] * U, e.at[1] * U, e.at[2] * U]));
+      add(ep, e.model, [0.5, 0, 0.5]);
+      if (e.kind === 'fox' || e.kind === 'shiba' || e.kind === 'cat') ep.rotation.z = -e.side * 0.18;
+      head.add(ep);
     }
-    // snout / beak / nose
-    if (d.snout) {
-      const sn = d.snout;
-      const g = P.ellipsoid(sn.r ?? 0.07, sn.sx ?? 1.1, sn.sy ?? 0.75, sn.sz ?? 1.0, 9, 7);
-      g.translate(0, headY + (sn.y ?? -0.06), hr * hs[2] * 0.88 + (sn.z ?? 0));
-      head.add(P.mesh(g, P.toon(sn.color || lighten(skin, 0.3))));
-      if (sn.nose) {
-        const ng = P.ellipsoid(sn.noseR ?? 0.022, 1.2, 0.8, 0.9, 7, 5);
-        ng.translate(0, headY + (sn.y ?? -0.06) + (sn.r ?? 0.07) * 0.45, hr * hs[2] * 0.88 + (sn.z ?? 0) + (sn.r ?? 0.07) * (sn.sz ?? 1) * 0.85);
-        head.add(P.mesh(ng, P.toon(sn.nose, { rim: 0.4 })));
-      }
+    // the face: one pixel canvas on a flat plane at the head front
+    const fw = (hb.x1 - hb.x0 + 1), fh = (hb.y1 - hb.y0 + 1) - 1;
+    const snout = H.snout;
+    const fs = {
+      skin: d.skin, w: fw * 4, h: fh * 4,
+      ...(snout ? { mouthCanvas: { w: 24, h: 12, my: snout.beak ? 4 : 5 } } : {}),
+      ...(d.glasses ? { glasses: { color: '#' + VB.hex(d.glasses.frame ?? 0x5a3a24).toString(16).padStart(6, '0') } } : {}),
+      ...(d.face || {}),
+    };
+    this.face = new Face(fs);
+    const fp = makeFacePlane(this.face.texture, fs.w, fs.h);
+    fp.position.set(((hb.x0 + hb.x1 + 1) / 2) * U, (hb.y0 + 0.5 + fh / 2) * U, (H.faceZ + 0.04) * U);
+    head.add(fp);
+    this.decal = fp;
+    if (snout && this.face.mtexture) {
+      const mp = makeFacePlane(this.face.mtexture, 24, 12);
+      mp.position.set(0, (snout.y + snout.h / 2) * U - (snout.beak ? 0.2 * U : 0.6 * U), (snout.z + 0.04) * U);
+      head.add(mp);
+      this.mouthPlane = mp;
     }
-    if (d.longNose) { // tengu
-      const ln = d.longNose;
-      const g = new THREE.CylinderGeometry(ln.tip ?? 0.018, ln.base ?? 0.04, ln.len ?? 0.2, 8);
-      g.rotateX(Math.PI / 2 + (ln.droop ?? -0.15));
-      g.translate(0, headY - 0.02, hr * hs[2] + (ln.len ?? 0.2) * 0.42);
-      head.add(P.mesh(g, P.toon(ln.color || skin)));
+    add(head, VB.buildHair(d, hb));
+    this.hat = add(head, VB.buildHat(d, hb));
+    if (this.hat && d.hat?.tilt) this.hat.rotation.x = d.hat.tilt;
+    this.glasses = add(head, VB.buildGlasses(d, H.faceZ + 0.6), [0, 0, 0], [0, 0, 0], false);
+    add(head, VB.buildMustache(d, H.faceZ + (snout ? 0 : 0.4)), [0, 0, 0], [0, 0, 0], false);
+    if (d.earbuds) {
+      const ebm = new VoxelModel(); ebm.set(0, 0, 0, 0xf4f4f8); ebm.set(0, -1, 0, 0xf4f4f8);
+      add(head, ebm, [0, 0, 0], [hb.x1 + 1, 4, 0], false); add(head, ebm, [0, 0, 0], [hb.x0 - 1, 4, 0], false);
     }
-    if (d.beak) { // kappa
-      const bk = d.beak;
-      const g = P.ellipsoid(0.065, 1.25, 0.55, 1.0, 9, 6);
-      g.translate(0, headY - 0.07, hr * hs[2] * 0.86);
-      head.add(P.mesh(g, P.toon(bk.color || '#e8c040')));
-    }
-    if (d.dish) { // kappa head dish with water
-      const rim = new THREE.CylinderGeometry(0.1, 0.085, 0.025, 12); rim.translate(0, headY + hr * hs[1] * 0.97, 0);
-      head.add(P.mesh(rim, P.toon('#f0ece0')));
-      const w = new THREE.CircleGeometry(0.085, 12); w.rotateX(-Math.PI / 2); w.translate(0, headY + hr * hs[1] * 0.97 + 0.013, 0);
-      const wm = P.mesh(w, P.toon('#8ad0f0', { rim: 0.5 }), { cast: false });
-      head.add(wm);
-      // hair fringe
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * Math.PI * 2;
-        const hgf = new THREE.ConeGeometry(0.035, 0.08, 4); hgf.rotateX(Math.PI); hgf.rotateZ(Math.cos(a) * 0.6); hgf.rotateX(-Math.sin(a) * 0.6);
-        hgf.translate(Math.cos(a) * 0.115, headY + hr * hs[1] * 0.82, Math.sin(a) * 0.115);
-        head.add(P.mesh(hgf, P.toon(d.hairColor || '#3a6a4a')));
-      }
-    }
-    if (d.crabHead) { // carapace rim + eyestalks
-      const cr = new THREE.TorusGeometry(hr * 1.02, 0.025, 4, 14, Math.PI); cr.rotateZ(Math.PI); cr.rotateX(Math.PI / 2 - 0.25); cr.scale(hs[0], 1, hs[2]); cr.translate(0, headY + 0.02, 0);
-      head.add(P.mesh(cr, P.toon(darken(skin, 0.15))));
-      for (const side of [-1, 1]) {
-        const st = new THREE.CylinderGeometry(0.012, 0.015, 0.09, 6); st.translate(side * 0.07, headY + hr * hs[1] + 0.03, 0.04);
-        head.add(P.mesh(st, P.toon(skin)));
-        const bead = new THREE.SphereGeometry(0.024, 8, 6); bead.translate(side * 0.07, headY + hr * hs[1] + 0.085, 0.04);
-        head.add(P.mesh(bead, P.toon('#2a1a24', { rim: 0.6 })));
-      }
-    }
-    if (d.cheekFluff) {
-      for (const side of [-1, 1]) {
-        const g = new THREE.ConeGeometry(0.05, 0.1, 4); g.rotateZ(side * Math.PI / 2); g.scale(1, 1, 0.5);
-        g.translate(side * hr * hs[0] * 0.98, headY - hr * 0.3, 0.02);
-        head.add(P.mesh(g, P.toon(d.cheekFluff)));
-      }
-    }
-    if (d.hair) this.addHair(d.hair, head, headY);
-    if (d.mustache) {
-      const m = P.mustacheMesh(d.mustache, 1);
-      m.position.set(0, headY - hr * 0.42, hr * hs[2] * 0.97);
-      head.add(m);
-    }
-    if (d.glasses) {
-      const g = P.glassesMesh(1, d.glasses === true ? {} : d.glasses);
-      g.position.set(0, headY + hr * 0.05, hr * hs[2] * 1.04);
-      head.add(g);
-      this.glasses = g;
-    }
-    if (d.hat) this.addHat(d.hat, head, headY);
-    if (d.ribbons) for (const r of d.ribbons) {
-      const rb = P.ribbonMesh(r.color || '#d8342e', r.scale ?? 1);
-      rb.position.set(r.x ?? 0, headY + (r.y ?? 0.15), r.z ?? 0);
-      rb.rotation.set(r.rx ?? 0, r.ry ?? 0, r.rz ?? 0);
-      head.add(rb);
-    }
-    if (d.earbuds) { const eb = P.earbudsMesh(1); eb.position.y = headY; head.add(eb); }
     if (d.hood) {
-      // hood up: a soft shell over the top/back of the head, open at the face
-      const g = new THREE.SphereGeometry(hr * 1.14, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.78);
-      g.rotateX(-0.55);
-      g.scale(hs[0], hs[1], hs[2] * 1.02);
-      // open the face: drop the front verts back
-      const p = g.attributes.position;
-      for (let i = 0; i < p.count; i++) { const z = p.getZ(i), y = p.getY(i); if (z > hr * 0.45 && y < hr * 0.75) p.setZ(i, hr * 0.45 + (z - hr * 0.45) * 0.15); }
-      g.computeVertexNormals();
-      g.translate(0, headY + 0.01, -0.012);
-      const col = d.hoodColor || d.sleeve || '#4c5b84';
-      const hood = P.mesh(g, P.toon(col, { side: THREE.DoubleSide }));
+      const hm = new VoxelModel();
+      const c = VB.hex(d.hoodColor ?? d.sleeve ?? 0x4c5b84);
+      for (let x = hb.x0 - 1; x <= hb.x1 + 1; x++) for (let y = hb.y0 + 1; y <= hb.y1 + 1; y++) for (let z = hb.z0 - 1; z <= hb.z1; z++) {
+        const shellv = x === hb.x0 - 1 || x === hb.x1 + 1 || y === hb.y1 + 1 || z === hb.z0 - 1;
+        if (!shellv) continue;
+        if (z >= hb.z1 - 1 && y < hb.y1 + 1 && x > hb.x0 && x < hb.x1) continue;
+        hm.set(x, y, z, z >= hb.z1 - 1 ? VB.sh(c, 0.85) : (x + y) % 5 === 0 ? VB.sh(c, 0.93) : c);
+      }
+      const hood = add(head, hm);
       hood.visible = false;
-      head.add(hood);
       this.hoodMesh = hood;
     }
-    if (d.scarf) {
-      const g = new THREE.TorusGeometry(b.torsoTop * 0.92, 0.03, 5, 12); g.rotateX(Math.PI / 2); g.scale(1, 1, b.torsoDepth);
-      const sm = P.mesh(g, P.toon(d.scarf));
-      sm.position.y = 0.0;
-      chest.add(sm);
+    if (d.ribbons) for (const r of d.ribbons) {
+      const rm = new VoxelModel(); const c = VB.hex(r.color ?? 0xd8342e);
+      rm.set(-2, 0, 0, c); rm.set(-1, 0, 0, c); rm.set(-2, 1, 0, c); rm.set(-2, -1, 0, c); rm.set(0, 0, 0, VB.sh(c, 0.8)); rm.set(1, 0, 0, c); rm.set(2, 0, 0, c); rm.set(2, 1, 0, c); rm.set(2, -1, 0, c);
+      const rmm = add(head, rm, [0, 0, 0], [r.x ?? 0, r.y ?? hb.y1, r.z ?? 0]);
+      if (rmm) rmm.rotation.set(r.rx ?? 0, r.ry ?? 0, r.rz ?? 0);
     }
     // blob shadow
     const bs = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), blobShadowMat(0.3));
     bs.rotation.x = -Math.PI / 2;
     bs.position.y = 0.012;
     bs.renderOrder = 1;
-    bs.scale.setScalar((b.torsoBot * 2.6) * this.scale / 0.5);
+    bs.scale.setScalar(0.62 * this.scale / 0.5 * (d.belly ? 1.25 : 1));
     this.blob = bs;
     this.root.add(bs);
-    // height for bubbles etc.
-    this.height = (b.hipY + b.torsoH + b.neckY + headY + hr * hs[1]) * this.scale;
+    this.height = (legLen + 0.5 + 6.5 + 0.4 + (hb.y1 + 1)) * U * this.scale;
+    this.headTop = (hb.y1 + 1) * U;
     this.root.traverse((o) => { if (o.isMesh) o.userData.character = this; });
-  }
-
-  addHair(h, head, headY) {
-    const hr = this.b.headR, hs = this.b.headScale;
-    const col = h.color || '#3a2a2a';
-    if (h.type === 'bob') {
-      const g = new THREE.SphereGeometry(hr * 1.07, 14, 9, 0, Math.PI * 2, 0, Math.PI * 0.62);
-      g.scale(hs[0], hs[1] * 1.02, hs[2] * 1.02);
-      // cut the fringe: push front-bottom verts up
-      const p = g.attributes.position;
-      for (let i = 0; i < p.count; i++) { const z = p.getZ(i), y = p.getY(i); if (z > hr * 0.55 && y < hr * 0.45) p.setY(i, Math.max(y, hr * 0.42 + (z - hr) * 0.4)); }
-      g.computeVertexNormals();
-      g.translate(0, headY + 0.008, -0.005);
-      head.add(P.mesh(g, P.toon(col)));
-    } else if (h.type === 'tuft') {
-      for (let i = 0; i < 3; i++) {
-        const g = new THREE.ConeGeometry(0.035, 0.09, 4); g.rotateZ((i - 1) * 0.4); g.translate((i - 1) * 0.035, headY + hr * hs[1] + 0.03, 0.04);
-        head.add(P.mesh(g, P.toon(col)));
-      }
-    } else if (h.type === 'fringe') { // white side fringe (grandpa)
-      for (const side of [-1, 1]) {
-        const g = P.ellipsoid(0.07, 0.6, 1.0, 1.2, 7, 5); g.translate(side * hr * hs[0] * 0.95, headY + 0.0, -0.03);
-        head.add(P.mesh(g, P.toon(col)));
-      }
-    } else if (h.type === 'mane') { // tengu: big white mane
-      const g = new THREE.IcosahedronGeometry(hr * 1.25, 1); g.scale(1.1, 0.9, 1.0); g.translate(0, headY + 0.02, -0.07);
-      head.add(P.mesh(g, P.toon(col)));
-      if (h.beard) {
-        const bd = new THREE.ConeGeometry(0.1, 0.2, 6); bd.rotateX(Math.PI); bd.translate(0, headY - hr * 0.95, hr * 0.55);
-        head.add(P.mesh(bd, P.toon(col)));
-      }
-    }
-  }
-  addHat(h, head, headY) {
-    const hr = this.b.headR, hs = this.b.headScale;
-    let m = null;
-    if (h.type === 'beanie') m = P.beanieMesh(h.color, 1, h);
-    else if (h.type === 'cap') m = P.capMesh(h.color, 1, h);
-    else if (h.type === 'straw') m = P.strawHatMesh(1);
-    else if (h.type === 'chef') m = P.chefHatMesh(1);
-    else if (h.type === 'tokin') { // tiny black yamabushi cap
-      const g = new THREE.CylinderGeometry(0.03, 0.07, 0.07, 6); m = new THREE.Group(); m.add(P.mesh(g, P.toon('#1a1a22')));
-    } else if (h.type === 'waitress') {
-      const g = new THREE.BoxGeometry(0.2, 0.05, 0.06); g.translate(0, 0.02, 0); m = new THREE.Group(); m.add(P.mesh(g, P.toon('#ffffff')));
-      const st = new THREE.BoxGeometry(0.205, 0.015, 0.062); st.translate(0, 0.03, 0); m.add(P.mesh(st, P.toon(h.color || '#d8342e')));
-    } else if (h.type === 'hairband') {
-      const g = new THREE.TorusGeometry(hr * 1.02, 0.012, 4, 14, Math.PI); g.rotateY(Math.PI / 2); g.rotateZ(Math.PI / 2); m = new THREE.Group(); m.add(P.mesh(g, P.toon(h.color)));
-      m.scale.set(hs[0], hs[1], hs[2]);
-    }
-    if (!m) return;
-    m.position.set(0, headY + hr * hs[1] * (h.type === 'tokin' ? 0.92 : h.type === 'waitress' ? 0.85 : h.type === 'hairband' ? 0.1 : 0.42), h.type === 'tokin' ? 0.06 : 0);
-    if (h.tilt) m.rotation.x = h.tilt;
-    if (h.roll) m.rotation.z = h.roll;
-    head.add(m);
-    this.hat = m;
   }
 
   // ------------------------------------------------------------ placement
@@ -475,7 +304,7 @@ export class Character {
   headPos(out = new THREE.Vector3()) {
     this.root.updateMatrixWorld(true);
     this.j.head.getWorldPosition(out);
-    out.y += (this.headY + this.b.headR) * this.scale;
+    out.y += (this.headTop ?? 0.5) * this.scale;
     return out;
   }
 

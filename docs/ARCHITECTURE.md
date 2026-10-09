@@ -5,16 +5,21 @@ model, texture, sprite, poster and sound is generated in code.
 
 ## Look
 
-- **Low-poly 3D + pixel-art textures** for characters, buildings, furniture,
-  props, terrain. **2D pixel sprites** (billboards) for foliage, grass tufts,
-  flowers, particles, small signs, birds/insects, effects.
+- **Voxel 3D, exactly like The Bear Must Eat** for characters, buildings,
+  furniture, props (VoxelModel from `src/vox/voxel.js`, helpers + grain
+  material in `src/vox/kit.js`: 0.05 m voxels for characters/props, 0.1 m for
+  big structures, 0.025 for tiny props), mixed with **detailed 2D pixel art**:
+  pixel faces on flat planes, signs/posters/decals, billboard foliage, grass
+  tufts, flowers, particles, birds/insects, effects. Ground can use the pixel
+  textures in `src/art/textures.js`.
 - The scene renders into a low-res target (~960x540 on 1080p) and is upscaled
   with nearest filtering + depth outline + bloom + colour grade
   (`src/core/renderer.js`). Grades: `human`, `humanNight`, `spirit`,
   `spiritDusk`, `melancholy`, `cozy`.
 - Reference quality bar: the latest *The Bear Must Eat* (lush, dense, painterly
-  pixel foliage, everything hand-placed and alive) — but low-poly, not voxel,
-  and higher resolution.
+  pixel foliage, chibi voxel villagers with big heads and pixel faces,
+  everything hand-placed and alive) — same style, a little higher resolution
+  and a closer camera.
 - Human World = grounded, believable, detailed, a little faded (old Japanese
   shopping street). Spirit Realm = warm, grassy, magical, Ghibli-like.
 - Palettes: use hue-shifted ramps (`ramp()` in pixtex.js): shadows drift to
