@@ -85,6 +85,7 @@ def parse_ranges(rng):
     return out
 
 DISPLAY = ['dela-gothic-one', 'rocknroll-one', 'mochiy-pop-one', 'dotgothic16', 'rampart-one', 'yusei-magic', 'hachi-maru-pop', 'potta-one', 'reggae-one']
+from fontTools.merge import Merger, Options as MergeOptions
 for pkg in DISPLAY:
     d = os.path.join(NM, '@fontsource', pkg)
     if not os.path.isdir(d):
@@ -92,26 +93,34 @@ for pkg in DISPLAY:
     with open(os.path.join(d, 'index.css'), encoding='utf-8') as f:
         txt = f.read()
     fam = re.search(r"font-family: '([^']+)'", txt).group(1)
-    nfiles = 0
-    fsize = 0
+    parts = []
     for m in re.finditer(r"src: url\(\./files/([^)]+?\.woff2)\)[^;]*;\s*unicode-range: ([^;]+);", txt):
         fn, rng = m.group(1), m.group(2)
         ranges = parse_ranges(rng)
         need = ''.join(c for c in sorted(chars) if any(a <= ord(c) <= b for a, b in ranges))
         if not need:
             continue
-        out_name = f'{pkg}-{nfiles}.woff2'
-        n = subset_font(os.path.join(d, 'files', fn), need, os.path.join(OUT, out_name))
-        if not n:
+        tmp_woff = os.path.join(OUT, f'_{pkg}-{len(parts)}.woff2')
+        if not subset_font(os.path.join(d, 'files', fn), need, tmp_woff):
             continue
-        sz = os.path.getsize(os.path.join(OUT, out_name))
-        fsize += sz
-        cps = sorted(set(ord(c) for c in need))
-        ur = ','.join(f'U+{c:x}' for c in cps)
-        css.append(f"@font-face {{ font-family: '{fam}'; font-weight: 400; font-style: normal; font-display: block; src: url('./{out_name}') format('woff2'); unicode-range: {ur}; }}")
-        nfiles += 1
-    total += fsize
-    print(f'  {fam}: {nfiles} files, {fsize // 1024} KB')
+        t = TTFont(tmp_woff)
+        t.flavor = None
+        tmp_ttf = tmp_woff.replace('.woff2', '.ttf')
+        t.save(tmp_ttf)
+        os.remove(tmp_woff)
+        parts.append(tmp_ttf)
+    if not parts:
+        continue
+    out_name = f'{pkg}.woff2'
+    merged = Merger(options=MergeOptions(drop_tables=['vhea', 'vmtx'])).merge(parts) if len(parts) > 1 else TTFont(parts[0])
+    merged.flavor = 'woff2'
+    merged.save(os.path.join(OUT, out_name))
+    for pth in parts:
+        os.remove(pth)
+    sz = os.path.getsize(os.path.join(OUT, out_name))
+    total += sz
+    css.append(f"@font-face {{ font-family: '{fam}'; font-weight: 400; font-style: normal; font-display: block; src: url('./{out_name}') format('woff2'); }}")
+    print(f'  {fam}: {len(parts)} parts merged, {sz // 1024} KB')
 
 with open(os.path.join(OUT, 'fonts.css'), 'w', encoding='utf-8') as f:
     f.write('\n'.join(css) + '\n')
