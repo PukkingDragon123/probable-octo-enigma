@@ -212,14 +212,24 @@ export class Character {
       add(head, ebm, [0, 0, 0], [hb.x1 + 1, 4, 0], false); add(head, ebm, [0, 0, 0], [hb.x0 - 1, 4, 0], false);
     }
     if (d.hood) {
+      // a soft rounded hood: shell around the head, open at the front, a darker
+      // lining framing the face, bunched folds at the back, two drawstrings
       const hm = new VoxelModel();
-      const c = VB.hex(d.hoodColor ?? d.sleeve ?? 0x4c5b84);
-      for (let x = hb.x0 - 1; x <= hb.x1 + 1; x++) for (let y = hb.y0 + 1; y <= hb.y1 + 1; y++) for (let z = hb.z0 - 1; z <= hb.z1; z++) {
-        const shellv = x === hb.x0 - 1 || x === hb.x1 + 1 || y === hb.y1 + 1 || z === hb.z0 - 1;
-        if (!shellv) continue;
-        if (z >= hb.z1 - 1 && y < hb.y1 + 1 && x > hb.x0 && x < hb.x1) continue;
-        hm.set(x, y, z, z >= hb.z1 - 1 ? VB.sh(c, 0.85) : (x + y) % 5 === 0 ? VB.sh(c, 0.93) : c);
-      }
+      const c = VB.hex(d.hoodColor ?? d.sleeve ?? 0x4c5b84), lin = VB.sh(c, 0.62), fold = VB.sh(c, 0.86), hiC = VB.sh(c, 1.08);
+      const X0 = hb.x0 - 1, X1 = hb.x1 + 1, Y0 = hb.y0 + 2, Y1 = hb.y1 + 1, Z0 = hb.z0 - 1, Z1 = hb.z1;
+      VB.rboxFn(hm, X0, X1, Y0, Y1 + 1, Z0, Z1, 2.6, (x, y, z) => {
+        const inside = x >= hb.x0 && x <= hb.x1 && y <= hb.y1 && z >= hb.z0;
+        if (inside) return null;
+        if (y > Y1) return null;
+        const rim = z >= Z1 - 0;
+        if (rim) return lin;
+        if (z <= Z0 + 1 && (x + y) % 4 === 0) return fold;
+        if (y === Y1 && (x * 3 + z) % 7 === 0) return hiC;
+        return (x + y * 2 + z) % 9 === 0 ? fold : c;
+      });
+      // drawstrings
+      const str = VB.hex(d.outfit?.accent ?? 0xefe6d2);
+      for (const sx of [-3, 2]) for (let k = 0; k < 3; k++) hm.set(sx, Y0 - 1 - k, Z1 + 1, str);
       const hood = add(head, hm);
       hood.visible = false;
       this.hoodMesh = hood;

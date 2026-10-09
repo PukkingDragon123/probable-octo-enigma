@@ -99,6 +99,7 @@ export class Face {
       whiskers: false, girl: false, nostrils: false, cheekFluff: null,
       ...style,
     };
+    if (typeof this.s.skin === 'number') this.s.skin = '#' + this.s.skin.toString(16).padStart(6, '0');
     this.pc = new PixCanvas(this.s.w, this.s.h);
     this.texture = new THREE.CanvasTexture(this.pc.c);
     this.texture.magFilter = THREE.NearestFilter;
@@ -190,7 +191,12 @@ export class Face {
     P.clear();
     const cx = s.w / 2;
     // under-layers: blush, shadow, gloom
-    if (fx.shadow) P.dither(0, 0, s.w, Math.round(s.eyeY + 2), '#1a0e24', (x, y, u, v) => fx.shadow * (1 - v * 0.6));
+    // hood / gloom shadow: a solid darker-skin band over the brow (no checker dither; reads as shade, not noise)
+    if (fx.shadow) {
+      const hb = Math.round(s.eyeY - s.eyeH / 2 - 1);
+      P.rect(0, 0, s.w, hb, mix(s.skin, '#2a1838', 0.32 + fx.shadow * 0.4));
+      for (let x = 0; x < s.w; x++) if ((x % 3) !== 1) P.px(x, hb, mix(s.skin, '#2a1838', 0.25 + fx.shadow * 0.3));
+    }
     if (fx.gloom) for (let i = 0; i < 7; i++) {
       const x = Math.round(cx - 14 + i * 4.6);
       P.vline(x, 1, Math.round(3 + (i % 3) * 2 + fx.gloom * 5), '#7a68c8');

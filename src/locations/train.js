@@ -68,7 +68,7 @@ function carShell() {
 // one 2-seat row (0.05 voxels), facing +x; origin at the floor under the seat centre
 function seatRow(seed = 1) {
   const v = new VoxelModel();
-  const fab = 0x3a5a8c, fabD = 0x2e4a74, fabL = 0x4a6a9c, cover = 0xf6f4ee, arm = 0x6a7280, leg = 0x5a606a;
+  const fab = 0x4a70b0, fabD = 0x3a5c96, fabL = 0x5a82c0, cover = 0xf6f4ee, arm = 0x6a7280, leg = 0x5a606a;
   for (let s = 0; s < 2; s++) {
     const z0 = -10 + s * 10;
     // cushion
@@ -239,7 +239,7 @@ export class TrainLocation extends Location {
     if (this.pano.seg === 'tunnel') { L.override = { elev: 0.55, sunI: 0.05, hemiI: 0.55 }; }
     else {
       const look = this.pano.look();
-      L.override = { elev: 0.42, sunI: 2.6, sun: parseInt(look.sun.slice(1), 16), hemiI: 1.0 };
+      L.override = { elev: 0.42, sunI: 2.6, sun: parseInt(look.sun.slice(1), 16), hemiI: 1.45, sky: 0xf4ece4, gnd: 0x9a8a80 };
     }
   }
 }

@@ -39,6 +39,9 @@ export class CameraRig {
     this.userPanEnabled = false;
     this._velX = 0; this._velZ = 0; this._lastFX = null; this._lastFZ = null;
     this.stiffness = 7;
+    // cut plane: geometry more than `clip` metres in front of the target (towards
+    // the camera) is sliced away, so close-ups can look through seats and walls
+    this.clip = 0;
   }
 
   // ------------------------------------------------------------ gameplay
@@ -74,7 +77,7 @@ export class CameraRig {
   snap() { this.target.copy(this.goal); this.wupp = this.wuppGoal; this.yaw = this.yawGoal; this.pitch = this.pitchGoal; }
 
   // ------------------------------------------------------------ cinematic shots
-  // shot({ x, y, z, wupp, pitch (deg), yaw (deg), dur, ease, hold }) -> Promise
+  // shot({ x, y, z, wupp, pitch (deg), yaw (deg), dur, ease, hold, clip }) -> Promise
   // Any field left out keeps its current value. dur 0 = cut.
   play(s) {
     if (this.shot && this.shot.resolve) this.shot.resolve();
@@ -88,6 +91,7 @@ export class CameraRig {
     to.yaw = from.yaw + angleDiff(from.yaw, to.yaw);
     const dur = s.dur ?? 1.2;
     if (s.follow !== undefined) this.follow = s.follow;
+    if (s.clip !== undefined) this.clip = s.clip || 0;
     return new Promise((resolve) => {
       this.shot = { from, to, t: 0, dur, ease: EASE[s.ease || 'inOutCubic'] || EASE.inOutCubic, resolve, keep: s.keep !== false };
       if (dur <= 0) this._applyShot(1);
@@ -171,7 +175,7 @@ export class CameraRig {
     this.subpixel.set(fx, fy);
     const hw = (renderer.rtW * w) / 2, hh = (renderer.rtH * w) / 2;
     cam.left = -hw; cam.right = hw; cam.top = hh; cam.bottom = -hh;
-    cam.near = 1; cam.far = this.dist * 2 + 200;
+    cam.near = this.clip > 0 ? Math.max(1, this.dist - this.clip) : 1; cam.far = this.dist * 2 + 200;
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld(true);
   }

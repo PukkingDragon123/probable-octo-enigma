@@ -330,7 +330,7 @@ export const GRADES = {
   spirit: { saturation: 1.14, grade: [1.05, 1.01, 0.93], lift: [0.03, 0.012, 0.045], contrast: 1.03, vignette: 0.26, vignetteColor: [0.62, 0.45, 0.6], haze: 0.28, hazeColor: [1.0, 0.9, 0.78], outlineTint: [0.42, 0.3, 0.38], warmth: 0.35, bloom: 0.5 },
   spiritDusk: { saturation: 1.12, grade: [1.08, 0.97, 0.9], lift: [0.04, 0.012, 0.06], contrast: 1.04, vignette: 0.36, vignetteColor: [0.55, 0.35, 0.55], haze: 0.32, hazeColor: [1.0, 0.75, 0.62], outlineTint: [0.42, 0.28, 0.4], warmth: 0.6, bloom: 0.66 },
   // sad train ride: washed out, blue
-  melancholy: { saturation: 0.78, grade: [0.95, 0.99, 1.06], lift: [0.02, 0.025, 0.06], contrast: 1.0, vignette: 0.45, vignetteColor: [0.35, 0.38, 0.55], haze: 0.2, hazeColor: [0.75, 0.8, 0.9], outlineTint: [0.36, 0.36, 0.46], warmth: 0.0, bloom: 0.35 },
+  melancholy: { saturation: 0.9, grade: [0.98, 1.0, 1.05], lift: [0.03, 0.032, 0.06], contrast: 1.02, vignette: 0.4, vignetteColor: [0.35, 0.38, 0.55], haze: 0.2, hazeColor: [0.75, 0.8, 0.9], outlineTint: [0.36, 0.36, 0.46], warmth: 0.0, bloom: 0.35 },
   // interiors lit by warm bulbs
   cozy: { saturation: 1.08, grade: [1.06, 1.0, 0.92], lift: [0.035, 0.015, 0.05], contrast: 1.05, vignette: 0.38, vignetteColor: [0.5, 0.36, 0.5], haze: 0.14, hazeColor: [1.0, 0.85, 0.7], outlineTint: [0.4, 0.3, 0.38], warmth: 0.4, bloom: 0.5 },
 };

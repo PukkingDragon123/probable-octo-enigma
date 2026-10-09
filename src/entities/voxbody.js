@@ -11,7 +11,7 @@ export { VS };
 const hex = (c) => (typeof c === 'number' ? c : parseInt(String(c).replace('#', ''), 16));
 const sh = (c, f) => { c = hex(c); const r = Math.min(255, Math.round(((c >> 16) & 255) * f)), g = Math.min(255, Math.round(((c >> 8) & 255) * f)), b = Math.min(255, Math.round((c & 255) * f)); return (r << 16) | (g << 8) | b; };
 const mixc = (a, b, t) => { a = hex(a); b = hex(b); const r = Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t), g = Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t), bl = Math.round((a & 255) * (1 - t) + (b & 255) * t); return (r << 16) | (g << 8) | bl; };
-export { hex, sh, mixc };
+export { hex, sh, mixc, rbox as rboxFn };
 // textured colour: base with a few darker / lighter voxels
 const tx = (base, d = 0.12, l = 0.08) => { const B = hex(base), D = sh(B, 0.86), L = sh(B, 1.12); return (x, y, z) => tone(x, y, z, B, D, L, d, l); };
 

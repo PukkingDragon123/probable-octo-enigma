@@ -104,11 +104,11 @@ export async function trainChapter(g) {
     g.audio?.ambience?.('train');
     g.renderer.setGrade('melancholy', 0);
     // ---- open on his face, then pull back to the window
-    D.cam({ x: 0.3, y: 0.85, z: -1.0, wupp: 0.0042, pitch: 12, yaw: 68, dur: 0 });
+    D.cam({ x: 0.3, y: 0.85, z: -1.0, wupp: 0.0042, pitch: 10, yaw: 72, dur: 0, clip: 0.9 });
     await D.fadeIn(2.2);
     D.caption('The Kodama · bound for Kodama-machi', { dur: 3.5, kind: 'place' });
     await D.wait(1.2);
-    await D.cam({ x: 0.4, y: 1.0, z: -0.9, wupp: 0.0085, pitch: 17, yaw: 58, dur: 5.5, ease: 'inOutSine' });
+    await D.cam({ x: 0.4, y: 1.0, z: -0.9, wupp: 0.0085, pitch: 17, yaw: 58, dur: 5.5, ease: 'inOutSine', clip: 0 });
     await D.wait(0.5);
     phone.track.t = 31;
     phone.show('music', { compact: true });
@@ -153,7 +153,7 @@ export async function trainChapter(g) {
     const cartFollow = () => { cart.position.set(att.x - 0.55, 0, att.z); cart.rotation.y = 0; };
     cartFollow();
     att.onFrame = cartFollow;
-    D.cam({ x: 1.3, y: 0.9, z: -0.4, wupp: 0.009, pitch: 18, yaw: 62, dur: 2.5 });
+    D.cam({ x: 1.3, y: 0.9, z: -0.4, wupp: 0.009, pitch: 18, yaw: 62, dur: 2.5, clip: 0 });
     const walking = D.walk(att, 1.25, L.aisleZ, { free: true });
     const iv = setInterval(cartFollow, 16);
     await D.say(att, 'Bento, snacks, drinks~! Anyone for a bento?', { expr: 'smile', auto: 1.2 });
@@ -195,7 +195,7 @@ export async function trainChapter(g) {
     const iv2 = setInterval(cartFollow, 16);
     leaving.then(() => { clearInterval(iv2); L.remove(att); L.scene.remove(cart); });
     // ---- open the bento
-    await D.cam({ x: 0.45, y: 0.6, z: -0.95, wupp: 0.0034, pitch: 40, yaw: 62, dur: 1.6 });
+    await D.cam({ x: 0.45, y: 0.6, z: -0.95, wupp: 0.0034, pitch: 40, yaw: 62, dur: 1.6, clip: 1.0 });
     for (let k = 0; k <= 1.0001; k += 0.04) { bento.userData.open(k); await D.wait(0.02); }
     g.audio?.play?.('bentoOpen', { volume: 0.5 });
     const bp = new THREE.Vector3(); bento.getWorldPosition(bp);
@@ -203,7 +203,7 @@ export async function trainChapter(g) {
     g.particles.emit('steam', { x: bp.x, y: bp.y + 0.08, z: bp.z, n: 3 });
     P.setExpr('surprised', { react: false });
     await D.think(P, "...It's pretty.", { auto: 1.6 });
-    await D.cam({ x: 0.3, y: 0.85, z: -0.95, wupp: 0.0055, pitch: 15, yaw: 64, dur: 1.4 });
+    await D.cam({ x: 0.3, y: 0.85, z: -0.95, wupp: 0.0055, pitch: 12, yaw: 70, dur: 1.4, clip: 1.0 });
     P.play('eat', { loop: true, onBite: () => g.audio?.play?.('munch', { volume: 0.35 }) });
     P.setExpr('delicious');
     await D.wait(2.4);
