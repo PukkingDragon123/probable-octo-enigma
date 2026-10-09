@@ -1,0 +1,39 @@
+.phone { position: fixed; left: 50%; bottom: 0; transform: translate(-50%, 110%); transition: transform 0.45s cubic-bezier(.2,1.2,.4,1); z-index: 32; pointer-events: auto; }
+.phone.open { transform: translate(-50%, 6%); }
+.phone.compact.open { transform: translate(-50%, 34%) rotate(-4deg); }
+.ph-body { width: min(300px, 70vw); aspect-ratio: 9 / 18; background: #1e1c26; border-radius: 34px; padding: 14px 12px 34px; box-shadow: 0 0 0 4px #3a3646, 0 0 0 7px #121018, 8px 12px 0 7px rgba(10,6,16,0.35); position: relative; image-rendering: pixelated; }
+.ph-notch { position: absolute; top: 6px; left: 50%; width: 70px; height: 12px; background: #121018; border-radius: 0 0 10px 10px; transform: translateX(-50%); z-index: 2; }
+.ph-home { position: absolute; bottom: 10px; left: 50%; width: 80px; height: 6px; border-radius: 4px; background: #5a5668; transform: translateX(-50%); cursor: pointer; }
+.ph-screen { width: 100%; height: 100%; border-radius: 22px; overflow: hidden; background: #f4efe4; position: relative; font-family: 'Galmuri11', monospace; color: #2a1828; }
+.ph-status { position: absolute; top: 0; left: 0; right: 0; height: 22px; display: flex; justify-content: space-between; padding: 4px 16px 0; font-size: 12px; z-index: 3; color: #fff; mix-blend-mode: difference; }
+.ph-icons { display: flex; gap: 2px; align-items: flex-end; }
+.ph-icons i { display: inline-block; width: 3px; background: #fff; }
+.ph-icons i:nth-child(1) { height: 4px; } .ph-icons i:nth-child(2) { height: 7px; } .ph-icons i:nth-child(3) { height: 10px; }
+.ph-icons b { display: inline-block; width: 14px; height: 8px; border: 2px solid #fff; margin-left: 4px; }
+.ph-app { position: absolute; inset: 0; padding: 30px 14px 12px; overflow: hidden; }
+.ph-wall { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; object-fit: cover; }
+.ph-lockclock { position: relative; margin-top: 40px; text-align: center; font-family: 'Galmuri14', monospace; font-size: 48px; color: #fff; }
+.ph-lockdate { position: relative; text-align: center; color: #c8d0f0; font-size: 13px; margin-bottom: 24px; }
+.ph-notif { position: relative; background: rgba(255,255,255,0.85); border-radius: 10px; padding: 8px 10px; margin: 6px 0; font-size: 12px; }
+.ph-title { font-family: 'Galmuri11', monospace; font-weight: 700; font-size: 15px; margin: 4px 0 10px; color: #4a3a5a; }
+.app-music { background: linear-gradient(#2a2a48, #1a1a2a); color: #f0ecff; }
+.app-music .ph-title { color: #b8b0e8; }
+.ph-art { width: 78%; display: block; margin: 0 auto 12px; image-rendering: pixelated; border-radius: 6px; box-shadow: 0 6px 0 rgba(0,0,0,0.3); }
+.ph-song { font-size: 16px; text-align: center; }
+.ph-artist { font-size: 11px; text-align: center; color: #a8a0d0; margin: 4px 0 12px; }
+.ph-bar { height: 4px; background: #4a4868; border-radius: 2px; overflow: hidden; } .ph-bar div { height: 100%; background: #e8a0b0; }
+.ph-times { display: flex; justify-content: space-between; font-size: 10px; color: #8a84b0; margin-top: 4px; }
+.ph-ctrl { display: flex; justify-content: center; gap: 22px; font-size: 18px; margin: 12px 0; }
+.ph-queue { font-size: 10px; color: #8a84b0; text-align: center; }
+.ph-thread { display: flex; flex-direction: column; gap: 6px; height: calc(100% - 40px); overflow-y: auto; }
+.ph-msg { max-width: 82%; padding: 7px 10px; border-radius: 12px; background: #fff; font-size: 13px; line-height: 1.35; box-shadow: 0 2px 0 #e0d6c8; align-self: flex-start; }
+.ph-msg.me { align-self: flex-end; background: #8ad08a; color: #1a3a1a; box-shadow: 0 2px 0 #5aa05a; }
+.ph-msg.typing { opacity: 0.8; } .caret { animation: blink 0.8s steps(2) infinite; } @keyframes blink { 50% { opacity: 0; } }
+.ph-photo { width: 100%; image-rendering: pixelated; border: 6px solid #fff; box-shadow: 0 4px 0 #d8ccb8; transform: rotate(-2deg); }
+.ph-caption { font-size: 12px; margin-top: 12px; color: #6a5a7a; text-align: center; }
+.ph-grid { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 8px; margin-top: 40px; }
+.ph-ico { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: 'Galmuri11', monospace; color: #fff; }
+.ph-ico span { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,0.3); }
+.ph-ico em { font-style: normal; font-size: 11px; }
+.ico-music span { background: #e86a8a; } .ico-messages span { background: #5ab05a; } .ico-photo span { background: #e8a83a; }
+.ico-cameri span { background: #e8443a; font-family: 'Dela Gothic One', sans-serif; } .ico-ledger span { background: #4a6ab0; } .ico-close span { background: #6a6a7a; }

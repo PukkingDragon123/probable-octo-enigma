@@ -650,7 +650,7 @@ def('checkPhone', (r, u, A, o) => {
 def('phone', (r, u, A, o) => {
   o.shoulderR = [-0.95, 0.2, 0.15]; o.elbowR = [-1.55, 0, 0]; o.handR = [-0.2, 0, 0];
   o.shoulderL = [-0.5, 0, 0.05]; o.elbowL = [-1.3, 0, 0];
-  o.head = [0.42, 0, 0];
+  o.head = [0.22, 0, 0];
   if (A.opts.scroll) o.handR = [-0.2 + Math.sin(u * 3) * 0.05, 0, 0];
 }, { loop: true, mask: ['shoulderR', 'elbowR', 'handR', 'shoulderL', 'elbowL', 'head'] });
 
