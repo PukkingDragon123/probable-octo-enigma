@@ -15,6 +15,7 @@ import { gachaMachine, broom } from '../world/streetProps.js';
 import { gachaCard, shopPoster } from '../world/shopSigns.js';
 import { manekiNeko } from '../world/shops.js';
 import { toyBox } from '../game/shopDay.js';
+import { displayCabinet, fillCabinet, konyokiBanner } from '../game/konyoki.js';
 import { glassPane } from '../world/station.js';
 import { emitMat } from '../core/materials.js';
 import { FONT } from '../ui/fonts.js';
@@ -285,6 +286,8 @@ export class KodamayaLocation extends Location {
     this.regPlane.position.set(3.1 + 14 * V5, 30 * V5, -0.9 - 2 * V5 + 0.007); S.add(this.regPlane);
     this.setYen(0);
     // the stock box (capsule bags for restocking) by the stairs
+    // the collection cabinet (one of every Konyoki) in the front-left corner
+    this.cabinet = displayCabinet(); this.cabinet.position.set(-4.35, 0, 2.55); this.cabinet.rotation.y = 0.45; S.add(this.cabinet);
     this.toyBox = toyBox(); this.toyBox.position.set(2.75, 0, 2.15); this.toyBox.rotation.y = -0.25; S.add(this.toyBox);
     this.jar = happinessJar(); this.jar.position.set(2.45, 1.0, -0.85); this.jar.scale.setScalar(1.35); S.add(this.jar);
     const cc = coinChanger(); cc.position.set(4.45, 0, 1.05); cc.rotation.y = -0.35; S.add(cc); this.changer = cc;
@@ -294,7 +297,7 @@ export class KodamayaLocation extends Location {
     const st = stairs(); st.position.set(W(-w / 2), 0, 0); S.add(st);
     const bd = basementDoor(); bd.position.set(-3.85, 0, W(-d / 2) + 0.05); S.add(bd); this.basement = bd;
     // ---- clutter: boxes, a broom against the wall, a step ladder, a crate of capsules
-    const boxes = [[-0.9, 1.6, 'ガチャ在庫'], [-0.35, 1.9, ''], [-0.7, 2.1, ''], [1.9, 1.7, 'おもちゃ'], [1.3, 2.2, ''], [-4.3, 1.9, '']];
+    const boxes = [[-0.9, 1.6, 'ガチャ在庫'], [-0.35, 1.9, ''], [-0.7, 2.1, ''], [1.9, 1.7, 'おもちゃ'], [1.3, 2.2, '']];
     this.boxes = boxes.map(([bx, bz, lab], i) => { const b = cardboard(i, { label: lab || null, w: 12 + (i % 2) * 2, h: 8 + (i % 3) }); b.position.set(bx, 0, bz); b.rotation.y = (hash3(i, 1, 9) - 0.5) * 0.5; S.add(b); return b; });
     const top = cardboard(9, { w: 10, h: 7 }); top.position.set(-0.85, 0.45, 1.6); top.rotation.y = 0.3; S.add(top); this.boxes.push(top);
     const br = broom(); br.position.set(1.15, 0.0, -2.75); br.rotation.set(0.12, 0, -0.08); S.add(br);
@@ -327,6 +330,7 @@ export class KodamayaLocation extends Location {
     for (const b of this.boxes) nav.blockCircle(b.position.x, b.position.z, 0.38);
     nav.block(2.0, -3, 4.6, -2.6);
     nav.block(2.1, 1.75, 3.4, 2.6);
+    nav.block(-5.0, 2.0, -3.6, 3.0);
     this.navs.shop = nav;
     this.stairsTop = { x: -4.4, z: -2.6 };
     this.setDust(1);
@@ -345,7 +349,19 @@ export class KodamayaLocation extends Location {
     this.setLights(true);
     this.lightOverride = { hemiI: 1.7, sunI: 1.6, sky: 0xfff8ec, gnd: 0x7a6048, sun: 0xfff4e0 };
     if (this.game.location === this) this.game.lighting.override = { ...this.lightOverride };
+    this.jar?.userData.setFill?.(Math.min(1, (this.game.state.happiness || 0) / 100));
+    this.refreshCollection();
     for (const s of this.shafts) s.material.uniforms && (s.material.uniforms.uColor && s.material.uniforms.uColor.value.setHex(0xfff0d0));
+  }
+  // fill the cabinet from the saved collection
+  refreshCollection() {
+    const col = this.game.state.collection || {};
+    if (col.kyuriOffice || this.game.state.konyoki?.includes('kyuriOffice')) fillCabinet(this.cabinet, 'kyuriOffice', new Set(col.kyuriOffice || []));
+  }
+  // turn a machine into a Konyoki machine: glowing banner on top, green capsules
+  makeKonyokiMachine(m, seriesId) {
+    m.konyoki = seriesId;
+    if (!m.banner) { m.banner = konyokiBanner(seriesId); m.banner.position.set(m.x, 1.24, m.z + 0.14); this.scene.add(m.banner); }
   }
   onTapFirst(e) { return this.day ? this.day.pickStars(e.x, e.y) > 0 : false; }
   onDrag(e) { if (this.day) this.day.pickStars(e.x, e.y, 40); }

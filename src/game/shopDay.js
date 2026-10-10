@@ -14,6 +14,7 @@ import { makeFolk } from '../data/folk.js';
 import { VoxelModel, vm, glowVm, signPlane, fill, ell, hash3, V25, V5 } from '../world/build.js';
 import { PixCanvas } from '../core/pixtex.js';
 import { FONT } from '../ui/fonts.js';
+import { rollVariant, konyokiFigure } from './konyoki.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -80,7 +81,7 @@ export class ShopDay {
     for (const m of this.machines) { m.stock = m.obj.userData.stock ?? 1; m.queue = null; m.series = Math.floor(hash3(m.x * 10, m.z * 10, 3) * 8); }
     this.jar = jar || L.jar;
     this.yen = 0;
-    this.happiness = 0;
+    this.happiness = game.state.happiness || 0; // persists between days
     this.stars = [];
     this.capsules = [];
     this.customers = [];
@@ -101,6 +102,7 @@ export class ShopDay {
   }
   addHappiness(n = 1) {
     this.happiness += n;
+    this.g.state.happiness = this.happiness;
     const cap = this.jar.userData.capacity || 100;
     this.jar.userData.setFill?.(Math.min(1, this.happiness / cap));
     this.emit('happiness', this.happiness);
@@ -134,6 +136,18 @@ export class ShopDay {
     this.g.particles?.emit('sparkle', { x: m.x, y: 1.0, z: m.z + 0.2, n: 6 });
     this.emit('refill', m);
   }
+  // ------------------------------------------------ the collection (one of each variant goes in the cabinet)
+  discover(seriesId, variant, cu) {
+    const st = this.g.state;
+    st.collection ||= {};
+    const owned = new Set(st.collection[seriesId] || []);
+    if (owned.has(variant.id)) return;
+    owned.add(variant.id);
+    st.collection[seriesId] = [...owned];
+    this.emit('discover', { seriesId, variant, cu });
+  }
+  // the maneki-neko, once awake, beckons and gathers resting stars by itself
+  wakeManeki() { this.manekiAwake = true; if (this.L.maneki) this.L.maneki.userData.awake = true; }
   // ------------------------------------------------ Happiness stars
   burst(c, n) {
     const head = c.headPos ? c.headPos(new THREE.Vector3()) : new THREE.Vector3(c.x, 1, c.z);
@@ -187,7 +201,9 @@ export class ShopDay {
         // pick a stocked machine nobody is using (favourite colours first)
         const free = this.machines.filter((m) => !m.queue && m.stock > 0.08);
         const any = this.machines.filter((m) => !m.queue);
-        const m = free.length ? pick(free) : any.length ? pick(any) : null;
+        // new Konyoki draw the crowd: most customers head for that machine first
+        const hot = free.filter((m) => m.konyoki);
+        const m = hot.length && Math.random() < 0.65 ? pick(hot) : free.length ? pick(free) : any.length ? pick(any) : null;
         if (!m) { await D.wait(1.0); continue; }
         m.queue = cu;
         await c.walkTo(m.x, m.z + 0.48, { nav: L.nav });
@@ -208,7 +224,8 @@ export class ShopDay {
         this.emit('crank', { m, cu });
         await D.wait(1.4);
         // the capsule tumbles into the tray
-        const col = pick(CAP_COLS);
+        const col = m.konyoki ? pick([0x6ab04a, 0x8ad860, 0xf4f0e8]) : pick(CAP_COLS);
+        const variant = m.konyoki ? rollVariant(m.konyoki, this.luck || 0) : null;
         const cap = capsuleMesh(col);
         const tray = m.obj.userData.tray;
         L.scene.add(cap);
@@ -228,7 +245,7 @@ export class ShopDay {
         c.play('openCapsule', { onPop: () => {
           this.g.audio?.play?.('capsulePop', { volume: 0.55 });
           cap.userData.top.position.y = 0.06; cap.userData.top.rotation.z = 0.8;
-          toy = toyMesh(m.series + Math.floor(Math.random() * 3));
+          toy = variant ? konyokiFigure(m.konyoki, variant.id) : toyMesh(m.series + Math.floor(Math.random() * 3));
           L.scene.add(toy);
           const hp = c.headPos(new THREE.Vector3());
           toy.position.set(hp.x, hp.y + 0.05, hp.z + 0.1);
@@ -236,13 +253,16 @@ export class ShopDay {
         await D.wait(1.7);
         // the reaction: most are happy, some ecstatic (rare!), a few meh
         const roll = Math.random();
-        const rare = roll < 0.15, meh = roll > 0.85;
+        // a spirit's toy never disappoints; its rarity decides how big the joy is
+        const rare = variant ? variant.rarity === 'rare' || variant.rarity === 'secret' : roll < 0.15;
+        const meh = variant ? false : roll > 0.85;
         if (meh) { c.setExpr('pout'); this.g.emotes?.show(c, 'dots'); }
         else { c.setExpr(rare ? 'excited' : 'happy'); this.g.emotes?.show(c, rare ? 'bigheart' : 'heart'); c.play(rare ? 'jump' : 'cheer'); }
-        if (!meh) this.burst(c, rare ? 6 : 2 + Math.floor(Math.random() * 3));
+        if (!meh) this.burst(c, variant ? (variant.rarity === 'secret' ? 12 : rare ? 8 : 4 + Math.floor(Math.random() * 2)) : rare ? 6 : 2 + Math.floor(Math.random() * 3));
+        if (variant) this.discover(m.konyoki, variant, cu);
         cu.mood += meh ? 0 : 1;
         this.served++;
-        this.emit('opened', { m, cu, rare, meh });
+        this.emit('opened', { m, cu, rare, meh, variant });
         await D.wait(1.6);
         if (toy) L.scene.remove(toy);
         c.drop('R');
@@ -274,7 +294,8 @@ export class ShopDay {
       } else if (s.state === 'rest') {
         s.m.rotation.y += dt * 2;
         s.y = 0.1 + Math.abs(Math.sin(this.t * 2.4 + s.ph)) * 0.05;
-        if (s.life > 14) { s.state = 'fade'; s.t = 0; }
+        if (this.manekiAwake && s.life > 3.2) this.collect(s);
+        else if (s.life > 14) { s.state = 'fade'; s.t = 0; }
       } else if (s.state === 'fade') {
         s.t += dt; s.m.scale.setScalar(Math.max(0.01, 1 - s.t)); if (s.t >= 1) s.state = 'gone';
       } else if (s.state === 'collect') {

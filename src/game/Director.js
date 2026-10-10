@@ -77,7 +77,9 @@ export class Director {
   act(char, name, o = {}) { return char.play(name, o); }
   emote(char, kind, o) { this.g.emotes.show(char, kind, o); this.g.audio?.play?.(EMOTE_SFX[kind] || 'pop', { volume: 0.35 }); }
   // ---------------------------------------------------------------- camera
-  cam(shot) { return this.g.rig.play({ dur: 1.2, ...shot }); }
+  // a framed shot holds until a script calls follow() again (otherwise the rig
+  // would drift back to chasing the player as soon as the tween ends)
+  cam(shot) { const r = this.g.rig; if (shot.follow === undefined) r.follow = null; return r.play({ dur: 1.2, ...shot }); }
   // back to the gameplay camera (the location's pitch / zoom, no cut plane) following someone
   follow(target, o = {}) {
     const r = this.g.rig, c = this.g.location?.camCfg || {};
