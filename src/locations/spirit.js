@@ -7,7 +7,7 @@
 //   L.revealIslands(dur)   the cloud banks roll away (Kappa Island, the Tengu's peak)
 import * as THREE from 'three';
 import { Location } from '../game/Location.js';
-import { islandShape, islandMesh, oldHouse, toriiPortal, stoneLantern, pondWater, koi, waterfall, cloudPuff, cloudSea, seaShadow, kappaIsland, tenguPeak } from '../world/spiritIsland.js';
+import { islandShape, islandMesh, oldHouse, toriiPortal, stoneLantern, pondWater, koi, waterfall, cloudPuff, cloudSea, seaShadow, kappaIsland, tenguPeak, teaKit } from '../world/spiritIsland.js';
 import { natureBatch, natureFrames } from '../art/nature.js';
 import { VoxelModel, vm, fill, V5 } from '../world/build.js';
 import { HokoriFlock } from '../entities/hokori.js';
@@ -34,6 +34,9 @@ export class SpiritLocation extends Location {
     // ---- the house, the portal, lanterns
     const house = (this.house = oldHouse({ onU: this.onU })); house.position.set(1.0, 0, -0.85); S.add(house); this.updaters.push(house.userData.update);
     const torii = (this.torii = toriiPortal({ onU: this.onU })); torii.position.set(-5.5, 0, 3.2); S.add(torii); this.updaters.push(torii.userData.update);
+    // the tea corner in front of the engawa (steamer, rolling table, drying brazier, brewing tray)
+    this.tea = teaKit({ onU: this.onU });
+    for (const [k, x, z] of [['brew', -0.95, 0.6], ['steamer', 1.75, 0.62], ['roller', 2.95, 0.55], ['dryer', 4.05, 0.72]]) { this.tea[k].position.set(x, 0, z); S.add(this.tea[k]); }
     this.lanterns = [];
     for (const [lx, lz] of [[-3.7, 3.4], [-1.6, 2.1], [2.6, 1.35], [-6.4, 1.6]]) { const l = stoneLantern({ onU: this.onU }); l.position.set(lx, 0, lz); S.add(l); this.lanterns.push(l); }
     // ---- the pond (water, koi, the channel to the edge and the waterfall)
@@ -101,7 +104,8 @@ export class SpiritLocation extends Location {
     for (let j = 0; j < nav.nz; j++) for (let i = 0; i < nav.nx; i++) { const x = nav.cx(i), z = nav.cz(j); if (((x - POND.x) / (POND.rx + 0.1)) ** 2 + ((z - POND.z) / (POND.rz + 0.1)) ** 2 < 1) nav.walk[j * nav.nx + i] = 0; }
     for (const l of this.lanterns) nav.blockCircle(l.position.x, l.position.z, 0.3);
     nav.block(-6.0, 2.95, -5.0, 3.45); nav.blockCircle(-6.47, 3.2, 0.2); nav.blockCircle(-4.53, 3.2, 0.2);
-    nav.block(4.8, 0.0, 7.8, 2.4); // tea field
+    for (const t of this.teaSpots) nav.blockCircle(t.x + 0.15, t.z + 0.15, 0.2); // tea bushes (paths between the rows)
+    for (const k of ['brew', 'steamer', 'roller', 'dryer']) nav.blockCircle(this.tea[k].position.x, this.tea[k].position.z, 0.34);
     for (const [x, z] of [[-6.2, -1.4], [-4.2, -2.6], [5.4, -2.6], [7.4, -0.8], [-2.9, 0.6], [-8.0, 0.6]]) nav.blockCircle(x, z, 0.35);
     nav.block(-8.6, 2.0, -7.2, 3.4); // bamboo
     this.navs.island = nav;

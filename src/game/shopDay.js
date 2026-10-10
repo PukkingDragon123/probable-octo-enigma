@@ -21,7 +21,7 @@ const CAP_COLS = [0xff6a8a, 0x5ab8f0, 0xf8d040, 0x7ad860, 0xb88af0, 0xff9a4a];
 const STAR_COLS = [0xff8ab8, 0xffe060, 0x8ae0ff, 0xb0f080, 0xd0a8ff, 0xffb070, 0xffffff];
 
 // ---------------------------------------------------------------- little meshes
-function capsuleMesh(col) {
+export function capsuleMesh(col) {
   const top = new VoxelModel(), bot = new VoxelModel();
   for (let x = -3; x <= 3; x++) for (let y = -3; y <= 3; y++) for (let z = -3; z <= 3; z++) {
     if (x * x + y * y + z * z > 10) continue;
@@ -34,7 +34,7 @@ function capsuleMesh(col) {
   return g;
 }
 // the tiny toy inside: a little voxel figure in the series' colours
-function toyMesh(seed) {
+export function toyMesh(seed) {
   const v = new VoxelModel();
   const c = CAP_COLS[seed % CAP_COLS.length];
   ell(v, 0.5, 2, 0.5, 2.2, 2.2, 2, c);
@@ -43,7 +43,7 @@ function toyMesh(seed) {
   v.set(-1, 7, 0, c); v.set(1, 7, 0, c);
   return vm(v, V25, [0.5, 0, 0.5]);
 }
-function starMesh(col) {
+export function starMesh(col) {
   const v = new VoxelModel();
   // a chunky little konpeito star: core + spikes
   ell(v, 0.5, 0.5, 0.5, 1.6, 1.6, 1.6, col);

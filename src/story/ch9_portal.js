@@ -223,6 +223,6 @@ export async function portalChapter(g) {
     L.updaters = L.updaters.filter((f) => f !== upd);
     for (const h of hokori) L.scene.remove(h.root);
     L.remove(G);
-    await D.title('To be continued', 'Kodamaya · Day 2', 2.6);
+    await D.title('Day 2', 'The second day at Kodamaya', 2.6);
   });
 }

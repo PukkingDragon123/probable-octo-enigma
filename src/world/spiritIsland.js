@@ -320,3 +320,83 @@ export function seaShadow(rx, rz) {
   m.rotation.x = -Math.PI / 2; m.renderOrder = 1;
   return m;
 }
+
+// ---------------------------------------------------------------- the tea corner
+// Four stations Mamo works through to make tea (each a group with a little
+// visual state the chapter changes):
+//   steamer: clay kamado + bamboo steamer basket   userData.setOn(on) (glowing fire)
+//   roller:  low table with a woven mat             userData.setLeaves(k) green pile 0..1
+//   dryer:   charcoal brazier with a flat zaru      userData.setLeaves(k) leaves dry 0..1 (green -> dark)
+//   brew:    tray with a tetsubin kettle + 4 cups   userData.setTea(k) cups fill 0..1
+export function teaKit({ onU = null } = {}) {
+  const kit = {};
+  // steamer
+  {
+    const v = new VoxelModel(), gl = new VoxelModel();
+    for (let y = 0; y < 12; y++) for (let x = -7; x <= 7; x++) for (let z = -6; z <= 6; z++) { const d = Math.hypot(x, z * 1.15); if (d <= 7 - y * 0.08 && (d > 5.6 - y * 0.08 || y === 0)) v.set(x, y, z, tone(x, y, z, 0xb8744a, 0x9a5e3a, 0xc88a5a, 0.2, 0.12)); }
+    fill(v, -2, 1, 2, 5, 6, 7, 0x2a1a14); fill(gl, -2, 1, 2, 4, 5, 5, 0xff7a20); // fire mouth
+    for (let y = 12; y < 18; y++) for (let x = -6; x <= 6; x++) for (let z = -6; z <= 6; z++) { const d = Math.hypot(x, z); if (d <= 6 && (d > 5 || y === 12)) v.set(x, y, z, y % 3 === 0 ? 0xa8884a : 0xc8a868); }
+    for (let x = -6; x <= 6; x++) for (let z = -6; z <= 6; z++) if (Math.hypot(x, z) <= 6) v.set(x, 18, z, (x + z) % 2 ? 0xb8985a : 0xd8b878); // lid
+    v.set(0, 19, 0, 0x8a6a3a);
+    const fire = glowVm(gl, V5, [0.5, 0, 0.5], { intensity: 0.0, mode: 3, onU });
+    const g = grp(vm(v, V5, [0.5, 0, 0.5]), fire);
+    g.userData.setOn = (on) => { fire.material.uniforms && fire.material.uniforms.uGlow && (fire.material.uniforms.uGlow.value = on ? 1.4 : 0.0); };
+    g.userData.top = { y: 19 * V5 };
+    kit.steamer = g;
+  }
+  // rolling table
+  {
+    const v = new VoxelModel();
+    fill(v, -12, 11, 6, 7, -7, 6, 0x8a5a32);
+    for (const [x, z] of [[-11, -6], [10, -6], [-11, 5], [10, 5]]) fill(v, x, x, 0, 5, z, z, 0x6a4224);
+    fill(v, -10, 9, 8, 8, -5, 4, (x, y, z) => ((x + z) % 2 ? 0xc8b078 : 0xd8c088)); // woven mat
+    const pile = new VoxelModel();
+    ell(pile, 0.5, 0, 0.5, 7, 3, 4, (x, y, z) => (hash3(x, y, z) < 0.3 ? 0x5a9a3a : 0x6aae44));
+    const pm = vm(pile, V5, [0.5, 0, 0.5]); pm.position.y = 9 * V5;
+    const g = grp(vm(v, V5, [0.5, 0, 0.5]), pm);
+    g.userData.setLeaves = (k) => { pm.visible = k > 0.01; pm.scale.set(0.4 + k * 0.6, Math.max(0.05, k), 0.4 + k * 0.6); };
+    g.userData.setLeaves(0);
+    kit.roller = g;
+  }
+  // drying brazier with a zaru basket
+  {
+    const v = new VoxelModel(), gl = new VoxelModel();
+    for (let y = 0; y < 8; y++) for (let x = -5; x <= 5; x++) for (let z = -5; z <= 5; z++) { const d = Math.hypot(x, z); if (d <= 5 && (d > 4 || y === 0)) v.set(x, y, z, 0x3a3a42); }
+    for (let x = -4; x <= 4; x++) for (let z = -4; z <= 4; z++) if (Math.hypot(x, z) < 3.8) gl.set(x, 6, z, hash3(x, 6, z) < 0.5 ? 0xff5a1a : 0xffa040);
+    for (let x = -9; x <= 9; x++) for (let z = -9; z <= 9; z++) { const d = Math.hypot(x, z); if (d <= 9) v.set(x, 9 + (d > 8 ? 1 : 0), z, (x + z) % 2 ? 0xc8a868 : 0xb8985a); }
+    const leaves = new VoxelModel();
+    for (let x = -7; x <= 7; x++) for (let z = -7; z <= 7; z++) if (Math.hypot(x, z) < 7 && hash3(x, 1, z) < 0.7) leaves.set(x, 0, z, 0x6aae44);
+    const lm = vm(leaves, V5, [0.5, 0, 0.5], { cast: false }); lm.position.y = 10 * V5;
+    lm.material = lm.material.clone();
+    const coals = glowVm(gl, V5, [0.5, 0, 0.5], { intensity: 1.0, mode: 3, onU });
+    const g = grp(vm(v, V5, [0.5, 0, 0.5]), coals, lm);
+    g.userData.setLeaves = (k, dry = 0) => { lm.visible = k > 0.01; lm.material.color.setRGB(1 - dry * 0.45, 1 - dry * 0.3, 1 - dry * 0.6); };
+    g.userData.setLeaves(0);
+    g.userData.top = { y: 11 * V5 };
+    kit.dryer = g;
+  }
+  // brewing tray: kettle + four cups that fill with green tea
+  {
+    const v = new VoxelModel();
+    fill(v, -12, 11, 0, 1, -6, 5, 0x5a3a24); fill(v, -12, 11, 2, 2, -6, 5, (x, y, z) => (x === -12 || x === 11 || z === -6 || z === 5 ? 0x4a2e1e : undefined));
+    for (let y = 2; y < 9; y++) for (let x = -11; x <= -3; x++) for (let z = -4; z <= 4; z++) { const d = Math.hypot(x + 7, z, (y - 5) * 0.9); if (d <= 4.5) v.set(x, y, z, hash3(x, y, z) < 0.3 ? 0x2a2a30 : 0x3a3a42); } // tetsubin
+    fill(v, -3, -1, 6, 7, 0, 0, 0x3a3a42); fill(v, -8, -6, 9, 10, -4, 4, 0x2a2a30); // spout, handle
+    const tea = new VoxelModel();
+    const cups = [[2, -3], [7, -3], [2, 2], [7, 2]];
+    for (const [cx, cz] of cups) { for (let y = 2; y < 6; y++) for (let x = -2; x <= 2; x++) for (let z = -2; z <= 2; z++) { const d = Math.hypot(x, z); if (d <= 2.2 && (d > 1.3 || y === 2)) v.set(cx + x, y, cz + z, 0xe8e0d0); } for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) tea.set(cx + x, 0, cz + z, 0x7ab84a); }
+    const tm = vm(tea, V5, [0, 0, 0], { cast: false }); tm.position.y = 3 * V5;
+    const g = grp(vm(v, V5, [0.5, 0, 0.5]), tm);
+    tm.position.x = -0.5 * V5; tm.position.z = -0.5 * V5;
+    g.userData.setTea = (k) => { tm.visible = k > 0.01; tm.position.y = (3 + k * 1.8) * V5; };
+    g.userData.setTea(0);
+    kit.brew = g;
+  }
+  return kit;
+}
+
+// a leaf bundle (carried by Mamo or a Hokori)
+export function leafBundle() {
+  const v = new VoxelModel();
+  ell(v, 0.5, 2, 0.5, 3, 2.2, 2.4, (x, y, z) => (hash3(x, y, z) < 0.35 ? 0x5a9a3a : 0x7ac04a));
+  return vm(v, V25, [0.5, 0, 0.5]);
+}
