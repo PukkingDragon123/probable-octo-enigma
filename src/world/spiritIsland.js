@@ -42,14 +42,14 @@ export function islandMesh(S, { pond = null, path = [] } = {}) {
     const pondHere = inPond(x, z);
     // grass top (a darker lip near the rim, lighter sunny patches, flowers)
     let topY = -1;
-    if (pondHere) topY = -3; // the pond bowl
+    if (pondHere) topY = -(pond.depth ?? 3); // the pond bowl
     const n = fbm2(x * 0.7, z * 0.7, 5, 3);
     const g = kk < 0.06 ? 0x5a9a3a : n > 0.6 ? 0x8ac458 : n < 0.38 ? 0x6aa840 : 0x7ab84a;
     const fl = hash3(i, 7, j);
     const flower = fl < 0.012 ? 0xffffff : fl < 0.02 ? 0xffb0d0 : fl < 0.026 ? 0xffe060 : null;
-    if (pondHere) top.set(i, topY, j, 0x5a6a5a);
+    if (pondHere) top.set(i, topY, j, pond.sand ? (hash3(i, 0, j) < 0.3 ? 0xd8c890 : 0xe8d8a0) : 0x5a6a5a);
     else top.set(i, topY, j, flower ?? tone(i, 0, j, g, sh(g, 0.92), sh(g, 1.06), 0.12, 0.08));
-    if (pondHere) { for (let y = topY + 1; y < -1; y++) if (!inPond(x + V1, z) || !inPond(x - V1, z) || !inPond(x, z + V1) || !inPond(x, z - V1)) top.set(i, y, j, 0x8a8a7a); }
+    if (pondHere) { for (let y = topY + 1; y < -1; y++) if (!inPond(x + V1, z) || !inPond(x - V1, z) || !inPond(x, z + V1) || !inPond(x, z - V1)) top.set(i, y, j, pond.sand ? 0xc8b880 : 0x8a8a7a); }
     if (rim) {
       for (let y = topY - 1; y >= -SLAB; y--) {
         const dirt = y > -3 ? 0x6a8a3a : y > -5 ? 0x8a6a42 : 0x7a5a3a;

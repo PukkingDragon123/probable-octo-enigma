@@ -6,6 +6,7 @@ import { KodamayaLocation } from './kodamaya.js';
 import { MamoRoomLocation } from './mamoroom.js';
 import { BendysLocation } from './bendys.js';
 import { SpiritLocation } from './spirit.js';
+import { KappaLocation } from './kappa.js';
 
 export function registerLocations(game) {
   game.register('train', (g) => new TrainLocation(g));
@@ -15,4 +16,5 @@ export function registerLocations(game) {
   game.register('mamoroom', (g) => new MamoRoomLocation(g));
   game.register('bendys', (g) => new BendysLocation(g));
   game.register('spirit', (g) => new SpiritLocation(g));
+  game.register('kappa', (g) => new KappaLocation(g));
 }

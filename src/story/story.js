@@ -13,13 +13,14 @@ import { day2Chapter } from './ch10_day2.js';
 import { teaChapter } from './ch11_tea.js';
 import { freeChapter } from './ch_free.js';
 import { day3Chapter } from './ch12_day3.js';
+import { day4Chapter } from './ch13_day4.js';
 
-const ORDER = ['train', 'station', 'walk', 'shop', 'room', 'bendys', 'night1', 'day1', 'portal', 'day2', 'tea', 'day3', 'free'];
+const ORDER = ['train', 'station', 'walk', 'shop', 'room', 'bendys', 'night1', 'day1', 'portal', 'day2', 'tea', 'day3', 'day4', 'free'];
 
 export class Story {
   constructor(game) {
     this.game = game;
-    this.chapters = { train: trainChapter, station: stationChapter, walk: walkChapter, shop: shopChapter, room: roomChapter, bendys: bendysChapter, night1: night1Chapter, day1: day1Chapter, portal: portalChapter, day2: day2Chapter, tea: teaChapter, day3: day3Chapter, free: freeChapter };
+    this.chapters = { train: trainChapter, station: stationChapter, walk: walkChapter, shop: shopChapter, room: roomChapter, bendys: bendysChapter, night1: night1Chapter, day1: day1Chapter, portal: portalChapter, day2: day2Chapter, tea: teaChapter, day3: day3Chapter, day4: day4Chapter, free: freeChapter };
   }
   register(id, fn) { this.chapters[id] = fn; }
   async titleBackdrop() { await trainTitleBackdrop(this.game); }

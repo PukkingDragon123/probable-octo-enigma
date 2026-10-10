@@ -973,6 +973,24 @@ def('draw', (r, u, A, o) => {
   o.spine = [0.3, 0, 0]; o.head = [0.45, 0, 0];
 }, { loop: true });
 
+// swimming: a head-up crawl, arms windmilling, legs kicking, a little bob (loop)
+def('swim', (r, u, A, o) => {
+  const a = u * PI * 2 * 1.3;
+  o.shoulderL = [-1.6 + sin(a) * 1.4, 0, 0.35]; o.shoulderR = [-1.6 - sin(a) * 1.4, 0, -0.35];
+  o.elbowL = [-0.5 - Math.max(0, cos(a)) * 0.6, 0, 0]; o.elbowR = [-0.5 - Math.max(0, -cos(a)) * 0.6, 0, 0];
+  o.hipL = [-0.5 + sin(a * 2) * 0.35, 0, 0]; o.hipR = [-0.5 - sin(a * 2) * 0.35, 0, 0];
+  o.kneeL = [0.4, 0, 0]; o.kneeR = [0.4, 0, 0];
+  o.spine = [0.35, sin(a) * 0.12, 0]; o.head = [-0.3, -sin(a) * 0.1, 0];
+  o.root.y = sin(a * 2) * 0.012 * r.scale;
+}, { loop: true });
+// treading water / soaking: arms resting out, gentle bob (loop)
+def('tread', (r, u, A, o) => {
+  const a = u * PI * 2 * 0.6;
+  o.shoulderL = [-0.4, 0, 0.9 + sin(a) * 0.15]; o.shoulderR = [-0.4, 0, -0.9 - sin(a) * 0.15];
+  o.elbowL = [-0.3, 0, 0]; o.elbowR = [-0.3, 0, 0];
+  o.root.y = sin(a) * 0.01 * r.scale;
+}, { loop: true });
+
 def('water', (r, u, A, o) => { // watering can (loop)
   o.shoulderR = [-1.0, 0, -0.15]; o.elbowR = [-0.4, 0, 0]; o.handR = [0, 0, -0.6 + sin(u * 3) * 0.1];
   o.spine = [0.15, 0, 0]; o.head = [0.35, 0, 0];
