@@ -5,13 +5,14 @@ import { stationChapter } from './ch2_station.js';
 import { walkChapter } from './ch3_walk.js';
 import { shopChapter } from './ch4_shop.js';
 import { roomChapter } from './ch5_room.js';
+import { bendysChapter } from './ch6_bendys.js';
 
 const ORDER = ['train', 'station', 'walk', 'shop', 'room', 'bendys', 'night1', 'day1', 'portal', 'spirit1', 'free'];
 
 export class Story {
   constructor(game) {
     this.game = game;
-    this.chapters = { train: trainChapter, station: stationChapter, walk: walkChapter, shop: shopChapter, room: roomChapter };
+    this.chapters = { train: trainChapter, station: stationChapter, walk: walkChapter, shop: shopChapter, room: roomChapter, bendys: bendysChapter };
   }
   register(id, fn) { this.chapters[id] = fn; }
   async titleBackdrop() { await trainTitleBackdrop(this.game); }

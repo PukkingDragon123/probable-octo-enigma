@@ -38,13 +38,15 @@ function retroPoster(seed = 1) {
   p.frame(0, 0, 30, 40, '#5a2a2a');
   return p;
 }
-function booth() {
+function booth({ backH = 24, half = 12 } = {}) {
   const v = new VoxelModel();
-  fill(v, -10, 9, 0, 13, -4, 3, (x, y) => (y === 13 ? 0xf4f0e8 : y === 12 ? 0xd8d4cc : x === -10 || x === 9 ? 0x8a8e96 : 0x6a4a3a)); // table
+  // pedestal table: a cream laminate top with a chrome edge on one steel post
+  fill(v, -10, 9, 12, 13, -5, 4, (x, y, z) => (y === 13 ? (x === -10 || x === 9 || z === -5 || z === 4 ? 0xc8ccd4 : 0xf4f0e8) : 0xb8bcc4));
+  fill(v, -1, 0, 1, 11, -1, 0, 0x9aa0a8); fill(v, -4, 3, 0, 0, -3, 2, 0x8a8e96);
   for (const z of [-15, 15]) {
     const back = z < 0 ? -18 : 17;
-    fill(v, -12, 11, 0, 8, Math.min(z - 2, z + 2), Math.max(z - 2, z + 2), (x, y) => (y === 8 ? 0xd8303a : y < 2 ? 0x5a2a2a : 0xc8202a));
-    fill(v, -12, 11, 9, 24, back, back + (z < 0 ? 2 : -2), (x, y) => (y === 24 ? 0xe84a4a : (x + 40) % 6 === 0 ? 0xb81a22 : 0xc8202a));
+    fill(v, -half, half - 1, 0, 8, Math.min(z - 2, z + 2), Math.max(z - 2, z + 2), (x, y) => (y === 8 ? 0xd8303a : y < 2 ? 0x5a2a2a : 0xc8202a));
+    fill(v, -half, half - 1, 9, backH, back, back + (z < 0 ? 2 : -2), (x, y) => (y === backH ? 0xe84a4a : (x + 40) % 6 === 0 ? 0xb81a22 : 0xc8202a));
   }
   // condiments: ketchup, mustard, napkins, a menu stand
   fill(v, -7, -6, 14, 18, -1, 0, 0xd8202a); v.set(-7, 19, -1, 0xf4f0e8);
@@ -78,6 +80,17 @@ function kitchen(onU) {
   fill(v, 4, 52, 38, 44, -12, -4, (x, y) => (y === 38 ? 0x8a8e96 : 0xb8bcc4)); // hood
   for (const y of [26, 32]) { fill(v, 56, 86, y, y, -10, -6, 0xd8dce0); for (let x = 57; x < 86; x += 3) fill(v, x, x + 1, y + 1, y + 4, -9, -7, 0xffffff); }
   fill(gl, 6, 50, 37, 37, -6, -6, 0xfff0d0);
+  // pots and pans on the flat-top, a stock pot, hanging ladles, the ticket rail
+  for (const [cx, r, hh, c] of [[12, 3, 5, 0x9aa0a8], [20, 4, 3, 0x3a3a40], [27, 3, 2, 0x3a3a40]]) for (let y = 19; y < 19 + hh; y++) for (let x = -r; x <= r; x++) for (let z = -r; z <= r; z++) { const dd = Math.hypot(x, z); if (dd <= r && (dd > r - 1 || y === 19)) v.set(cx + x, y, -5 + z, c); }
+  fill(v, 24, 25, 21, 21, -1, 1, 0x5a3a24); // pan handle
+  for (let x = 17; x <= 23; x++) for (let z = -8; z <= -2; z++) if (Math.hypot(x - 20, z + 5) < 2.6) v.set(x, 22, z, 0xf8c838); // an omelette in the pan
+  for (let i = 0; i < 6; i++) { const x = 58 + i * 4; fill(v, x, x, 34, 40, -11, -11, 0xb8bcc4); fill(v, x - 1, x + 1, 33, 33, -11, -10, 0xc8ccd4); }
+  fill(v, 4, 52, 30, 30, -1, -1, 0xb8bcc4);
+  for (let x = 8; x < 50; x += 7) fill(v, x, x + 3, 25, 29, -1, -1, 0xfffaf0); // order tickets
+  // the pass shelf with plates waiting under heat lamps
+  fill(v, 56, 86, 20, 20, -2, 0, 0xc8ccd4);
+  for (let x = 60; x < 84; x += 8) { for (let k = -2; k <= 2; k++) v.set(x + k, 21, -1, 0xffffff); v.set(x, 22, -1, 0xf8c838); v.set(x + 1, 22, -1, 0xd8301a); }
+  for (let x = 60; x < 84; x += 8) gl.set(x, 27, -1, 0xff9040);
   const g = new THREE.Group(); g.add(vm(v, V5), glowVm(gl, V5, [0, 0, 0], { intensity: 1.2, mode: 3, onU }));
   return g;
 }
@@ -144,7 +157,7 @@ export class BendysLocation extends Location {
     const { w, d, h } = BEN;
     k.room({
       w, d, h, lowFront: 16, cap: 0xc8202a, base: 0xc8202a,
-      floor: (x, z) => (((Math.floor((x + 400) / 6) + Math.floor((z + 400) / 6)) & 1) ? 0xf4ece0 : 0xc8302a),
+      floor: (x, z) => { const c = ((Math.floor((x + 400) / 10) + Math.floor((z + 400) / 10)) & 1) ? 0xf0e4d0 : 0xa8343a; return hash3(x, 0, z) < 0.06 ? sh(c, 0.95) : c; },
       wall: (x, y, z, side) => (y < 20 ? (y === 19 ? 0xc8ccd4 : (side === 'back' ? x : z) % 8 === 0 ? 0xb81a22 : 0xc8202a) : y > h - 6 ? 0xf4f0e8 : tone(x, y, z, 0xfff0dc, 0xf8e8d0, 0xfff6e8, 0.08, 0.06)),
       windows: [{ side: 'left', a0: -30, a1: 10, y0: 26, y1: 48, frame: 0xc8ccd4, sky: (u, v) => hmix(0x2a3a6a, 0x5a4a8a, v) }],
     });
@@ -166,11 +179,23 @@ export class BendysLocation extends Location {
     for (let i = 0; i < 2; i++) { const pp = signPlane(retroPoster(i), 0.42); pp.position.set(-4.95 + 0.01, 1.7, -1.2 + i * 0.9); pp.rotation.y = Math.PI / 2; S.add(pp); }
     // ---- front of house: parfait case, jukebox, a gacha machine by the door, plants
     const pc = parfaitCase(); pc.position.set(4.4, 0, 1.6); pc.rotation.y = -0.4; S.add(pc);
-    const jb = jukebox(this.onU); jb.position.set(-4.6, 0, 0.9); jb.rotation.y = 0.5; S.add(jb);
-    const gm = gachaMachine({ seed: 77, body: 0xf8e8e0 }); gm.position.set(-4.75, 0, 2.2); gm.rotation.y = 0.6; S.add(gm);
-    k.add(hkPlant(k, { h: 14, r: 5, flower: 0xff8ab0 }), 4.7, 0, -0.2);
+    const jb = jukebox(this.onU); jb.position.set(-4.65, 0, 1.75); jb.rotation.y = 0.5; S.add(jb);
+    const gm = gachaMachine({ seed: 77, body: 0xf8e8e0 }); gm.position.set(4.7, 0, 0.3); gm.rotation.y = -0.6; S.add(gm);
+    k.add(hkPlant(k, { h: 14, r: 5, flower: 0xff8ab0 }), 4.75, 0, 2.6);
     // ---- a family table in the middle-front
-    const tb = booth(); tb.position.set(-1.0, 0, 1.0); tb.rotation.y = 0; S.add(tb); this.frontTable = tb;
+    const tb = booth(); tb.position.set(-3.1, 0, 0.75); tb.rotation.y = Math.PI / 2; S.add(tb); this.frontTable = tb;
+    // the table in the middle where Grandpa always sits
+    const dt = booth({ backH: 15, half: 7 }); dt.position.set(0.1, 0, 0.95); dt.rotation.y = Math.PI / 2; S.add(dt); this.dinnerTable = dt;
+    // framed photos over the booths: Bendo through the years, a signed baseball card, the 1979 opening
+    const photo = (seed, wpx, hpx, draw) => { const p = new PixCanvas(wpx, hpx, 4100 + seed); p.rect(0, 0, wpx, hpx, '#3a2418'); p.rect(2, 2, wpx - 4, hpx - 4, '#e8dcc0'); draw(p); return p; };
+    const frames = [
+      photo(1, 26, 20, (p) => { p.rect(3, 3, 20, 14, '#a8c8d8'); p.circle(9, 11, 3, '#8a8a92'); p.circle(17, 11, 3, '#4a8a5a'); p.rect(7, 13, 4, 4, '#f4f0e8'); p.rect(15, 13, 4, 4, '#3a4a6a'); }),
+      photo(2, 20, 26, (p) => { p.rect(3, 3, 14, 20, '#f4e8c8'); p.text('1979', 10, 6, { font: `7px ${FONT.tiny}`, color: '#c8202a', align: 'center' }); p.rect(5, 14, 10, 6, '#e8303a'); }),
+      photo(3, 24, 18, (p) => { p.rect(3, 3, 18, 12, '#f0d8a0'); for (let i = 0; i < 4; i++) p.circle(6 + i * 4, 10, 2, ['#8a8a92', '#f4f0e8', '#e8a04a', '#6a5a4a'][i]); }),
+    ];
+    frames.forEach((pc, i) => { const m = signPlane(pc, pc.w / 64 * 1.3); m.position.set(-4.4 + i * 0.85, 1.6 + (i % 2) * 0.12, W(-d / 2) + 0.01); m.rotation.z = (i - 1) * 0.03; S.add(m); });
+    const neon = new PixCanvas(40, 14, 4120); neon.rect(0, 0, 40, 14, '#2a1418'); neon.text('OPEN', 20, 2, { font: `9px ${FONT.bold}`, color: '#ff5a7a', align: 'center', outline: '#ffb0c8' });
+    const nm = signPlane(neon, 0.6, { emissive: 1.1, onU: this.onU, mode: 4 }); nm.position.set(-0.6, 1.75, W(-d / 2) + 0.01); S.add(nm);
     k.finish({ lights: false, pitch: 34 });
     S.add(k.group);
     this.updaters.push((dt) => k.update(dt));
@@ -178,7 +203,7 @@ export class BendysLocation extends Location {
     const nav = this.makeNav('floor', { minX: W(-w / 2) + 0.25, minZ: W(-d / 2) + 0.3, w: W(w) - 0.5, d: W(d) - 0.5 });
     nav.block(-5.3, -3.1, 0.2, -1.0); nav.block(1.1, -3.1, 5.3, -0.65);
     for (const st of this.stools) nav.blockCircle(st.position.x, st.position.z, 0.18);
-    nav.block(-2.1, 0.2, 0.1, 1.8); nav.block(3.8, 1.1, 5.3, 2.2); nav.block(-5.3, 0.4, -4.1, 2.6);
+    nav.block(-4.2, 0.35, -2.0, 1.15); nav.block(-0.95, 0.55, 1.15, 1.35); nav.block(3.8, 1.1, 5.3, 2.2); nav.block(-5.3, 1.2, -4.1, 2.4); nav.blockCircle(4.7, 0.3, 0.3);
     this.navs.floor = nav;
     // ---- regulars
     this.crowd = new Crowd(this.game, this);
@@ -191,6 +216,7 @@ export class BendysLocation extends Location {
     sit(this.booths[0], 0, 'salaryman', 'eat'); sit(this.booths[0], 2, 'salaryman', 'drink');
     sit(this.booths[2], 1, 'shopper', 'eat'); sit(this.booths[2], 3, 'kid', 'eat'); sit(this.booths[2], 2, 'shopper', null);
     sit(this.booths[1], 0, 'student', 'phone'); sit(this.booths[1], 1, 'student', 'eat');
+    sit(this.frontTable, 0, 'officeLady', 'drink'); sit(this.frontTable, 3, 'officeLady', 'eat');
     // counter regulars
     for (const i of [0, 3]) C.add({ seed: S(), role: i ? 'worker' : 'granny' }, { x: this.stools[i].position.x, z: this.stools[i].position.z, yaw: Math.PI, mode: 'sit', seatY: 0.62, prop: false, act: i ? 'drink' : 'eat' });
   }
