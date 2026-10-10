@@ -156,7 +156,7 @@ export class Game extends Emitter {
       if (use && L.chars.has(P)) {
         const ok = await P.walkTo(use.x, use.z, { nav: it.free ? null : L.nav });
         if (ok === false && Math.hypot(P.x - use.x, P.z - use.z) > 0.5) return;
-        if (use.yaw != null) P.face(use.yaw);
+        if (use.yaw != null) P.faceYaw(use.yaw);
         await this.director.wait(0.15);
       } else if (it.char && L.chars.has(P)) {
         const c = it.char;

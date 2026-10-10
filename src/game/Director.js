@@ -65,7 +65,7 @@ export class Director {
     for (const p of pts) await char.walkTo(p.x, p.z, { nav: null, run: o.run });
   }
   face(char, target) {
-    if (typeof target === 'number') char.face(target);
+    if (typeof target === 'number') char.faceYaw(target);
     else if (target) char.faceTo(target.x, target.z);
   }
   faceEach(a, b) { a.faceTo(b.x, b.z); b.faceTo(a.x, a.z); }

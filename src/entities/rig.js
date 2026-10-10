@@ -270,7 +270,7 @@ export class Character {
   // ------------------------------------------------------------ placement
   get object3d() { return this.root; }
   setPos(x, z, y = this.y) { this.x = x; this.z = z; this.y = y; this.root.position.set(x, y, z); this._lastX = x; this._lastZ = z; return this; }
-  face(yaw) { this.yawGoal = yaw; return this; }
+  faceYaw(yaw) { this.yawGoal = yaw; return this; }
   faceTo(x, z) { this.yawGoal = Math.atan2(x - this.x, z - this.z); return this; }
   faceNow(yaw) { this.yaw = this.yawGoal = yaw; this.root.rotation.y = yaw; return this; }
   setExpr(name, { react = true } = {}) {
@@ -416,7 +416,7 @@ export class Character {
       T.tail[1] += Math.sin(ph) * 0.3 * walkK;
     }
     // faces tilt a touch up towards the (high) camera so they read
-    T.head[0] -= this.def.faceUp ?? 0.12;
+    T.head[0] -= this.def.faceUp ?? 0.2;
     // idle: breathing + weight shift + occasional fidget
     const br = Math.sin(this.t * 1.9);
     T.spine[0] += br * 0.015;

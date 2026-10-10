@@ -16,7 +16,6 @@ const SPECIES = [
   { species: 'cat', skin: 0xf4ece0, light: 0xffffff, earInner: 0xffc0c8, ears: 'cat', tail: 'cat', tailColor: 0xe8a04a, tailTip: 0x3a2a20 },
   { species: 'shiba', skin: 0x3a3030, light: 0xe8d8c0, earInner: 0x6a5a58, ears: 'shiba', tail: 'shiba', tailColor: 0x3a3030 },
   { species: 'shiba', skin: 0xf0e8d8, light: 0xffffff, earInner: 0xf8d8c8, ears: 'shiba', tail: 'shiba', tailColor: 0xf0e8d8 },
-  { species: 'crane', skin: 0xf4f2ee, ears: 'none', tail: 'none' },
   { species: 'bear', skin: 0x4a3a30, light: 0xa8886a, earInner: 0x8a6a50, ears: 'round', tail: 'stub' },
   { species: 'rabbit', skin: 0xb89a7a, light: 0xf0e0c8, earInner: 0xf0c0b0, ears: 'rabbit', tail: 'rabbit', tailTip: 0xffffff },
 ];
@@ -32,7 +31,7 @@ export function makeFolk(seed, role = null) {
   const r = rngOf(seed + 1);
   role = role || pick(r, ['salaryman', 'salaryman', 'officeLady', 'student', 'tourist', 'granny', 'shopper', 'worker']);
   let sp = pick(r, SPECIES);
-  if (role === 'granny' && r() < 0.4) sp = SPECIES.find((s) => s.species === 'crane') || sp;
+  if (role === 'granny' && r() < 0.18) sp = { species: 'crane', skin: 0xf4f2ee, ears: 'none', tail: 'none' };
   const def = {
     id: `folk${seed}_${N++}`, name: '', role,
     ...JSON.parse(JSON.stringify(sp)),

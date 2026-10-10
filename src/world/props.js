@@ -35,19 +35,21 @@ function cropCanvas(pc, x, y, w, h) {
 }
 
 // ---------------------------------------------------------------- platform bench (3 moulded seats)
-export function bench({ color = 0x3a9a8a, seats = 3 } = {}) {
+export function bench({ color = 0x3a9a8a, seats = 3, seatH = 6 } = {}) {
   const v = new VoxelModel();
   const frame = 0x8a9098, frameD = 0x6a7078;
   const half = seats * 5;
-  fill(v, -half, half - 1, 7, 7, -3, 3, frame);
-  for (const x of [-half + 1, half - 2]) { fill(v, x, x, 0, 6, -2, -2, frameD); fill(v, x, x, 0, 6, 2, 2, frameD); fill(v, x, x, 0, 0, -3, 3, frameD); }
-  for (let s = 0; s < seats; s++) {
-    const x0 = -half + s * 10 + 1, x1 = x0 + 7;
-    const cc = s % 2 ? sh(color, 1.08) : color;
-    rbox(v, x0, x1, 8, 9, -3, 3, 0.6, cc);
-    rbox(v, x0, x1, 10, 17, -4, -3, 0.6, (x, y, z) => (y === 17 ? sh(cc, 1.12) : cc));
+  fill(v, -half, half - 1, seatH - 2, seatH - 2, -3, 3, frame);
+  for (const x of [-half + 1, half - 2]) { fill(v, x, x, 0, seatH - 3, -2, -2, frameD); fill(v, x, x, 0, seatH - 3, 2, 2, frameD); fill(v, x, x, 0, 0, -3, 3, frameD); }
+  for (let s2 = 0; s2 < seats; s2++) {
+    const x0 = -half + s2 * 10 + 1, x1 = x0 + 7;
+    const cc = s2 % 2 ? sh(color, 1.08) : color;
+    rbox(v, x0, x1, seatH - 1, seatH, -3, 3, 0.6, (x, y) => (y === seatH ? sh(cc, 1.1) : cc));
+    rbox(v, x0, x1, seatH + 1, seatH + 8, -4, -3, 0.6, (x, y, z) => (y === seatH + 8 ? sh(cc, 1.14) : cc));
   }
-  return grp(vm(v, V5));
+  const g = grp(vm(v, V5));
+  g.userData.seats = []; for (let s2 = 0; s2 < seats; s2++) g.userData.seats.push({ x: (-half + s2 * 10 + 5) * V5, z: 0.02, y: (seatH + 1) * V5 });
+  return g;
 }
 
 // ---------------------------------------------------------------- recycling bins (cans / bottles / other)
@@ -92,10 +94,11 @@ export function kiosk({ onU = null } = {}) {
   const W = 30, D = 18, H = 44;
   const body = 0xe8e4d8, trim = 0x1f8a7a;
   // booth
-  fill(v, -W, W - 1, 0, 18, -D, -6, (x, y, z) => (y < 2 ? 0x6a6a72 : y === 18 ? trim : tone(x, y, z, body, sh(body, 0.94), sh(body, 1.04))));
-  fill(v, -W, W - 1, 19, 20, -D, -4, 0xb8a88a); // counter top (wood)
-  fill(v, -W, W - 1, 21, H - 1, -D, -D + 1, body); // back wall
-  fill(v, -W, -W + 1, 21, H - 1, -D, -6, body); fill(v, W - 2, W - 1, 21, H - 1, -D, -6, body);
+  fill(v, -W, W - 1, 0, 11, -8, -6, (x, y, z) => (y < 2 ? 0x6a6a72 : y === 11 ? trim : tone(x, y, z, body, sh(body, 0.94), sh(body, 1.04))));
+  fill(v, -W, W - 1, 12, 13, -9, -4, 0xb8a88a); // counter top (wood)
+  fill(v, -W, W - 1, 0, H - 1, -D, -D + 1, body); // back wall
+  fill(v, -W, -W + 1, 0, H - 1, -D, -6, body); fill(v, W - 2, W - 1, 0, H - 1, -D, -6, body);
+  fill(v, -W + 2, W - 3, 0, 0, -D + 2, -9, 0x8a8478); // floor inside
   fill(v, -W - 1, W, H, H + 1, -D - 1, -2, sh(body, 0.9)); // roof
   // shelves of goods behind the counter
   const goods = [0xe8443a, 0xf0c040, 0x3a8ad8, 0x6ab04a, 0xf4f0e8, 0xff8ab0, 0x8a5ac8, 0xc87a3a];
@@ -104,13 +107,15 @@ export function kiosk({ onU = null } = {}) {
     for (let x = -W + 3; x < W - 3; x += 2) { const c = goods[(x * 7 + sy) & 7]; const hh = 2 + ((x + sy) % 3); fill(v, x, x, sy, sy + hh, -D + 2, -D + 3, c); }
   }
   // magazines rack on the counter front (fanned colourful covers)
-  for (let x = -W + 2; x < W - 2; x += 3) { const c = goods[(x * 3) & 7]; fill(v, x, x + 1, 8, 15, -5, -5, c); fill(v, x, x + 1, 15, 15, -5, -5, 0xffffff); }
+  for (let x = -W + 2; x < W - 2; x += 3) { const c = goods[(x * 3) & 7]; fill(v, x, x + 1, 4, 10, -5, -5, c); fill(v, x, x + 1, 10, 10, -5, -5, 0xffffff); }
+  for (let x = -W + 3; x < W - 3; x += 4) { const c = goods[(x * 5 + 3) & 7]; fill(v, x, x + 2, 14, 15, -8, -6, c); }
   // drinks cooler on the side (glowing)
   const glow = new VoxelModel();
   fill(glow, W - 1, W + 8, 0, 34, -D, -8, null);
   fill(v, W, W + 9, 0, 35, -D, -7, (x, y, z) => (y === 35 || x === W + 9 ? 0xc8ccd4 : 0xd8dce0));
   for (let y = 4; y <= 32; y++) for (let z = -D + 1; z <= -8; z++) { const shelf = y % 7 === 0; glow.set(W + 10, y, z, shelf ? 0xb8c4cc : goods[(y * 3 + z) & 7]); }
   const g = grp(vm(v, V5), glowVm(glow, V5, [0, 0, 0], { intensity: 0.9, onU }));
+  g.userData.clerk = { x: 0, z: -0.65, yaw: 0 };
   const board = signPlane(kioskBoard(), 1.4, { emissive: 0.6, onU });
   board.position.set(0, (H + 4) * V5, -1 * V5);
   g.add(board);
