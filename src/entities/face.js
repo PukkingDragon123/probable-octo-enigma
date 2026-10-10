@@ -73,6 +73,7 @@ function resolve(name) {
 
 // talking visemes (from text): which mouth shape a letter group maps to
 export function visemeFor(ch) {
+  if (!ch) return null;
   const c = ch.toLowerCase();
   if ('a'.includes(c)) return 'A';
   if ('ei'.includes(c)) return 'E';

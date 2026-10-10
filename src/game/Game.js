@@ -209,7 +209,7 @@ export class Game extends Emitter {
     this.canvas.style.height = `${window.innerHeight}px`;
   }
   update(rawDt) {
-    const fast = this.director.skipping ? 6 : 1;
+    const fast = this.director.skipping ? 6 : (this.fastForward || 1);
     const dt = rawDt * this.timeScale * fast;
     this.time += dt;
     WORLD.uTime.value = this.time;

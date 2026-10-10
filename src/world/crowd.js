@@ -93,6 +93,42 @@ export class Crowd {
     this.groups.push(G);
     return G;
   }
+  // make room around a spot (cutscenes): standing / walking folk inside r drift
+  // out to the edge of the circle and wait there; seated and scripted ones stay
+  clearAround(x, z, r = 2, nav = null) {
+    for (const p of this.people) {
+      if (p.mode === 'sit' || p.mode === 'eat' || p.mode === 'still') continue;
+      const dx = p.c.x - x, dz = p.c.z - z, d = Math.hypot(dx, dz);
+      if (d > r) continue;
+      const k = (r + 0.4) / (d || 1);
+      p.mode = 'stand'; p.home = { x: x + dx * k, z: z + dz * k, yaw: Math.atan2(x - p.c.x, z - p.c.z) };
+      p.c.walkTo(p.home.x, p.home.z, { nav }).then(() => p.c.faceYaw(p.home.yaw));
+    }
+  }
+  // keep walkers out of a circle (a cutscene's stage): their loops turn back at
+  // its edge instead of passing through. keepOut(null) lifts it.
+  keepOut(x, z, r = 2) {
+    this.keep = x == null ? null : { x, z, r };
+    if (!this.keep) return;
+    for (const p of this.people) {
+      if (p.mode !== 'walk' || !p.c.moving || !p.cur) continue;
+      const hit = this.edgeHit(p.c.x, p.c.z, p.cur.x, p.cur.z);
+      if (hit) { p.cur = hit; p.c.walkTo(hit.x, hit.z, { nav: p.o.nav ?? null }); }
+    }
+  }
+  // first point on the segment a->b just outside the keep-out circle, or null
+  edgeHit(ax, az, bx, bz) {
+    const K = this.keep;
+    if (!K || Math.hypot(ax - K.x, az - K.z) < K.r) return null; // already inside: let them leave
+    const len = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(len / 0.2));
+    let px = ax, pz = az;
+    for (let i = 1; i <= n; i++) {
+      const x = ax + ((bx - ax) * i) / n, z = az + ((bz - az) * i) / n;
+      if (Math.hypot(x - K.x, z - K.z) < K.r) return { x: px, z: pz, pause: 0.3 };
+      px = x; pz = z;
+    }
+    return null;
+  }
   remove(p) { this.L.remove(p.c); this.people = this.people.filter((q) => q !== p); }
   clear() { for (const p of this.people) this.L.remove(p.c); this.people = []; this.groups = []; }
 
@@ -142,9 +178,12 @@ export class Crowd {
           if (c.moving) break;
           p.pause -= dt;
           if (p.pause > 0) break;
-          const w = p.path[p.wi % p.path.length];
+          let w = p.path[p.wi % p.path.length];
           p.wi++;
+          w = this.edgeHit(c.x, c.z, w.x, w.z) || w;
+          p.cur = w;
           p.pause = w.pause ?? rnd(0.2, 2.5);
+          if (Math.hypot(w.x - c.x, w.z - c.z) < 0.05) break;
           c.walkTo(w.x, w.z, { nav: p.o.nav ?? null }).then(() => { if (w.yaw != null) c.faceYaw(w.yaw); if (w.act) c.play(w.act); });
           break;
         }

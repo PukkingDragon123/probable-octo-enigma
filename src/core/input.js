@@ -48,7 +48,7 @@ export class Input extends Emitter {
     e.preventDefault();
     try { this.el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     const p = this.rel(e);
-    this.pointers.set(e.pointerId, { x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), dragging: false, held: false, button: e.button });
+    this.pointers.set(e.pointerId, { x0: p.x, y0: p.y, x: p.x, y: p.y, t0: e.timeStamp || performance.now(), dragging: false, held: false, button: e.button });
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       this.lastPinch = Math.hypot(a.x - b.x, a.y - b.y);
@@ -57,7 +57,8 @@ export class Input extends Emitter {
       clearTimeout(this.holdTimer);
       this.holdTimer = setTimeout(() => {
         const q = this.pointers.get(e.pointerId);
-        if (q && !q.dragging) { q.held = true; this.emit('hold', { x: q.x, y: q.y }); }
+        // a long frame can delay this timer past the real release: trust event time stamps
+        if (q && !q.dragging && performance.now() - q.t0 >= 440) { q.held = true; this.emit('hold', { x: q.x, y: q.y }); }
       }, 450);
     }
     this.emit('press', { x: p.x, y: p.y, button: e.button });
@@ -95,8 +96,11 @@ export class Input extends Emitter {
     clearTimeout(this.holdTimer);
     if (!this.enabled) return;
     const p = this.rel(e);
+    // press length from the events' own time stamps, so a slow frame between
+    // press and release doesn't turn a tap into a hold
+    const dur = (e.timeStamp || performance.now()) - q.t0;
     if (q.dragging) this.emit('dragend', { x: p.x, y: p.y, held: q.held });
-    else if (!cancel && !q.held && performance.now() - q.t0 < 600 && this.pointers.size === 0) this.emit('tap', { x: p.x, y: p.y, button: q.button });
+    else if (!cancel && dur < 450 && this.pointers.size === 0) this.emit('tap', { x: p.x, y: p.y, button: q.button });
     else if (q.held) this.emit('holdend', { x: p.x, y: p.y });
     this.emit('release', { x: p.x, y: p.y });
   }

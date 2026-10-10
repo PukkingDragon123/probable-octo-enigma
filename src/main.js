@@ -20,6 +20,8 @@ addEventListener('orientationchange', () => setTimeout(() => game.resize(), 200)
 game.start();
 
 const params = new URLSearchParams(location.search);
+if (params.get('ff')) game.fastForward = +params.get('ff'); // dev: run game time faster
+if (params.get('skip')) game.director.skipUntil = params.get('skip'); // dev: jump to a beat
 const startChapter = params.get('chapter');
 const viewLoc = params.get('loc');
 if (viewLoc) {

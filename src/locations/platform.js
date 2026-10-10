@@ -200,7 +200,7 @@ export class PlatformLocation extends Location {
     const ext = extinguisherBox(); ext.position.set(-10.8 + 0.42, 0.05, cz + 0.05); S.add(ext);
     const ext2 = extinguisherBox(); ext2.position.set(9.4 + 0.42, 0.05, cz + 0.05); S.add(ext2);
     const aed = aedBox(); aed.position.set(-16.75, 0.75, cz + 0.4); aed.rotation.y = Math.PI / 2; S.add(aed);
-    for (const x of [-16, -1, 12]) { const ep = emergencyPost(); ep.position.set(x, 0, 1.55); S.add(ep); }
+    for (const x of [-16, -1, 14.4]) { const ep = emergencyPost(); ep.position.set(x, 0, 1.55); S.add(ep); }
     const mir = convexMirror(); mir.position.set(21.4, 0, 1.4); mir.rotation.y = -0.6; S.add(mir);
     for (const x of [-16.6, 10.4, 13.6]) { const pp = plantPot({ col: [0xc87a4a, 0x3a6a8a, 0xb85a4a][Math.abs(Math.round(x)) % 3] }); pp.position.set(x, 0, cz + 0.6); S.add(pp); nb.push(['bush_1', 'hydrangea_violet', 'fern_0'][Math.abs(Math.round(x)) % 3], x + 0.02, 0.35, cz + 0.62, { sway: 0.4, scale: 0.8 }); }
     nb.commit();

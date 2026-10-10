@@ -16,6 +16,7 @@ export class Director {
     this.game = game;
     this.active = 0;
     this.skipping = false;
+    this.skipUntil = null; // dev: fast-forward a cutscene until D.mark(name)
   }
   get g() { return this.game; }
   async cutscene(fn, { letterbox = true } = {}) {
@@ -23,6 +24,7 @@ export class Director {
     this.active++;
     g.inputLocked = true;
     if (letterbox) this.letterbox(true);
+    if (this.skipUntil) this.skipping = true;
     try { await fn(this); } catch (e) { console.error('cutscene error', e); }
     this.active--;
     if (this.active <= 0) {
@@ -35,6 +37,8 @@ export class Director {
     }
   }
   get inCutscene() { return this.active > 0; }
+  // named beat in a script; ?skip=<name> fast-forwards to it
+  mark(name) { if (this.skipUntil === name) { this.skipUntil = null; this.skipping = false; } }
   // ---------------------------------------------------------------- time
   wait(s) {
     const g = this.g;

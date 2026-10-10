@@ -16,5 +16,5 @@ html, body {
 }
 #game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
-#ui > * { pointer-events: auto; }
+/* children opt in to pointer events themselves (overlays like .bubbles stay click-through) */
 canvas.pix { image-rendering: pixelated; }

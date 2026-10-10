@@ -757,7 +757,7 @@ def('hug', (r, u, A, o) => {
   const sq = A.opts.squeeze ? sin(u * 6) * 0.05 : 0;
   o.shoulderL = [-1.3, -0.9, 0.2]; o.shoulderR = [-1.3, 0.9, -0.2];
   o.elbowL = [-1.0 - sq, 0, 0]; o.elbowR = [-1.0 - sq, 0, 0];
-  o.spine = [0.08, 0, 0]; o.head = [0.12, 0, A.opts.tilt ?? 0.2];
+  o.spine = [0.08, 0, 0]; o.head = [0.12, A.opts.headYaw ?? 0, A.opts.tilt ?? 0.2];
 }, { loop: true, mask: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'spine', 'head'] });
 
 // limp arms being hugged -> slowly hugging back (opts.back 0..1 set externally)
@@ -766,7 +766,7 @@ def('beHugged', (r, u, A, o) => {
   o.shoulderL = [lerp(0.1, -1.2, k), lerp(0, -0.8, k), lerp(0.05, 0.25, k)];
   o.shoulderR = [lerp(0.1, -1.2, k), lerp(0, 0.8, k), lerp(-0.05, -0.25, k)];
   o.elbowL = [lerp(0, -0.8, k), 0, 0]; o.elbowR = [lerp(0, -0.8, k), 0, 0];
-  o.head = [0.15, 0, -0.15];
+  o.head = [0.15, A.opts.headYaw ?? 0, -0.15];
 }, { loop: true, mask: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'head'] });
 
 // turning a gacha handle with the right hand (opts.turns)
@@ -820,6 +820,15 @@ def('openCapsule', (r, u, A, o) => {
   if (u > 0.62 && !A.fired.p) { A.fired.p = true; A.opts.onPop && A.opts.onPop(); }
 }, { dur: 1.6 });
 
+// holding something up over the head with both hands (loop); opts.hop bounces
+// on the toes, opts.wave sways it side to side
+def('holdUp', (r, u, A, o) => {
+  const sway = A.opts.wave ? sin(u * 5) * 0.18 : 0;
+  const hop = A.opts.hop ? Math.max(0, sin(u * 9)) : 0;
+  o.shoulderL = [-2.75, 0, 0.35 + sway]; o.shoulderR = [-2.75, 0, -0.35 + sway]; o.elbowL = [-0.45, 0, 0]; o.elbowR = [-0.45, 0, 0];
+  o.head = [-0.15, 0, sway * 0.5]; o.spine = [-0.06, 0, sway * 0.3];
+  o.root.y = hop * 0.06 * r.scale; o.kneeL = [0.25 * (1 - hop), 0, 0]; o.kneeR = [0.25 * (1 - hop), 0, 0];
+}, { loop: true });
 def('cheer', (r, u, A, o) => {
   const k = Math.min(1, u * 4) * Math.min(1, (1 - u) * 4);
   const b = Math.abs(sin(u * PI * 3));
