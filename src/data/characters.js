@@ -11,6 +11,9 @@ import { design as yukiDesign } from '../entities/cast/yuki.js';
 import { design as bendoDesign } from '../entities/cast/bendo.js';
 import { design as mioDesign } from '../entities/cast/mio.js';
 import { design as kanakoDesign } from '../entities/cast/kanako.js';
+import { design as taroboDesign } from '../entities/cast/tarobo.js';
+import { design as kappeiDesign } from '../entities/cast/kappei.js';
+import { design as attendantDesign } from '../entities/cast/attendant.js';
 
 const TURTLE_FACE = { eyeStyle: 'anime', beak: true, nostrils: true, mouthW: 9, mouthY: 33, eyeY: 21, eyeDX: 10, eyeW: 9, eyeH: 10, blushDX: 16, blushY: 28, browY: 12 };
 
@@ -87,7 +90,7 @@ export const CHARACTERS = {
   },
   // ------------------------------------------------------------ train
   attendant: {
-    id: 'attendant', name: 'Attendant', voice: { pitch: 1.25, kind: 'lady' }, scale: 0.9,
+    id: 'attendant', name: 'Haruka', voice: { pitch: 1.25, kind: 'lady' }, scale: 0.9, design: attendantDesign,
     species: 'deer', skin: 0xc08a5a, light: 0xf0dcc0, nose: 0x2a1a1a, earInner: 0xf0c8b0,
     outfit: { kind: 'attendant', vest: 0xe8648a, scarf: 0x2a9ab0 }, sleeve: 0xffffff, cuff: 0xe8648a,
     skirt: { color: 0x3a3a4a, len: 3, flare: 0.8 }, shorts: true, legColor: 0xc08a5a, shoe: 0x2a2a30,
@@ -97,16 +100,16 @@ export const CHARACTERS = {
   },
   // ------------------------------------------------------------ spirits
   tarobo: {
-    id: 'tarobo', name: 'Tarōbō', voice: { pitch: 0.68, kind: 'gruff' }, scale: 1.05, belly: 0.8, spirit: true,
+    id: 'tarobo', name: 'Tarōbō', voice: { pitch: 0.68, kind: 'gruff' }, scale: 1.0, belly: 0.8, spirit: true, design: taroboDesign,
     species: 'tengu', skin: 0xd8463a, noseLen: 7,
     outfit: { kind: 'yamabushi', color: 0xf2ece0, pom: 0x2a6a5a }, sleeve: 0xf2ece0, wideSleeves: true,
     skirt: { color: 0x3a4a7a, len: 3, flare: 1.2, pleats: true }, pants: 0x3a4a7a, feet: 'geta', shoe: 0x7a5a3a,
     face: { eyeStyle: 'anime', iris: '#e8b020', irisLight: '#ffe060', pupil: '#2a1a0a', brow: '#f4f0f0', browThick: 3, browW: 10, eyeW: 8, eyeH: 8, mouthY: 36, blushCol: '#ff5a4a' },
-    wings: '#22222e', ears: 'none', tail: 'none',
+    ears: 'none', tail: 'none',
     walkSpeed: 1.2,
   },
   kappei: {
-    id: 'kappei', name: 'Kappei', voice: { pitch: 1.0, kind: 'boy' }, scale: 0.84, spirit: true,
+    id: 'kappei', name: 'Kappei', voice: { pitch: 1.0, kind: 'boy' }, scale: 0.84, spirit: true, design: kappeiDesign,
     species: 'kappa', skin: 0x5aa86a, light: 0xc8e0a0, beak: 0xe8c040, hairColor: 0x2a5a3a,
     shell: { base: 0x4a7a4a, seam: 0x2a4a2a, light: 0x6a9a5a, rim: 0x3a5a3a },
     outfit: { kind: 'bare', color: 0x5aa86a }, sleeve: 0x5aa86a, sleeveLen: 0, pants: 0x5aa86a, shoe: 0x5aa86a,

@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { Face, makeFacePlane, visemeFor } from './face.js';
 import * as P from './parts.js';
 import * as VB from './voxbody.js';
+import { folkDesign } from './cast/folk.js';
 import { VoxelModel } from '../vox/voxel.js';
 import { blobShadowMat } from '../core/materials.js';
 import { clamp, lerp, damp, dampAngle, angleDiff, smooth, EASE, spring } from '../core/util.js';
@@ -89,7 +90,7 @@ export class Character {
   // the front of the head (plus a mouth plane on snouts / beaks).
   build() {
     const d = this.def;
-    const des = (this.des = typeof d.design === 'function' ? d.design(d) : VB.genericDesign(d));
+    const des = (this.des = typeof d.design === 'function' ? d.design(d) : d.design === 'legacy' ? VB.genericDesign(d) : folkDesign(d));
     const D = (this.dims = { ...DEFAULT_DIMS, ...(des.dims || {}) });
     const J = (this.j = {});
     const U = VB.VS;
