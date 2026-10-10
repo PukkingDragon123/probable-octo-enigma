@@ -268,7 +268,7 @@ export function cloudSea(size = 90) {
   p.rect(0, 0, S, S, '#f4e8f0');
   for (let i = 0; i < 220; i++) { const x = p.rnd() * S, y = p.rnd() * S, r = 4 + p.rnd() * 14; p.ellipse(x, y, r * 1.4, r, p.rnd() < 0.5 ? '#ffffff' : '#fff6f8'); p.ellipse(x + 2, y + r * 0.6, r * 1.2, r * 0.4, '#e0d0e8'); }
   for (let i = 0; i < 60; i++) { const x = p.rnd() * S, y = p.rnd() * S; p.ellipse(x, y, 10 + p.rnd() * 10, 3, '#d8c8e4'); }
-  const tex = new THREE.CanvasTexture(p.c); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(3, 3); tex.colorSpace = THREE.SRGBColorSpace;
+  const tex = new THREE.CanvasTexture(p.c); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(size / 36, size / 36); tex.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshLambertMaterial({ map: tex }));
   m.rotation.x = -Math.PI / 2;
   m.receiveShadow = true;

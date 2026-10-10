@@ -10,6 +10,7 @@ import { Location } from '../game/Location.js';
 import { islandShape, islandMesh, oldHouse, toriiPortal, stoneLantern, pondWater, koi, waterfall, cloudPuff, cloudSea, kappaIsland, tenguPeak } from '../world/spiritIsland.js';
 import { natureBatch, natureFrames } from '../art/nature.js';
 import { VoxelModel, vm, fill, V5 } from '../world/build.js';
+import { HokoriFlock } from '../entities/hokori.js';
 
 export const POND = { x: 3.9, z: 3.0, rx: 1.45, rz: 0.95 };
 
@@ -43,15 +44,15 @@ export class SpiritLocation extends Location {
     const fall = waterfall(6.5); fall.position.set(POND.x + 0.6, -0.1, ez + 0.02); S.add(fall); this.updaters.push(fall.userData.update);
     this.fallFoot = { x: POND.x + 0.6, y: -6.4, z: ez + 0.1 };
     // ---- clouds: the sea below, puffs drifting round the island, banks hiding the far islands
-    const sea = cloudSea(110); sea.position.y = -8.2; S.add(sea); this.updaters.push(sea.userData.update);
+    const sea = cloudSea(260); sea.position.y = -8.2; S.add(sea); this.updaters.push(sea.userData.update);
     this.puffs = [];
-    const puffAt = [[-12, -3.5, 2, 18], [12.5, -4, 3, 20], [-9, -6.5, 6.5, 22], [8.5, -6.8, 7, 24], [0, -7.4, 10, 28], [-14, 1.5, -6, 15], [14, 2.4, -7, 16], [4, 4.2, -10, 13], [-5, 4.6, -11, 14]];
+    const puffAt = [[-12, -3.5, 2, 18], [12.5, -4, 3, 20], [-9, -6.5, 6.5, 22], [8.5, -6.8, 7, 24], [0, -7.4, 10, 28], [-17, 4.5, -3, 15], [15, 2.4, -6, 16], [4, 4.2, -10, 13], [-5, 4.6, -11, 14]];
     puffAt.forEach(([x, y, z, r], i) => { const p = cloudPuff(i + 1, { r }); p.position.set(x, y, z); S.add(p); this.puffs.push({ m: p, x0: x, ph: i * 1.3 }); });
     // far islands (miniatures, hazy) and the banks in front of them
-    this.kappa = kappaIsland(); this.kappa.position.set(16, -1.2, -12); this.kappa.scale.setScalar(0.6); S.add(this.kappa);
-    this.peak = tenguPeak(); this.peak.position.set(-18, -0.5, -15); this.peak.scale.setScalar(0.55); S.add(this.peak);
+    this.kappa = kappaIsland(); this.kappa.position.set(11.5, -0.6, -11); this.kappa.scale.setScalar(0.7); S.add(this.kappa);
+    this.peak = tenguPeak(); this.peak.position.set(-12.5, -1.0, -13); this.peak.scale.setScalar(0.6); S.add(this.peak);
     this.banks = [];
-    for (const [x, y, z, r] of [[16, 0.2, -9, 30], [12.5, -1, -8, 24], [19.5, 1.2, -10, 26], [-18, 2.5, -12, 30], [-14.5, 0, -11, 26], [-21.5, 4, -13, 24], [-18, 6, -13, 22]]) {
+    for (const [x, y, z, r] of [[11.5, 0.6, -8.5, 30], [8.5, -0.6, -8, 24], [14.5, 1.4, -9.5, 26], [-12.5, 2.5, -10.5, 30], [-9.5, 0.2, -10, 26], [-15.5, 4, -11.5, 24], [-12.5, 6.2, -11.5, 22]]) {
       const b = cloudPuff(Math.round(x * 7), { r }); b.position.set(x, y, z); S.add(b); this.banks.push({ m: b, x0: x, y0: y });
     }
     // ---- plants: trees, the tea field, flowers, ferns, rocks, susuki at the rim, lily pads
@@ -104,12 +105,16 @@ export class SpiritLocation extends Location {
     nav.block(-8.6, 2.0, -7.2, 3.4); // bamboo
     this.navs.island = nav;
     this.arrive = { x: -5.5, z: 3.75 };
+    // Hokori milling about the garden (hidden until they're summoned in the story)
+    this.hokori = new HokoriFlock(this.game, S, { n: 6, area: { x0: -2.5, x1: 3.5, z0: 1.0, z1: 3.6 }, nav });
+    this.setHokori(false);
   }
+  setHokori(on) { for (const f of this.hokori.list) f.h.root.visible = on; this.hokoriOn = on; }
   // Tarōbō's gust: the cloud banks roll apart and sink, revealing the far islands
   revealIslands(dur = 3.0) {
     const g = this.game;
     return g.director.tween((k) => {
-      for (const b of this.banks) { const dir = Math.sign(b.x0 - (b.x0 > 0 ? 16 : -18)) || (b.x0 > 0 ? 1 : -1); b.m.position.x = b.x0 + dir * k * 14; b.m.position.y = b.y0 - k * 9; b.m.scale.setScalar(1 - k * 0.5); }
+      for (const b of this.banks) { const dir = Math.sign(b.x0 - (b.x0 > 0 ? 11.5 : -12.5)) || (b.x0 > 0 ? 1 : -1); b.m.position.x = b.x0 + dir * k * 14; b.m.position.y = b.y0 - k * 9; b.m.scale.setScalar(1 - k * 0.5); }
     }, dur);
   }
   async enter() {
@@ -119,6 +124,7 @@ export class SpiritLocation extends Location {
   }
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);
+    if (this.hokoriOn) this.hokori.update(dt);
     for (const k of this.koi) { k.a += dt * k.sp; k.m.position.set(POND.x + Math.cos(k.a) * k.r, -0.15, POND.z + Math.sin(k.a) * k.r * 0.6); k.m.rotation.y = -k.a - Math.PI / 2; }
     for (const p of this.puffs) p.m.position.x = p.x0 + Math.sin(t * 0.05 + p.ph) * 1.2;
     const B = this.plants;
