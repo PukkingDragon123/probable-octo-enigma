@@ -17,7 +17,7 @@ export const POND = { x: 3.9, z: 3.0, rx: 1.45, rz: 0.95 };
 export class SpiritLocation extends Location {
   constructor(game) {
     super(game, 'spirit', { bg: 0x9ec8f0, lightMode: 'spirit', grade: 'spirit', ambience: 'spirit' });
-    this.camCfg = { wupp: 0.0145, pitch: 32, yaw: 0, follow: true, minWupp: 0.007, maxWupp: 0.03, followY: 0.8, bounds: { minX: -5.2, maxX: 5.2, minZ: -0.6, maxZ: 3.4 } };
+    this.camCfg = { wupp: 0.0158, pitch: 46, yaw: 45, follow: true, minWupp: 0.007, maxWupp: 0.03, followY: 0.8, bounds: { minX: -5.2, maxX: 5.2, minZ: -0.6, maxZ: 3.4 } };
     this.shadowSize = 16;
     this.clock = false;
     this.hourOverride = 22.6;
@@ -47,13 +47,13 @@ export class SpiritLocation extends Location {
     const sea = cloudSea(260); sea.position.y = -8.2; S.add(sea);
     const ssh = seaShadow(shape.rx * 1.1, shape.rz * 1.2); ssh.position.set(shape.cx - 2.5, -8.15, shape.cz - 3.0); S.add(ssh); this.updaters.push(sea.userData.update);
     this.puffs = [];
-    const puffAt = [[-12, -3.5, 2, 18], [12.5, -4, 3, 20], [-9, -6.5, 6.5, 22], [8.5, -6.8, 7, 24], [0, -7.4, 10, 28], [-17, 4.5, -3, 15], [15, 2.4, -6, 16], [4, 4.2, -10, 13], [-5, 4.6, -11, 14]];
+    const puffAt = [[-12, -3.5, 2, 18], [12.5, -4, 3, 20], [-9, -6.5, 6.5, 22], [8.5, -6.8, 7, 24], [0, -7.4, 10, 28], [-17, 4.5, -3, 15], [16, 2.4, 2, 16], [4, 4.2, -10, 13], [-5, 4.6, -11, 14]];
     puffAt.forEach(([x, y, z, r], i) => { const p = cloudPuff(i + 1, { r }); p.position.set(x, y, z); S.add(p); this.puffs.push({ m: p, x0: x, ph: i * 1.3 }); });
     // far islands (miniatures, hazy) and the banks in front of them
-    this.kappa = kappaIsland(); this.kappa.position.set(11.5, -0.6, -11); this.kappa.scale.setScalar(0.7); S.add(this.kappa);
+    this.kappa = kappaIsland(); this.kappa.position.set(6.5, -1.4, -9); this.kappa.scale.setScalar(0.7); S.add(this.kappa);
     this.peak = tenguPeak(); this.peak.position.set(-12.5, -1.0, -13); this.peak.scale.setScalar(0.6); S.add(this.peak);
     this.banks = [];
-    for (const [x, y, z, r] of [[11.5, 0.6, -8.5, 30], [8.5, -0.6, -8, 24], [14.5, 1.4, -9.5, 26], [-12.5, 2.5, -10.5, 30], [-9.5, 0.2, -10, 26], [-15.5, 4, -11.5, 24], [-12.5, 6.2, -11.5, 22]]) {
+    for (const [x, y, z, r] of [[6.5, 0.2, -6.5, 30], [3.5, -1.0, -6, 24], [9.5, 1.0, -7.5, 26], [-12.5, 2.5, -10.5, 30], [-9.5, 0.2, -10, 26], [-15.5, 4, -11.5, 24], [-12.5, 6.2, -11.5, 22]]) {
       const b = cloudPuff(Math.round(x * 7), { r }); b.position.set(x, y, z); S.add(b); this.banks.push({ m: b, x0: x, y0: y });
     }
     // ---- plants: trees, the tea field, flowers, ferns, rocks, susuki at the rim, lily pads
@@ -115,13 +115,13 @@ export class SpiritLocation extends Location {
   revealIslands(dur = 3.0) {
     const g = this.game;
     return g.director.tween((k) => {
-      for (const b of this.banks) { const dir = Math.sign(b.x0 - (b.x0 > 0 ? 11.5 : -12.5)) || (b.x0 > 0 ? 1 : -1); b.m.position.x = b.x0 + dir * k * 14; b.m.position.y = b.y0 - k * 9; b.m.scale.setScalar(1 - k * 0.5); }
+      for (const b of this.banks) { const dir = Math.sign(b.x0 - (b.x0 > 0 ? 6.5 : -12.5)) || (b.x0 > 0 ? 1 : -1); b.m.position.x = b.x0 + dir * k * 14; b.m.position.y = b.y0 - k * 9; b.m.scale.setScalar(1 - k * 0.5); }
     }, dur);
   }
   async enter() {
     const g = this.game;
     g.rig.setFollow(null);
-    g.rig.play({ x: -2, y: 0.8, z: 2.2, wupp: this.camCfg.wupp, pitch: this.camCfg.pitch, yaw: 0, dur: 0 });
+    g.rig.play({ x: -2, y: 0.8, z: 2.2, wupp: this.camCfg.wupp, pitch: this.camCfg.pitch, yaw: this.camCfg.yaw, dur: 0 });
   }
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);

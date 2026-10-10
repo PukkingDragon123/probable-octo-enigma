@@ -65,11 +65,11 @@ export async function portalChapter(g) {
     g.place(P, -5.75, 4.05, 0.3);
     P.setHood(true); P.setExpr('shocked', { react: false });
     // establishing: the whole island in its sea of clouds
-    D.cam({ x: 0, y: -0.2, z: 1.5, wupp: 0.034, pitch: 26, yaw: 0, dur: 0 });
+    D.cam({ x: 0, y: -0.6, z: 1.2, wupp: 0.034, pitch: 44, yaw: 45, dur: 0 });
     g.audio?.music?.('spirit', { volume: 0.6 });
     await D.fadeIn(1.8);
     D.caption('The Spirit Realm', { dur: 3.5, kind: 'place' });
-    await D.cam({ x: -2.6, y: 0.6, z: 2.6, wupp: 0.012, pitch: 28, dur: 4.0, ease: 'inOutSine' });
+    await D.cam({ x: -3.2, y: 0.6, z: 3.0, wupp: 0.0125, pitch: 42, yaw: 45, dur: 4.0, ease: 'inOutSine' });
     P.play('lookAround');
     await D.wait(1.2);
     P.setHood(false); // the hood comes down for the first time
@@ -84,7 +84,7 @@ export async function portalChapter(g) {
     await D.say(G, 'Make what\'s *inside* them. Little souls of happiness. You\'ll see. First—', { expr: 'smug' });
     // ---- the dusty house
     D.mark('house');
-    D.cam({ x: 0.6, y: 0.9, z: 1.2, wupp: 0.0105, pitch: 26, dur: 2.6, ease: 'inOutSine' });
+    D.cam({ x: 0.4, y: 0.8, z: 1.4, wupp: 0.011, pitch: 40, yaw: 45, dur: 2.6, ease: 'inOutSine' });
     G.walkTo(0.4, 1.3, { nav: L.nav });
     await D.walk(P, -0.4, 1.55, { nav: L.nav });
     G.faceYaw(Math.PI); P.faceYaw(Math.PI);
@@ -102,13 +102,13 @@ export async function portalChapter(g) {
     await h1.hopTo(0.0, 2.35, { speed: 2.2 });
     P.faceTo(h1.x, h1.z); G.faceTo(h1.x, h1.z);
     h1.faceTo(P.x, P.z);
-    await D.cam({ x: 0.0, y: 0.3, z: 2.2, wupp: 0.0045, pitch: 18, dur: 1.0, clip: 1.2 });
+    await D.cam({ x: 0.0, y: 0.3, z: 2.2, wupp: 0.005, pitch: 32, yaw: 45, dur: 1.0, clip: 1.4 });
     await D.wait(0.5);
     h1.squash(0.6); h1.setHappy(1.2);
     g.audio?.play?.('squeak', { volume: 0.5, pitch: 1.4 });
     await D.say(h1, 'Pyu!', { kind: 'spirit', auto: 0.8, name: '' });
     P.setExpr('shocked'); P.squash(0.4); D.emote(P, 'excl');
-    await D.cam({ x: 0.0, y: 0.75, z: 1.8, wupp: 0.0088, pitch: 22, dur: 0.8, clip: 1.8 });
+    await D.cam({ x: 0.0, y: 0.7, z: 1.8, wupp: 0.009, pitch: 36, yaw: 45, dur: 0.8, clip: 2.0 });
     await D.say(P, 'IT BLINKED. THE DUST BLINKED.', { kind: 'shout', expr: 'shocked' });
     G.setExpr('laugh');
     await D.say(G, 'Ho ho ho! That\'s a Hokori. A dust spirit. Harmless — they love a tidy house more than anything.', { expr: 'laugh' });
@@ -136,7 +136,7 @@ export async function portalChapter(g) {
     for (const h of hokori) { h.squash(0.8); h.lookAt({ x: 4, y: 6, z: 0 }); }
     P.setExpr('surprised'); G.setExpr('surprised');
     P.lookAt({ x: 4, y: 6, z: 0 }, 1); G.lookAt({ x: 4, y: 6, z: 0 }, 1);
-    await D.cam({ x: 1.6, y: 2.0, z: 1.2, wupp: 0.0145, pitch: 18, dur: 1.2 });
+    await D.cam({ x: 1.6, y: 1.8, z: 1.2, wupp: 0.0155, pitch: 30, yaw: 45, dur: 1.2 });
     // Tarōbō rides in on his cloud
     const T = new Character(CHARACTERS.tarobo);
     L.add(T);
@@ -157,7 +157,7 @@ export async function portalChapter(g) {
     P.lookAt(null); G.lookAt(null);
     for (const h of hokori) h.lookAt(T.root);
     P.faceTo(T.x, T.z); G.faceTo(T.x, T.z);
-    await D.cam({ x: (T.x + G.x) / 2, y: 1.0, z: 1.45, wupp: 0.0098, pitch: 18, dur: 1.0, clip: 2.2 });
+    await D.cam({ x: (T.x + G.x) / 2, y: 0.9, z: 1.35, wupp: 0.0102, pitch: 36, yaw: 45, dur: 1.0, clip: 2.4 });
     await D.shout(T, 'GENZŌ!! Forty years! FORTY YEARS without so much as a cup of tea!', { expr: 'furious', act: 'hipsHands', name: 'Tarōbō' });
     G.setExpr('awkward');
     await D.say(G, 'Tarōbō-sama. You\'re looking... well. Very red.', { expr: 'awkward', act: 'bow' });
@@ -182,7 +182,7 @@ export async function portalChapter(g) {
     await D.say(T, '...Hm. Small. But real. Very well!', { expr: 'smug', name: 'Tarōbō' });
     // the fan: one great swing and the cloud banks roll away
     D.mark('reveal');
-    await D.cam({ x: 0, y: 1.2, z: -2, wupp: 0.046, pitch: 16, dur: 1.6, ease: 'inOutSine' });
+    await D.cam({ x: -1, y: 0.8, z: -3, wupp: 0.05, pitch: 34, yaw: 45, dur: 1.6, ease: 'inOutSine' });
     T.faceYaw(Math.PI);
     T.play('fan', { dur: 1.2, onSwing: () => { g.audio?.play?.('windGust', { volume: 0.9 }); D.shake(0.5); } });
     await D.wait(0.6);
@@ -192,7 +192,7 @@ export async function portalChapter(g) {
     D.caption('Kappa Island · Tarōbō\'s Castle', { dur: 3.0, kind: 'place' });
     await D.wait(1.4);
     T.faceTo(P.x, P.z); P.faceTo(T.x, T.z);
-    await D.cam({ x: (P.x + T.x) / 2, y: 0.95, z: 1.45, wupp: 0.0098, pitch: 18, dur: 1.2, clip: 2.2 });
+    await D.cam({ x: (P.x + T.x) / 2, y: 0.9, z: 1.35, wupp: 0.0102, pitch: 36, yaw: 45, dur: 1.2, clip: 2.4 });
     P.setExpr('surprised');
     await D.say(P, '...There are more islands.', { expr: 'surprised' });
     T.setExpr('smug');
@@ -208,7 +208,7 @@ export async function portalChapter(g) {
     L.remove(T); L.scene.remove(back); L.scene.remove(ride);
     // ---- the end of the evening
     D.mark('end');
-    await D.cam({ x: (P.x + G.x) / 2, y: 0.9, z: (P.z + G.z) / 2 + 0.2, wupp: 0.0085, pitch: 20, dur: 1.0, clip: 1.8 });
+    await D.cam({ x: (P.x + G.x) / 2, y: 0.8, z: (P.z + G.z) / 2 + 0.2, wupp: 0.009, pitch: 36, yaw: 45, dur: 1.0, clip: 2.0 });
     G.faceTo(P.x, P.z); P.faceTo(G.x, G.z);
     await D.say(G, 'Well! That went better than last time. He only threw me off the island twice, back then.', { expr: 'laugh' });
     P.setExpr('smile');
@@ -218,7 +218,7 @@ export async function portalChapter(g) {
     G.setExpr('gentle');
     await D.say(G, 'It is, isn\'t it?', { expr: 'gentle' });
     clearInterval(tick);
-    await D.cam({ x: 0, y: -0.2, z: 1.5, wupp: 0.034, pitch: 26, dur: 3.5, ease: 'inOutSine' });
+    await D.cam({ x: 0, y: -0.6, z: 1.2, wupp: 0.034, pitch: 44, yaw: 45, dur: 3.5, ease: 'inOutSine' });
     await D.fadeOut(2.0);
     L.updaters = L.updaters.filter((f) => f !== upd);
     for (const h of hokori) L.scene.remove(h.root);
