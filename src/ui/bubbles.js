@@ -213,6 +213,8 @@ export class Bubbles {
         this.advance(b);
       } else if (fast && !b.choices && !b.closing && b.life > 0.25) this.advance(b);
       if (b.o.ambient && !b.closing && b.life > 6) this.advance(b);
+      // dev auto-play: lines advance by themselves after a reading pause
+      if (g.autoPlay && b.done && !b.choices && !b.closing && b.life > 1.2 + this.plainLen(b.text) / 30) this.advance(b);
       this.place(b);
     }
   }

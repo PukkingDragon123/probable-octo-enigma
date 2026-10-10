@@ -14,6 +14,7 @@ import { PixCanvas, mix, darken, lighten, makeTexture } from '../core/pixtex.js'
 import { gachaMachine, broom } from '../world/streetProps.js';
 import { gachaCard, shopPoster } from '../world/shopSigns.js';
 import { manekiNeko } from '../world/shops.js';
+import { toyBox } from '../game/shopDay.js';
 import { glassPane } from '../world/station.js';
 import { emitMat } from '../core/materials.js';
 import { FONT } from '../ui/fonts.js';
@@ -125,7 +126,14 @@ export function happinessJar() {
   g.add(m);
   const p = new PixCanvas(16, 10, 2070); p.rect(0, 0, 16, 10, '#fff8e8'); p.frame(0, 0, 16, 10, '#c8a070'); p.text('しあわせ', 8, 1, { font: `7px ${FONT.tiny}`, color: '#c8302a', align: 'center' });
   const lab = signPlane(p, 0.22); lab.position.set(0, 0.17, 6.2 * V25); g.add(lab);
+  // the konpeito inside (glowing, piled up to the fill level)
+  const c = new VoxelModel();
+  const SC = [0xff8ab8, 0xffe060, 0x8ae0ff, 0xb0f080, 0xd0a8ff, 0xffb070, 0xffffff];
+  for (let y = 1; y < 13; y++) for (let x = -5; x <= 5; x++) for (let z = -5; z <= 5; z++) if (Math.hypot(x, z) <= 4.6) c.set(x, y, z, SC[Math.floor(hash3(x, y, z) * SC.length)]);
+  const cm = glowVm(c, V25, [0.5, 1, 0.5], { intensity: 1.15 });
+  cm.position.y = V25; cm.renderOrder = 5; cm.visible = false; g.add(cm);
   g.userData.capacity = 100; g.userData.fill = 0;
+  g.userData.setFill = (k) => { g.userData.fill = k; cm.visible = k > 0.005; cm.scale.y = Math.max(0.02, k); };
   return g;
 }
 function coinChanger() {
@@ -272,7 +280,13 @@ export class KodamayaLocation extends Location {
     const kd = kamidana(); kd.position.set(4.2, 2.65, W(-d / 2) + 0.2); S.add(kd);
     // ---- right side: counter (with the jar), the coin changer, a stool, a lamp
     const ct = counter(); ct.position.set(3.1, 0, -0.9); S.add(ct); this.counter = ct;
-    this.jar = happinessJar(); this.jar.position.set(2.45, 1.0, -0.85); S.add(this.jar);
+    this.regPc = new PixCanvas(28, 8, 2200);
+    this.regPlane = signPlane(this.regPc, 0.3, { emissive: 1.0 });
+    this.regPlane.position.set(3.1 + 14 * V5, 30 * V5, -0.9 - 2 * V5 + 0.007); S.add(this.regPlane);
+    this.setYen(0);
+    // the stock box (capsule bags for restocking) by the stairs
+    this.toyBox = toyBox(); this.toyBox.position.set(2.75, 0, 2.15); this.toyBox.rotation.y = -0.25; S.add(this.toyBox);
+    this.jar = happinessJar(); this.jar.position.set(2.45, 1.0, -0.85); this.jar.scale.setScalar(1.35); S.add(this.jar);
     const cc = coinChanger(); cc.position.set(4.45, 0, 1.05); cc.rotation.y = -0.35; S.add(cc); this.changer = cc;
     const lp = lamp(k, { table: true, h: 14, shadeCol: 0xf8c878 }); k.add(lp, 4.05, 1.0, -1.0);
     const mn = manekiNeko(); mn.position.set(3.75, 1.0, -0.75); mn.scale.setScalar(0.8); S.add(mn); this.updaters.push(mn.userData.update); this.maneki = mn;
@@ -312,11 +326,29 @@ export class KodamayaLocation extends Location {
     nav.block(W(-w / 2), W(-d / 2), W(-w / 2) + 1.25, 1.9);
     for (const b of this.boxes) nav.blockCircle(b.position.x, b.position.z, 0.38);
     nav.block(2.0, -3, 4.6, -2.6);
+    nav.block(2.1, 1.75, 3.4, 2.6);
     this.navs.shop = nav;
     this.stairsTop = { x: -4.4, z: -2.6 };
     this.setDust(1);
     this.setLights(false);
   }
+  setYen(n) {
+    const p = this.regPc; p.rect(0, 0, 28, 8, '#103018');
+    p.text('¥' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','), 27, 0, { font: `7px ${FONT.tiny}`, color: '#8af0a0', align: 'right' });
+    this.regPlane.userData.tex.needsUpdate = true;
+  }
+  // morning after the big clean: sheets off, a little dust left, lights on, daylight from the street
+  setDay(hour = 10) {
+    this.setDust(0.12);
+    for (const m of this.machines) if (m.sheet) { m.sheet.visible = false; m.sheet.userData.off = true; }
+    this.hourOverride = hour;
+    this.setLights(true);
+    this.lightOverride = { hemiI: 1.7, sunI: 1.6, sky: 0xfff8ec, gnd: 0x7a6048, sun: 0xfff4e0 };
+    if (this.game.location === this) this.game.lighting.override = { ...this.lightOverride };
+    for (const s of this.shafts) s.material.uniforms && (s.material.uniforms.uColor && s.material.uniforms.uColor.value.setHex(0xfff0d0));
+  }
+  onTapFirst(e) { return this.day ? this.day.pickStars(e.x, e.y) > 0 : false; }
+  onDrag(e) { if (this.day) this.day.pickStars(e.x, e.y, 40); }
   setDust(k) {
     this.dust = k;
     if (this.dustMat) this.dustMat.opacity = k;
@@ -337,6 +369,7 @@ export class KodamayaLocation extends Location {
   }
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);
+    this.day?.update(dt);
     // dust motes drifting in the light shafts
     if ((this._moteT = (this._moteT || 0) - dt) <= 0) {
       this._moteT = 0.25;

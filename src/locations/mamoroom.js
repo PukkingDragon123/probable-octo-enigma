@@ -158,7 +158,8 @@ export class MamoRoomLocation extends Location {
     // ceiling light pull-cord lamp (glow) hanging in the middle
     const cl = new VoxelModel(), cg = new VoxelModel();
     fill(cl, 0, 0, 0, 20, 0, 0, 0x3a3a40); for (let x = -8; x <= 8; x++) for (let z = -8; z <= 8; z++) { const r = Math.hypot(x, z); if (r < 8.5 && r > 6.8) cl.set(x, -1, z, 0xe8e0d0); if (r <= 6.8) cg.set(x, -1, z, 0xfff4d8); }
-    const clg = new THREE.Group(); clg.add(vm(cl, V25), glowVm(cg, V25, [0, 0, 0], { intensity: 1.1 })); clg.position.set(0, 2.55, -0.4); S.add(clg);
+    this.lampU = { value: 1 };
+    const clg = new THREE.Group(); clg.add(vm(cl, V25), glowVm(cg, V25, [0, 0, 0], { intensity: 1.1, onU: this.lampU })); clg.position.set(0, 2.55, -0.4); S.add(clg);
     // ---- the clutter (tutorial targets): boxes + dust bunnies
     const labels = ['ガチャ在庫', '昭和', 'おもちゃ', '', 'カプセル', '', '雑誌'];
     const spots = [[-1.9, 0.9], [-0.9, 1.6], [0.4, 1.9], [1.2, 0.6], [-2.5, -0.4], [2.2, -0.3], [-0.6, -0.8]];
@@ -184,6 +185,16 @@ export class MamoRoomLocation extends Location {
     const nav = this.navs.room;
     nav.restore();
     for (const b of this.boxes) if (!b.done) nav.blockCircle(b.obj.position.x, b.obj.position.z, 0.32);
+  }
+  // lights out: moonlight through the window, the lamp off
+  setNight() {
+    this.lampU.value = 0.04;
+    this.hourOverride = 22.5;
+    this.lightOverride = { hemiI: 0.7, sunI: 0.55, sky: 0x7080c0, gnd: 0x2a2440, sun: 0xa8c0ff };
+    if (this.game.location === this) this.game.lighting.override = { ...this.lightOverride };
+    this.futonRoll.visible = false; this.futonFlat.visible = true;
+    for (const b of this.boxes) if (!b.done) { this.scene.remove(b.obj); b.done = true; }
+    for (const b of this.bunnies) if (!b.done) { this.scene.remove(b.obj); b.done = true; }
   }
   async enter() {
     const g = this.game;

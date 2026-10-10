@@ -160,15 +160,17 @@ export function parasol({ col = 0xd8302a } = {}) {
 // slot, capsule door. Returns the stack; userData.slots = [{x, y, card}] (local)
 export function gachaMachine({ seed = 1, body = 0xf4f2ec, dust = 0 } = {}) {
   const v = new VoxelModel();
+  const capsM = [new VoxelModel(), new VoxelModel()]; // the capsule piles (scaled by stock)
   const W = 16, Hh = 18; // V25 voxels: 0.4 m wide, 0.45 m per machine
   const caps = [0xff6a8a, 0x5ab8f0, 0xf8d040, 0x7ad860, 0xb88af0, 0xff9a4a, 0xffffff];
   const tier = (y0, s) => {
     // display box (window carved; capsules piled inside the lower 70%)
     fill(v, 0, W - 1, y0 + 8, y0 + Hh - 1, 0, 9, (x, y, z) => (y === y0 + Hh - 1 ? sh(body, 1.05) : x === 0 || x === W - 1 ? sh(body, 0.9) : body));
     carve(v, 1, W - 2, y0 + 9, y0 + Hh - 3, 2, 9);
+    const cm = capsM[y0 ? 1 : 0];
     for (let x = 1; x <= W - 2; x++) for (let z = 2; z <= 8; z++) {
       const fillH = y0 + 9 + Math.floor(4 + hash3(x, s, z) * 3);
-      for (let y = y0 + 9; y < fillH; y++) { const c = caps[Math.floor(hash3(x >> 1, y >> 1, (z >> 1) + s) * caps.length)]; v.set(x, y, z, ((x + y + z) % 2 === 0) ? 0xf8f8f8 : c); }
+      for (let y = y0 + 9; y < fillH; y++) { const c = caps[Math.floor(hash3(x >> 1, y >> 1, (z >> 1) + s) * caps.length)]; cm.set(x, y, z, ((x + y + z) % 2 === 0) ? 0xf8f8f8 : c); }
     }
     // lower body: coin slot + crank + capsule door
     fill(v, 0, W - 1, y0, y0 + 7, 0, 9, (x, y) => (y === y0 + 7 ? 0xd8d8d4 : sh(body, 0.95)));
@@ -183,6 +185,18 @@ export function gachaMachine({ seed = 1, body = 0xf4f2ec, dust = 0 } = {}) {
   const g = grp(vm(v, V25, [W / 2, 0, 5]));
   g.position.y = 0;
   g.children[0].position.y = 4 * V25;
+  const piles = capsM.map((cm, t) => { const m = vm(cm, V25, [W / 2, t * Hh + 9, 5]); m.position.y = (4 + t * Hh + 9) * V25; g.add(m); return m; });
+  g.userData.stock = 1;
+  // stock 0..1: the capsule piles sink as the machine empties (lower tier empties last)
+  g.userData.setStock = (k) => {
+    g.userData.stock = k = Math.max(0, Math.min(1, k));
+    const up = Math.max(0, k * 2 - 1), lo = Math.min(1, k * 2);
+    piles[1].scale.y = Math.max(0.001, up); piles[1].visible = up > 0.02;
+    piles[0].scale.y = Math.max(0.001, lo); piles[0].visible = lo > 0.02;
+  };
+  // where the capsule pops out (local) and where a customer stands to play
+  g.userData.tray = { x: 0.31 * 0 + 12.5 * V25 - (W / 2) * V25, y: (4 + 1.5) * V25, z: 6 * V25 };
+  g.userData.crank = { x: (6.5 - W / 2) * V25, y: (4 + 3.5) * V25, z: 6 * V25 };
   // glass fronts + header cards
   for (let t = 0; t < 2; t++) {
     const gp = glassPane((W - 2) * V25, (Hh - 11) * V25);
