@@ -87,8 +87,8 @@ export class Bubbles {
     const kind = o.kind || (speaker?.def?.spirit ? 'spirit' : 'say');
     const A = art(kind);
     const el = document.createElement('div');
-    el.className = 'bubble b-' + kind;
-    const sc = this.scale;
+    el.className = 'bubble b-' + kind + (o.ambient ? ' ambient' : '');
+    const sc = this.scale * (o.ambient ? 0.85 : 1);
     const C = A.frame.C;
     el.style.borderImage = `url(${A.frame.url}) ${C} fill / ${C * sc}px stretch`;
     el.style.borderWidth = `${C * sc}px`;
@@ -107,11 +107,11 @@ export class Bubbles {
     el.classList.add('pop');
     this.list.push(b);
     const audio = this.game.audio;
-    audio?.play?.('bubble', { volume: 0.25 });
+    if (!o.ambient) audio?.play?.('bubble', { volume: 0.25 });
     if (speaker?.def?.voice && audio?.voice && !o.silent) {
       try { b.voice = audio.voice(speaker.def.voice, text, {}); } catch { b.voice = null; }
     }
-    el.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.advance(b); });
+    if (!o.ambient) el.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.advance(b); });
     if (b.choices) {
       const box = document.createElement('div');
       box.className = 'b-choices';
@@ -177,13 +177,14 @@ export class Bubbles {
   }
   // tap anywhere advances the newest bubble
   tapAdvance() {
-    const b = this.list[this.list.length - 1];
+    const b = this.list.filter((q) => !q.o.ambient).pop();
     if (!b) return false;
     if (b.choices && b.done) return true; // must pick
     this.advance(b);
     return true;
   }
-  get active() { return this.list.length > 0; }
+  // ambient chatter (shopkeepers calling out) never blocks taps or cutscenes
+  get active() { return this.list.some((b) => !b.o.ambient); }
   clear() { for (const b of [...this.list]) { this.close(b); b.resolve && b.resolve(); b.resolveChoice && b.resolveChoice(0); } }
 
   update(dt) {
@@ -211,6 +212,7 @@ export class Bubbles {
       } else if (b.o.auto != null && !b.closing && b.life > b.o.auto + this.plainLen(b.text) / b.cps) {
         this.advance(b);
       } else if (fast && !b.choices && !b.closing && b.life > 0.25) this.advance(b);
+      if (b.o.ambient && !b.closing && b.life > 6) this.advance(b);
       this.place(b);
     }
   }
@@ -228,6 +230,8 @@ export class Bubbles {
       const s = g.rig.worldToScreen(wp, g.renderer, this._sp || (this._sp = { x: 0, y: 0 }));
       const sc = this.scale;
       sx = s.x; sy = s.y - 6 * sc;
+      // ambient chatter from someone off screen just isn't shown
+      if (b.o.ambient) { const off = sx < -40 || sx > vw + 40 || sy < -40 || sy > vh + 60; el.style.visibility = off ? 'hidden' : ''; }
       // keep on screen
       const left = clamp(sx - W / 2, 8, vw - W - 8);
       const top = clamp(sy - H - 6 * sc, 8, vh - H - 8);

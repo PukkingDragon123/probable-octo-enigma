@@ -42,11 +42,14 @@ export class CameraRig {
     // cut plane: geometry more than `clip` metres in front of the target (towards
     // the camera) is sliced away, so close-ups can look through seats and walls
     this.clip = 0;
+    // narrow places (a street seen side-on) keep the framing near a fixed depth
+    // instead of chasing the character's z: goal.z = lerp(follow z, lockZ, lockK)
+    this.lockZ = null; this.lockK = 0.85;
   }
 
   // ------------------------------------------------------------ gameplay
   setBounds(b) { this.bounds = b; }
-  setFollow(obj, offset = null) { this.follow = obj; if (offset) this.followOffset.copy(offset); else this.followOffset.set(0, 0, 0); this._lastFX = null; }
+  setFollow(obj, offset = null) { this.follow = obj; if (offset) this.followOffset.copy(offset); this._lastFX = null; }
   _fpos(o) {
     if (!o) return null;
     if (o.isObject3D) { o.getWorldPosition(_v); return { x: _v.x, y: _v.y, z: _v.z }; }
@@ -131,6 +134,7 @@ export class CameraRig {
         this._lastFX = fp.x; this._lastFZ = fp.z;
         this.goal.x = fp.x + this.followOffset.x + this._velX * this.lookAhead * 0.35;
         this.goal.z = fp.z + this.followOffset.z + this._velZ * this.lookAhead * 0.35;
+        if (this.lockZ != null) this.goal.z = lerp(this.goal.z, this.lockZ, this.lockK);
         this.goal.y = (fp.y || 0) * 0.5 + this.followOffset.y;
         this.clampGoal();
       }

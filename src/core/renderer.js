@@ -327,6 +327,7 @@ export const GRADES = {
   // lifted violet shadows, tinted outlines, tilt-shift haze, soft bloom.
   // Human World: the same warmth, a hair less saturated, slightly cooler lift
   human: { saturation: 1.08, grade: [1.03, 1.0, 0.95], lift: [0.018, 0.012, 0.045], contrast: 1.04, vignette: 0.3, vignetteColor: [0.55, 0.42, 0.62], haze: 0.22, hazeColor: [1.0, 0.9, 0.8], outlineTint: [0.36, 0.3, 0.42], warmth: 0.05, bloom: 0.42 },
+  humanDusk: { saturation: 1.12, grade: [1.06, 0.99, 0.92], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.38, 0.55], haze: 0.24, hazeColor: [1.0, 0.82, 0.66], outlineTint: [0.4, 0.3, 0.4], warmth: 0.32, bloom: 0.58 },
   humanNight: { saturation: 1.12, grade: [0.97, 0.98, 1.06], lift: [0.02, 0.018, 0.07], contrast: 1.06, vignette: 0.42, vignetteColor: [0.3, 0.26, 0.5], haze: 0.24, hazeColor: [0.36, 0.36, 0.6], outlineTint: [0.3, 0.28, 0.44], warmth: 0.0, bloom: 0.62 },
   // Spirit Realm: warmer, more saturated, golden haze
   spirit: { saturation: 1.18, grade: [1.05, 1.0, 0.93], lift: [0.03, 0.012, 0.05], contrast: 1.04, vignette: 0.28, vignetteColor: [0.62, 0.45, 0.62], haze: 0.28, hazeColor: [1.0, 0.88, 0.74], outlineTint: [0.42, 0.3, 0.4], warmth: 0.3, bloom: 0.5 },

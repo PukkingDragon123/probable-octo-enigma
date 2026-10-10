@@ -23,7 +23,7 @@ export function glassMat() {
   glassMatCache = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide });
   return glassMatCache;
 }
-function glassPane(w, h) {
+export function glassPane(w, h) {
   const g = new THREE.PlaneGeometry(w, h);
   const uv = g.attributes.uv.array; for (let i = 0; i < uv.length; i += 2) { uv[i] *= w; uv[i + 1] *= h; }
   const m = new THREE.Mesh(g, glassMat());

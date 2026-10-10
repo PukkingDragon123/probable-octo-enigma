@@ -79,6 +79,7 @@ export class Game extends Emitter {
     if (!this.lighting) this.lighting = new Lighting(L.scene);
     this.lighting.attach(L.scene);
     this.lighting.mode = L.lightMode;
+    this.lighting.override = L.lightOverride ? { ...L.lightOverride } : null;
     this.lighting.setShadowSize(L.shadowSize);
     if (!this.particles) this.particles = new Particles(L.scene);
     this.particles.clear();
@@ -91,6 +92,8 @@ export class Game extends Emitter {
     this.renderer.setFog(null);
     this.bubbles.clear();
     this.rig.shot = null;
+    this.rig.lockZ = L.camCfg.lockZ ?? null;
+    if (L.camCfg.followY != null) this.rig.followOffset.set(0, L.camCfg.followY, 0); else this.rig.followOffset.set(0, 0, 0);
     await L.enter(opts);
     if (L.music !== undefined) this.audio?.music?.(L.music);
     if (L.ambience !== undefined) this.audio?.ambience?.(L.ambience);
