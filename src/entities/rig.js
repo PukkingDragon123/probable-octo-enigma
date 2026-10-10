@@ -954,6 +954,25 @@ def('pour', (r, u, A, o) => {
   o.shoulderL = [-0.6, 0, 0.2]; o.elbowL = [-1.1, 0, 0]; o.head = [0.3, 0, 0];
 }, { dur: 2.0 });
 
+// tossing a frying pan over the stove (loop): the pan hand flicks up, the other works a spatula
+def('cook', (r, u, A, o) => {
+  const t = (u * 1.4) % 1, flick = t < 0.18 ? Math.sin((t / 0.18) * Math.PI) : 0;
+  o.shoulderR = [-0.95 - flick * 0.35, 0.15, -0.1]; o.elbowR = [-0.8 + flick * 0.3, 0, 0]; o.handR = [-flick * 0.5, 0, 0];
+  o.shoulderL = [-0.7 + sin(u * 6) * 0.15, -0.2, 0.15]; o.elbowL = [-1.1, 0, 0];
+  o.spine = [0.12, 0, 0]; o.head = [0.35, 0, 0];
+}, { loop: true });
+// carrying a tray at shoulder height on one hand (loop)
+def('serve', (r, u, A, o) => {
+  o.shoulderR = [-1.3, 0.1, -0.35]; o.elbowR = [-1.5, 0, 0]; o.handR = [0.6, 0, 0];
+  o.shoulderL = [-0.1, 0, 0.1]; o.elbowL = [-0.2, 0, 0];
+}, { loop: true, mask: ['shoulderR', 'elbowR', 'handR', 'shoulderL', 'elbowL'] });
+// squeezing a ketchup bottle in little careful strokes (loop)
+def('draw', (r, u, A, o) => {
+  o.shoulderR = [-0.85, 0.25, -0.1]; o.elbowR = [-1.25, sin(u * 5) * 0.12, 0]; o.handR = [0.4, 0, cos(u * 5) * 0.2];
+  o.shoulderL = [-0.5, 0, 0.15]; o.elbowL = [-0.9, 0, 0];
+  o.spine = [0.3, 0, 0]; o.head = [0.45, 0, 0];
+}, { loop: true });
+
 def('water', (r, u, A, o) => { // watering can (loop)
   o.shoulderR = [-1.0, 0, -0.15]; o.elbowR = [-0.4, 0, 0]; o.handR = [0, 0, -0.6 + sin(u * 3) * 0.1];
   o.spine = [0.15, 0, 0]; o.head = [0.35, 0, 0];

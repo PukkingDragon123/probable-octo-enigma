@@ -93,6 +93,7 @@ export class Game extends Emitter {
     this.bubbles.clear();
     this.rig.shot = null;
     this.rig.lockZ = L.camCfg.lockZ ?? null;
+    this.rig.setBounds(L.camCfg.bounds ?? null);
     if (L.camCfg.followY != null) this.rig.followOffset.set(0, L.camCfg.followY, 0); else this.rig.followOffset.set(0, 0, 0);
     await L.enter(opts);
     if (L.music !== undefined) this.audio?.music?.(L.music);

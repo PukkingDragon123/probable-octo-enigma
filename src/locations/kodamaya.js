@@ -8,7 +8,7 @@
 //   L.setLights(on)   fluorescent tubes flicker on
 import * as THREE from 'three';
 import { Location } from '../game/Location.js';
-import { HomeKit, HV, W, bookshelf, clock, plant, crate as hkCrate, lamp, PAL } from '../world/homeKit.js';
+import { HomeKit, HV, W, bookshelf, clock, plant, crate as hkCrate, lamp, PAL, mix as hmix } from '../world/homeKit.js';
 import { VoxelModel, vm, glowVm, signPlane, fill, sh, tone, hash3, ell, rbox, V5, V25 } from '../world/build.js';
 import { PixCanvas, mix, darken, lighten, makeTexture } from '../core/pixtex.js';
 import { gachaMachine, broom } from '../world/streetProps.js';
@@ -189,7 +189,7 @@ function kamidana() {
   for (let x = -14; x <= 13; x++) v.set(x, -1 - Math.round(Math.sin(((x + 14) / 27) * Math.PI) * 1.5), 5, 0xd8c890);
   return vm(v, V5);
 }
-function cardboard(seed = 1, { w = 12, h = 9, d = 10, label = null } = {}) {
+export function cardboard(seed = 1, { w = 12, h = 9, d = 10, label = null } = {}) {
   const v = new VoxelModel();
   const c = [0xc8a070, 0xb89060, 0xd0aa78][seed % 3];
   fill(v, -w / 2, w / 2 - 1, 0, h - 1, -d / 2, d / 2 - 1, (x, y, z) => (y === h - 1 && Math.abs(x + 0.5) < 1 ? 0xd8c8a0 : y === h - 1 ? sh(c, 1.08) : (x === -w / 2 || z === d / 2 - 1) && y % 4 === 0 ? sh(c, 0.92) : c));
@@ -202,7 +202,7 @@ function cardboard(seed = 1, { w = 12, h = 9, d = 10, label = null } = {}) {
 export class KodamayaLocation extends Location {
   constructor(game) {
     super(game, 'kodamaya', { bg: 0x1e1622, lightMode: 'interior', grade: 'cozy', ambience: 'shop' });
-    this.camCfg = { wupp: 0.0112, pitch: 36, yaw: 0, follow: true, minWupp: 0.006, maxWupp: 0.022 };
+    this.camCfg = { wupp: 0.0118, pitch: 36, yaw: 0, follow: true, minWupp: 0.006, maxWupp: 0.022, followY: 0.9, bounds: { minX: -1.3, maxX: 1.3, minZ: -0.6, maxZ: 0.6 } };
     this.shadowSize = 9;
     this.clock = false;
     this.hourOverride = 18.0;
@@ -219,7 +219,7 @@ export class KodamayaLocation extends Location {
       w, d, h, lowFront: 14, cap: 0x5a3a22, base: 0x4a2e1e,
       floor: (x, z) => { const plank = Math.floor((z + 200) / 5); const h2 = hash3(Math.floor((x + 200 + plank * 13) / 22), plank, 3); const seam = (x + 200 + plank * 13) % 22 === 0 || (z + 200) % 5 === 0; return seam ? 0x5a3a24 : h2 < 0.3 ? 0x8a5e38 : h2 > 0.75 ? 0xa0703f : 0x946640; },
       wall: (x, y, z, side) => (y < 22 ? (y === 21 ? 0x5a3a22 : (side === 'back' ? (x + 400) : (z + 400)) % 6 === 0 ? 0x6a4428 : 0x7a5030) : y > h - 4 ? 0xd8c8a8 : tone(x, y, z, 0xe8dcc0, 0xdcd0b4, 0xf0e6cc, 0.12, 0.06)),
-      windows: [{ side: 'right', a0: -30, a1: -6, y0: 30, y1: 52, frame: 0x5a3a22, sky: (u, v) => mix(0xffb070, 0x6a5a9a, v) }],
+      windows: [{ side: 'right', a0: -30, a1: -6, y0: 30, y1: 52, frame: 0x5a3a22, sky: (u, v) => hmix(0xffb070, 0x6a5a9a, v) }],
     });
     // stains on the plaster + a horizontal beam
     k.deco((R) => {

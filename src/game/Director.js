@@ -81,7 +81,10 @@ export class Director {
   // back to the gameplay camera (the location's pitch / zoom, no cut plane) following someone
   follow(target, o = {}) {
     const r = this.g.rig, c = this.g.location?.camCfg || {};
-    r.shot = null; r.clip = 0;
+    r.clip = 0;
+    // small rooms keep one framing of the whole room instead of chasing the player
+    if (c.fixed) { r.setFollow(null); r.play({ ...c.fixed, wupp: o.wupp ?? c.wupp, pitch: c.pitch, yaw: c.yaw ?? 0, dur: o.dur ?? 0.9, clip: 0 }); return; }
+    r.shot = null;
     r.setFollow(target);
     r.wuppGoal = o.wupp ?? c.wupp ?? r.wuppGoal;
     if ((o.pitch ?? c.pitch) != null) r.pitchGoal = ((o.pitch ?? c.pitch) * Math.PI) / 180;

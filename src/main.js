@@ -22,6 +22,7 @@ game.start();
 const params = new URLSearchParams(location.search);
 if (params.get('ff')) game.fastForward = +params.get('ff'); // dev: run game time faster
 if (params.get('skip')) game.director.skipUntil = params.get('skip'); // dev: jump to a beat
+if (params.get('auto')) game.autoPlay = true; // dev: tutorials play themselves
 const startChapter = params.get('chapter');
 const viewLoc = params.get('loc');
 if (viewLoc) {
@@ -29,7 +30,7 @@ if (viewLoc) {
   const L = await game.goTo(viewLoc, {}, { transition: null });
   const p = (params.get('at') || '').split(',').map(Number);
   game.place(game.player, p[0] || 0, p[1] || 2, 0);
-  game.rig.setFollow(game.player);
+  if (L.camCfg.fixed) game.director.follow(game.player); else game.rig.setFollow(game.player);
   if (params.get('hour')) game.state.hour = +params.get('hour');
 } else if (startChapter) {
   game.story.start(startChapter);

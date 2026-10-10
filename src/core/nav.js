@@ -26,6 +26,9 @@ export class NavGrid {
   }
   block(x0, z0, x1, z1, pad = 0) { return this.setRect(x0, z0, x1, z1, 0, pad); }
   open(x0, z0, x1, z1) { return this.setRect(x0, z0, x1, z1, 1, 0); }
+  // keep the static layout, so movable things (boxes) can be re-blocked each time
+  snapshot() { this._base = this.walk.slice(); return this; }
+  restore() { if (this._base) this.walk.set(this._base); return this; }
   blockCircle(x, z, r) {
     for (let j = this.iz(z - r); j <= this.iz(z + r); j++)
       for (let i = this.ix(x - r); i <= this.ix(x + r); i++) {
