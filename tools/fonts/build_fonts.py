@@ -84,7 +84,8 @@ def parse_ranges(rng):
             out.append((v, v))
     return out
 
-DISPLAY = ['dela-gothic-one', 'rocknroll-one', 'mochiy-pop-one', 'dotgothic16', 'rampart-one', 'yusei-magic', 'hachi-maru-pop', 'potta-one', 'reggae-one']
+# (DotGothic16, Rampart One, Potta One and Reggae One were dropped: unused, and they kept the single-file build heavy)
+DISPLAY = ['dela-gothic-one', 'rocknroll-one', 'mochiy-pop-one', 'yusei-magic', 'hachi-maru-pop']
 from fontTools.merge import Merger, Options as MergeOptions
 for pkg in DISPLAY:
     d = os.path.join(NM, '@fontsource', pkg)

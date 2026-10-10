@@ -13,12 +13,12 @@ export const FONT = {
   bold: 'Dela Gothic One',
   round: 'RocknRoll One',
   pop: 'Mochiy Pop One',
-  dot: 'DotGothic16',
-  outline: 'Rampart One',
+  dot: 'Galmuri11',
+  outline: 'Dela Gothic One',
   brush: 'Yusei Magic',
   cute: 'Hachi Maru Pop',
-  chunky: 'Potta One',
-  wild: 'Reggae One',
+  chunky: 'Dela Gothic One',
+  wild: 'Mochiy Pop One',
 };
 
 // Wait for every family (with a sample of Latin + Japanese) so canvas painting

@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     target: 'es2022',
+    // the single-file page is published as an Artifact; keep identifiers readable there
+    minify: mode === 'single' ? false : 'esbuild',
     chunkSizeWarningLimit: 4000,
     assetsInlineLimit: mode === 'single' ? 100000000 : 4096,
   },
