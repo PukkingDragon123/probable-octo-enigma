@@ -266,12 +266,14 @@ export function cloudPuff(seed = 1, { r = 14, tint = 0xffffff, shade = 0xe4d6f0 
 export function cloudSea(size = 90) {
   const S = 256, p = new PixCanvas(S, S, 6030);
   p.rect(0, 0, S, S, '#f4e8f0');
-  for (let i = 0; i < 220; i++) { const x = p.rnd() * S, y = p.rnd() * S, r = 4 + p.rnd() * 14; p.ellipse(x, y, r * 1.4, r, p.rnd() < 0.5 ? '#ffffff' : '#fff6f8'); p.ellipse(x + 2, y + r * 0.6, r * 1.2, r * 0.4, '#e0d0e8'); }
-  for (let i = 0; i < 60; i++) { const x = p.rnd() * S, y = p.rnd() * S; p.ellipse(x, y, 10 + p.rnd() * 10, 3, '#d8c8e4'); }
+  // every blob is drawn at its wrapped copies too, so the tile repeats seamlessly
+  const wrap = (fn) => { for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) fn(ox, oy); };
+  for (let i = 0; i < 220; i++) { const x = p.rnd() * S, y = p.rnd() * S, r = 4 + p.rnd() * 14, c = p.rnd() < 0.5 ? '#ffffff' : '#fff6f8'; wrap((ox, oy) => { p.ellipse(x + ox, y + oy, r * 1.4, r, c); p.ellipse(x + ox + 2, y + oy + r * 0.6, r * 1.2, r * 0.4, '#e0d0e8'); }); }
+  for (let i = 0; i < 60; i++) { const x = p.rnd() * S, y = p.rnd() * S, rr = 10 + p.rnd() * 10; wrap((ox, oy) => p.ellipse(x + ox, y + oy, rr, 3, '#d8c8e4')); }
   const tex = new THREE.CanvasTexture(p.c); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(size / 36, size / 36); tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshLambertMaterial({ map: tex }));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: tex, color: 0xfff2ec }));
   m.rotation.x = -Math.PI / 2;
-  m.receiveShadow = true;
+  m.receiveShadow = false; // the shadow map doesn't reach this far; a painted shadow is used instead
   m.userData.update = (dt, t) => { tex.offset.x = (t * 0.004) % 1; tex.offset.y = (t * 0.002) % 1; };
   return m;
 }
@@ -303,4 +305,18 @@ export function tenguPeak() {
   }
   fill(v, -1, 1, 45, 47, -1, 1, 0xd8a83a);
   return grp(vm(v, V1, [0, 0, 0], { cast: false }));
+}
+
+// a soft dithered shadow cast by an island onto the cloud sea below
+export function seaShadow(rx, rz) {
+  const S = 64, p = new PixCanvas(S, S, 6040);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const d = Math.hypot((x + 0.5) / S * 2 - 1, (y + 0.5) / S * 2 - 1);
+    const k = Math.max(0, 1 - d) * 1.3;
+    if (k > ((x & 3) * 4 + (y & 3)) / 16) p.px(x, y, 'rgba(120,90,150,0.45)');
+  }
+  const tex = new THREE.CanvasTexture(p.c); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(rx * 2, rz * 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.renderOrder = 1;
+  return m;
 }

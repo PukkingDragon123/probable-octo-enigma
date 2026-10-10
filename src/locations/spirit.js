@@ -7,7 +7,7 @@
 //   L.revealIslands(dur)   the cloud banks roll away (Kappa Island, the Tengu's peak)
 import * as THREE from 'three';
 import { Location } from '../game/Location.js';
-import { islandShape, islandMesh, oldHouse, toriiPortal, stoneLantern, pondWater, koi, waterfall, cloudPuff, cloudSea, kappaIsland, tenguPeak } from '../world/spiritIsland.js';
+import { islandShape, islandMesh, oldHouse, toriiPortal, stoneLantern, pondWater, koi, waterfall, cloudPuff, cloudSea, seaShadow, kappaIsland, tenguPeak } from '../world/spiritIsland.js';
 import { natureBatch, natureFrames } from '../art/nature.js';
 import { VoxelModel, vm, fill, V5 } from '../world/build.js';
 import { HokoriFlock } from '../entities/hokori.js';
@@ -44,7 +44,8 @@ export class SpiritLocation extends Location {
     const fall = waterfall(6.5); fall.position.set(POND.x + 0.6, -0.1, ez + 0.02); S.add(fall); this.updaters.push(fall.userData.update);
     this.fallFoot = { x: POND.x + 0.6, y: -6.4, z: ez + 0.1 };
     // ---- clouds: the sea below, puffs drifting round the island, banks hiding the far islands
-    const sea = cloudSea(260); sea.position.y = -8.2; S.add(sea); this.updaters.push(sea.userData.update);
+    const sea = cloudSea(260); sea.position.y = -8.2; S.add(sea);
+    const ssh = seaShadow(shape.rx * 1.1, shape.rz * 1.2); ssh.position.set(shape.cx - 2.5, -8.15, shape.cz - 3.0); S.add(ssh); this.updaters.push(sea.userData.update);
     this.puffs = [];
     const puffAt = [[-12, -3.5, 2, 18], [12.5, -4, 3, 20], [-9, -6.5, 6.5, 22], [8.5, -6.8, 7, 24], [0, -7.4, 10, 28], [-17, 4.5, -3, 15], [15, 2.4, -6, 16], [4, 4.2, -10, 13], [-5, 4.6, -11, 14]];
     puffAt.forEach(([x, y, z, r], i) => { const p = cloudPuff(i + 1, { r }); p.position.set(x, y, z); S.add(p); this.puffs.push({ m: p, x0: x, ph: i * 1.3 }); });
