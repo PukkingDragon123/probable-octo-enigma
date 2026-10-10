@@ -153,8 +153,8 @@ export class GinzaLocation extends Location {
       for (let k = 0; k < 4; k++) nb.push(flowersPl[(pi++) % flowersPl.length], px - 0.45 + k * 0.3, pl.userData.soilY, 7.75 + (k % 2) * 0.06, { sway: 0.4, scale: 0.7 });
     }
     // bicycle parking on the near side (painted bays)
-    for (let i = 0; i < 6; i++) { const b = bicycle({ col: [0xe8e0d0, 0x3a5a8a, 0xd84a4a, 0x2a2a30, 0xf0c040, 0x6a8a5a][i], seed: i + 1 }); b.position.set(-1.6 + i * 0.55, 0, 8.05); b.rotation.y = Math.PI / 2 + (i % 2 ? 0.08 : -0.05); S.add(b); }
-    for (let i = 0; i < 4; i++) { const b = bicycle({ col: [0x8a8e96, 0xe86aa0, 0x3a7a6a, 0xf4f0e8][i], seed: i + 8 }); b.position.set(19.2 + i * 0.55, 0, 8.05); b.rotation.y = Math.PI / 2 + (i % 2 ? -0.06 : 0.05); S.add(b); }
+    for (let i = 0; i < 6; i++) { const b = bicycle({ col: [0xe8e0d0, 0x3a5a8a, 0xd84a4a, 0x2a2a30, 0xf0c040, 0x6a8a5a][i], seed: i + 1 }); b.position.set(-1.6 + i * 0.55, 0, 8.0); b.rotation.y = 0.75 + (i % 2 ? 0.08 : -0.05); S.add(b); }
+    for (let i = 0; i < 4; i++) { const b = bicycle({ col: [0x8a8e96, 0xe86aa0, 0x3a7a6a, 0xf4f0e8][i], seed: i + 8 }); b.position.set(19.2 + i * 0.55, 0, 8.0); b.rotation.y = 0.75 + (i % 2 ? -0.06 : 0.05); S.add(b); }
     // manholes
     for (const [mx, mz] of [[-17.5, 2.4], [5.2, 6.0], [21.8, 2.6]]) { const m = signPlane(manholeCover({ seed: Math.round(mx) }), 0.68); m.rotation.x = -Math.PI / 2; m.position.set(mx, 0.011, mz); S.add(m); }
     // yaki-imo cart by the gate, chimney smoke handled in update

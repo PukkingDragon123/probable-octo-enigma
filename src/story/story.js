@@ -2,13 +2,14 @@
 // state.chapter remembers where to resume.
 import { trainChapter, trainTitleBackdrop } from './ch1_train.js';
 import { stationChapter } from './ch2_station.js';
+import { walkChapter } from './ch3_walk.js';
 
 const ORDER = ['train', 'station', 'walk', 'shop', 'bendys', 'night1', 'day1', 'portal', 'spirit1', 'free'];
 
 export class Story {
   constructor(game) {
     this.game = game;
-    this.chapters = { train: trainChapter, station: stationChapter };
+    this.chapters = { train: trainChapter, station: stationChapter, walk: walkChapter };
   }
   register(id, fn) { this.chapters[id] = fn; }
   async titleBackdrop() { await trainTitleBackdrop(this.game); }

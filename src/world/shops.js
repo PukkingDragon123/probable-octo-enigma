@@ -280,8 +280,19 @@ export function makeShop(kind, { onU = null, seed = 1 } = {}) {
       for (let k = 0; k < 9; k++) for (let x = -S.w / 2 - 1; x < S.w / 2 + 1; x++) ev.set(x, -Math.floor(k * 0.55), k, (x + 400) % 4 === 0 ? 0x3a4250 : k === 8 ? 0x2a3240 : 0x4a5262);
       const em = vm(ev, V5); at(em, 0, (H1 + 12 + 2) * V5, 0.08); g.add(em);
       // faded painted letters on the shutter
-      const sp = new PixCanvas(160, 40, 91); sp.text('木霊屋', 80, 4, { font: `22px ${FONT.brush}`, color: 'rgba(240,232,214,0.85)', align: 'center' }); sp.text('ガチャガチャ・おもちゃ', 80, 28, { font: `7px ${FONT.tiny}`, color: 'rgba(240,232,214,0.7)', align: 'center' }); sp.scatter(0, 0, 160, 40, 'rgba(0,0,0,0)', 0.0);
+      // hand-painted on the shutter long ago: cream letters, a capsule doodle, flaking
+      const sp = new PixCanvas(160, 44, 91);
+      sp.text('木霊屋', 80, 3, { font: `24px ${FONT.brush}`, color: '#f4ead2', align: 'center', shadow: { color: '#3a5a4a', dx: 1, dy: 1 } });
+      sp.text('ガチャガチャ・おもちゃ', 80, 31, { font: `7px ${FONT.tiny}`, color: '#f4ead2', align: 'center' });
+      for (const cx of [22, 138]) { sp.circle(cx, 18, 9, '#f4ead2'); sp.circle(cx, 18, 8, cx < 80 ? '#e86a5a' : '#5ab0d8'); sp.rect(cx - 8, 18, 17, 9, '#f4ead2'); sp.rect(cx - 7, 18, 15, 7, '#fff8ec'); sp.rect(cx - 8, 17, 17, 1, '#3a5a4a'); }
+      sp.x.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i < 260; i++) sp.rect(sp.rnd() * 160, sp.rnd() * 44, 1 + Math.floor(sp.rnd() * 2), 1, '#000');
+      sp.x.globalCompositeOperation = 'source-over';
       const sl = signPlane(sp, 2.5); sl.position.set(0, 1.35 - (H1 - 5) * V5, 1 * V5 + 0.006); g.userData.shutter.add(sl);
+      // a pair of old lanterns either side of the sign (still lit every evening) and a closed board
+      for (const sx2 of [-1, 1]) { const Lt = lantern({ col: 0xe8402a, onU, text: sx2 < 0 ? '木' : '霊' }); at(Lt, sx2 * (W / 2 - 0.3), 2.25, 0.22); g.add(Lt); }
+      const cb = new PixCanvas(26, 34, 93); cb.rect(0, 0, 26, 34, '#8a6a4a'); cb.rect(2, 2, 22, 30, '#f4ecd8'); ['本', '日', '休', '業'].forEach((c, i) => cb.text(c, 13, 3 + i * 7, { font: `7px ${FONT.tiny}`, color: '#c8302a', align: 'center' }));
+      const cbm = signPlane(cb, 0.3); at(cbm, 0.9, 1.0, 1 * V5 + 0.008); cbm.rotation.z = 0.06; g.userData.shutter.add(cbm); cbm.position.y -= (H1 - 5) * V5;
       // the gacha machines out front, a little dusty, and the maneki-neko on a stool
       const row = gachaRow(5, { seed, dust: 0.3 }); at(row, -0.75, 0, 0.42); g.add(row);
       g.userData.gacha = row;

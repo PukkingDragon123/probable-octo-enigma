@@ -78,7 +78,15 @@ export class Director {
   emote(char, kind, o) { this.g.emotes.show(char, kind, o); this.g.audio?.play?.(EMOTE_SFX[kind] || 'pop', { volume: 0.35 }); }
   // ---------------------------------------------------------------- camera
   cam(shot) { return this.g.rig.play({ dur: 1.2, ...shot }); }
-  follow(target, o = {}) { this.g.rig.shot = null; this.g.rig.setFollow(target); if (o.wupp) this.g.rig.wuppGoal = o.wupp; }
+  // back to the gameplay camera (the location's pitch / zoom, no cut plane) following someone
+  follow(target, o = {}) {
+    const r = this.g.rig, c = this.g.location?.camCfg || {};
+    r.shot = null; r.clip = 0;
+    r.setFollow(target);
+    r.wuppGoal = o.wupp ?? c.wupp ?? r.wuppGoal;
+    if ((o.pitch ?? c.pitch) != null) r.pitchGoal = ((o.pitch ?? c.pitch) * Math.PI) / 180;
+    if (c.yaw != null) r.yawGoal = (c.yaw * Math.PI) / 180;
+  }
   shake(k = 0.6) { this.g.rig.shake = Math.max(this.g.rig.shake, k); }
   letterbox(on) { this.g.letterboxGoal = on ? 1 : 0; }
   // ---------------------------------------------------------------- screen
