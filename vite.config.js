@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
   server: { host: true },
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
-    target: 'es2020',
+    target: 'es2022',
     chunkSizeWarningLimit: 4000,
     assetsInlineLimit: mode === 'single' ? 100000000 : 4096,
   },
