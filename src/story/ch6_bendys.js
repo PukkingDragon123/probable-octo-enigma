@@ -25,7 +25,7 @@ export async function bendysChapter(g) {
     L.add(G); G.setPos(-0.2, 2.6); G.faceNow(Math.PI);
     g.place(P, -0.9, 2.75, Math.PI);
     P.setHood(true); P.setExpr('neutral', { react: false });
-    D.cam({ x: 0.3, y: 1.0, z: 0.6, wupp: 0.0128, pitch: 32, dur: 0 });
+    D.cam({ x: 0.3, y: 1.2, z: -0.3, wupp: 0.0128, pitch: 32, dur: 0 });
     await D.fadeIn(1.0);
     g.audio?.music?.('bendys', { volume: 0.5 });
     g.audio?.play?.('doorBell', { volume: 0.6 });

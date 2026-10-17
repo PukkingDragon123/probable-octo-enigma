@@ -90,7 +90,7 @@ export async function walkChapter(g) {
     await duo([{ x: SX + 4, z: 5.0 }, { x: RX - 0.65, z: 4.3 }], { gdx: 0.35, gdz: -0.55 });
     L.signalT = 18.5; // the cars still have the green
     G.faceYaw(Math.PI / 2); P.faceYaw(Math.PI / 2);
-    await D.cam({ x: RX + 1.4, y: 1.0, z: 3.8, wupp: 0.0118, pitch: 24, dur: 1.4, clip: 2 });
+    await D.cam({ x: RX + 0.7, y: 1.0, z: 3.8, wupp: 0.0118, pitch: 24, dur: 1.4, clip: 2 });
     await D.say(G, 'Wait for the little green man.', { expr: 'gentle' });
     for (let i = 0; i < 40 && L.crossing?.ped !== 'go'; i++) await D.wait(0.25);
     await D.wait(0.5);

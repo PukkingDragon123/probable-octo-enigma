@@ -5,7 +5,7 @@
 // Units here are voxels (VS = 0.05 m). Every part is built around its joint
 // pivot (limbs hang down along -y from y = 0), character facing +z.
 import * as THREE from 'three';
-import { VS, VoxelModel, rbox, ell, tone, hash3, buildGeo, matFor } from '../vox/kit.js';
+import { VS, VoxelModel, keyX, keyY, keyZ, rbox, ell, tone, hash3, buildGeo, matFor } from '../vox/kit.js';
 
 export { VS };
 const hex = (c) => (typeof c === 'number' ? c : parseInt(String(c).replace('#', ''), 16));
@@ -175,7 +175,7 @@ export function buildHead(def) {
     const ey = ek === 'monkey' || ek === 'deer' ? 6 : y1 - (ek === 'otter' ? 0 : 1);
     for (const side of [1, -1]) {
       let m = ear(ek);
-      if (side < 0 && (ek === 'deer')) { const mm = new VoxelModel(); for (const [k, c] of m.vox) { const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512; mm.set(-x - 1, y, z, c); } m = mm; }
+      if (side < 0 && (ek === 'deer')) { const mm = new VoxelModel(); for (const [k, c] of m.vox) { const x = keyX(k), y = keyY(k), z = keyZ(k); mm.set(-x - 1, y, z, c); } m = mm; }
       out.ears.push({ model: m, at: [side > 0 ? ex + 0.5 : -(ex + 0.5), ey, -1], side, kind: ek });
     }
   }

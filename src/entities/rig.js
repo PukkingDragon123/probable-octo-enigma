@@ -20,7 +20,7 @@ import { Face, makeFacePlane, visemeFor } from './face.js';
 import * as P from './parts.js';
 import * as VB from './voxbody.js';
 import { folkDesign } from './cast/folk.js';
-import { VoxelModel } from '../vox/voxel.js';
+import { VoxelModel, keyX, keyY, keyZ } from '../vox/voxel.js';
 import { blobShadowMat } from '../core/materials.js';
 import { clamp, lerp, damp, dampAngle, angleDiff, smooth, EASE, spring } from '../core/util.js';
 import { darken, lighten } from '../core/pixtex.js';
@@ -139,7 +139,7 @@ export class Character {
         parent.add(g);
         this.tailSegs.push(g);
         const nx = new THREE.Group();
-        let minZ = 0; for (const [k] of sp.model.vox) { const z = ((k >> 20) & 1023) - 512; if (z < minZ) minZ = z; }
+        let minZ = 0; for (const [k] of sp.model.vox) { const z = keyZ(k); if (z < minZ) minZ = z; }
         nx.position.z = (sp.len != null ? -sp.len : minZ + 0.5) * U;
         g.add(nx);
         parent = nx;

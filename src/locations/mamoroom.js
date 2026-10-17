@@ -11,6 +11,7 @@ import { PixCanvas, mix, makeTexture } from '../core/pixtex.js';
 import { cardboard } from './kodamaya.js';
 import { pottedPlant } from '../world/shotengai.js';
 import { FONT } from '../ui/fonts.js';
+import { nightView, furin, senpuki, katoriButa, toyShelf, pendulumClock, wallCalendar, heightMarks, ramma } from '../world/roomProps.js';
 
 export const ROOM = { w: 140, d: 92, h: 58 };
 
@@ -87,7 +88,7 @@ export function dustBunny(seed = 1, r = 4) {
 export class MamoRoomLocation extends Location {
   constructor(game) {
     super(game, 'mamoroom', { bg: 0x1a1424, lightMode: 'interior', grade: 'cozy', ambience: 'night' });
-    this.camCfg = { wupp: 0.0118, pitch: 38, yaw: 0, follow: false, minWupp: 0.006, maxWupp: 0.016, fixed: { x: 0, y: 1.0, z: 0.15 } };
+    this.camCfg = { wupp: 0.0118, pitch: 38, yaw: 0, follow: false, minWupp: 0.006, maxWupp: 0.016, fixed: { x: 0, y: 1.32, z: -0.45 } };
     this.shadowSize = 7;
     this.clock = false;
     this.hourOverride = 18.6;
@@ -106,14 +107,18 @@ export class MamoRoomLocation extends Location {
         const a = side === 'back' ? x : z;
         if ((a + 400) % 36 === 0 || (a + 400) % 36 === 1) return 0x7a5232; // hashira posts
         if (y > h - 8) return y === h - 8 ? 0x6a4428 : 0xe0d4b8; // ramma band
-        return tone(x, y, z, 0xd8c8a4, 0xccbc98, 0xe4d4b0, 0.14, 0.06);
+        if (y === 46 || y === 47) return y === 47 ? 0x8a5a34 : 0x6a4428; // nageshi beam
+        // juraku sand wall: warm ochre with darker and lighter flecks and a few straw fibres
+        const f = hash3(x * 3 + 7, y * 5 + 1, z * 3);
+        if (f < 0.07) return 0xc0aa84; if (f > 0.95) return 0xeadcbc; if (f > 0.93) return 0xc8a868;
+        return tone(x, y, z, 0xd8c6a0, 0xd0be98, 0xe0d0ac, 0.1, 0.05);
       },
-      windows: [{ side: 'back', a0: 14, a1: 46, y0: 22, y1: 44, frame: 0x6a4428, sky: nightWindow }],
+      windows: [{ side: 'back', a0: 14, a1: 46, y0: 22, y1: 44, frame: 0x6a4428, sky: nightWindow, bars: false }],
     });
     // the window's sliding glass pane (opens during the tutorial) + a curtain each side
     const pane = new VoxelModel();
     for (let x = 0; x < 17; x++) for (let y = 0; y < 23; y++) { const edge = x === 0 || x === 16 || y === 0 || y === 22; pane.set(x, y, 0, edge ? 0x8a6a4a : (x + y) % 9 === 0 ? 0xe8f0f8 : 0xb8c8d8); }
-    this.pane = vm(pane, V5); this.pane.position.set(W(30), W(22), W(-d / 2) + 0.03);
+    this.pane = vm(pane, V5); this.pane.position.set(W(30), W(22), W(-d / 2) + 0.012);
     this.pane.material = this.pane.material.clone(); this.pane.material.transparent = true; this.pane.material.opacity = 0.55;
     S.add(this.pane);
     this.curtains = [];
@@ -147,14 +152,25 @@ export class MamoRoomLocation extends Location {
     fill(desk, 2, 12, 12, 12, -4, 4, 0xf4f0e8); // notebook
     const dm = vm(desk, V5); dm.position.set(1.6, 0, -1.55); S.add(dm);
     const zab = new VoxelModel(); fill(zab, -8, 7, 0, 2, -8, 7, (x, y, z) => (y === 2 ? 0x6a5aa8 : 0x5a4a98)); const zm = vm(zab, V5); zm.position.set(1.6, 0, -0.75); S.add(zm);
-    const lp = lamp(k, { h: 30, shadeCol: 0xf8d898 }); k.add(lp, -0.7, 0, -1.95);
+    const lp = lamp(k, { h: 30, shadeCol: 0xf8d898 }); k.add(lp, -3.15, 0, -1.3);
     const sh2 = bookshelf(k, { w: 20, h: 30, d: 8, col: 0x6a4428, rows: 3 }); k.add(sh2, 3.0, 0, W(-d / 2 + 4));
     const fut = new VoxelModel(); ell(fut, 0.5, 6, 0.5, 18, 6, 6, (x, y, z) => ((x + 40) % 6 < 3 ? 0x8ab0d8 : 0xf4f0e8)); const fm = vm(fut, V5, [0.5, 0, 0.5]); fm.position.set(2.9, 0, 1.3); S.add(fm); this.futonRoll = fm;
     // the futon laid out (shown at the end)
     const flat = new VoxelModel(); fill(flat, -12, 11, 0, 2, -20, 19, (x, y, z) => (z < -14 ? 0xf4f0e8 : (x + z + 40) % 8 < 4 ? 0x8ab0d8 : 0x7aa0c8)); fill(flat, -9, 8, 3, 4, -19, -15, 0xfaf6ee);
     const fl = vm(flat, V5); fl.position.set(0.3, 0, 0.3); fl.visible = false; S.add(fl); this.futonFlat = fl;
-    const pp = signPlane(idolPoster(), 0.46); pp.position.set(-0.9, 1.75, W(-d / 2) + 0.006); S.add(pp);
-    const pl = pottedPlant(5, { leaf: 0x6a6a3a, pot: 0xc87a4a }); pl.position.set(W(w / 2) - 0.3, 0, 0.2); S.add(pl); // a sad, dry plant
+    const pp = signPlane(idolPoster(), 0.46); pp.position.set(-0.62, 1.72, W(-d / 2) + 0.006); S.add(pp);
+    const pl = pottedPlant(5, { leaf: 0x6a6a3a, pot: 0xc87a4a }); pl.position.set(W(w / 2) - 0.3, 0, 1.95); S.add(pl); // a sad, dry plant
+    // ---- the room's life: the evening view, a wind chime, the fan, the mosquito-coil pig,
+    // Dad's old toys, the clock, a July calendar, his height marks on the post, the carved transom
+    const vw = signPlane(nightView(106, 74), W(33)); vw.position.set(W(30.5), W(33.5), W(-d / 2) - 0.046); S.add(vw);
+    const rm = signPlane(ramma(448, 26), W(w) - 0.1); rm.position.set(0, W(h - 4), W(-d / 2) + 0.005); S.add(rm);
+    this.furin = furin(); this.furin.position.set(1.05, 2.22, W(-d / 2) + 0.2); S.add(this.furin); this.updaters.push(this.furin.userData.update);
+    this.fan = senpuki(); this.fan.position.set(0.32, 0, -1.72); this.fan.rotation.y = 0.35; S.add(this.fan); this.updaters.push(this.fan.userData.update);
+    this.buta = katoriButa(); this.buta.position.set(-0.05, 0, -2.02); this.buta.rotation.y = 0.5; S.add(this.buta);
+    const ts = toyShelf(); ts.position.set(-0.86, 0, W(-d / 2) + 0.22); S.add(ts);
+    const ck = pendulumClock(); ck.position.set(-1.2, 1.28, W(-d / 2) + 0.06); S.add(ck); this.updaters.push(ck.userData.update);
+    const cal = signPlane(wallCalendar(), 0.4); cal.position.set(0.26, 1.5, W(-d / 2) + 0.006); S.add(cal);
+    const hm = signPlane(heightMarks(), 0.156, { alphaTest: 0.3 }); hm.position.set(W(-3.5) - 0.02, 1.25, W(-d / 2) + 0.008); S.add(hm);
     // ceiling light pull-cord lamp (glow) hanging in the middle
     const cl = new VoxelModel(), cg = new VoxelModel();
     fill(cl, 0, 0, 0, 20, 0, 0, 0x3a3a40); for (let x = -8; x <= 8; x++) for (let z = -8; z <= 8; z++) { const r = Math.hypot(x, z); if (r < 8.5 && r > 6.8) cl.set(x, -1, z, 0xe8e0d0); if (r <= 6.8) cg.set(x, -1, z, 0xfff4d8); }
@@ -168,7 +184,7 @@ export class MamoRoomLocation extends Location {
       b.position.set(bx, 0, bz); b.rotation.y = (hash3(i, 3, 9) - 0.5) * 0.7; S.add(b);
       return { obj: b, done: false, id: 'box' + i };
     });
-    const dspots = [[-3.1, -0.9], [3.2, -1.2], [-2.9, 1.8], [3.15, 1.95], [0.1, -1.95]];
+    const dspots = [[-2.75, -0.95], [3.15, -1.55], [-2.9, 1.8], [2.6, 2.0], [-0.45, -1.55]];
     this.bunnies = dspots.map(([dx, dz], i) => { const b = dustBunny(i, 5 + (i % 3)); b.position.set(dx, 0, dz); S.add(b); return { obj: b, done: false, id: 'dust' + i }; });
     k.finish({ lights: false, pitch: 38 });
     S.add(k.group);
@@ -176,6 +192,7 @@ export class MamoRoomLocation extends Location {
     // ---- nav
     const nav = this.makeNav('room', { minX: W(-w / 2) + 0.25, minZ: W(-d / 2) + 0.3, w: W(w) - 0.5, d: W(d) - 0.5 });
     nav.block(0.6, -2.1, 2.6, -1.05); nav.block(2.0, 1.0, 3.6, 1.65); nav.block(-3.4, -2.3, -1.4, -1.6); nav.block(2.4, -2.3, 3.5, -1.9);
+    nav.block(-1.5, -2.3, -0.2, -1.85); nav.blockCircle(-3.15, -1.3, 0.2); nav.blockCircle(0.32, -1.72, 0.28); nav.blockCircle(-0.05, -2.02, 0.16);
     this.navs.room = nav;
     nav.snapshot();
     this.boxNav();
@@ -204,5 +221,15 @@ export class MamoRoomLocation extends Location {
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);
     if (this.windowOpen) for (const [i, c] of this.curtains.entries()) c.rotation.x = -0.1 - Math.sin(t * 1.6 + i) * 0.12;
+    if (this.furin) {
+      this.furin.userData.wind += ((this.windowOpen ? 1.4 : 0.25) - this.furin.userData.wind) * Math.min(1, dt * 0.8);
+      // a soft ring now and then once the breeze comes in
+      if (this.windowOpen && (this._chimeT = (this._chimeT ?? 2) - dt) <= 0) { this._chimeT = 3 + Math.random() * 5; this.game.audio?.play('bell', { volume: 0.12, pitch: 2.2 }); }
+    }
+    if (this.buta && (this._smokeT = (this._smokeT || 0) - dt) <= 0) {
+      this._smokeT = 0.45;
+      const s = this.buta.userData.smoke, b = this.buta.position;
+      this.game.particles?.emit('steam', { x: b.x + Math.sin(this.buta.rotation.y) * s.z, y: s.y, z: b.z + Math.cos(this.buta.rotation.y) * s.z, scale: 0.22, alpha: 0.35, up: [0.12, 0.2], speed: [0, 0.01] });
+    }
   }
 }

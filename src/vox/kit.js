@@ -5,9 +5,9 @@
 // on fixed substeps, a 2D pixel face and events. Same conventions as
 // foxRig.js: 1 voxel = 0.05 units, root at the feet, facing +Z.
 import * as THREE from 'three';
-import { VoxelModel } from './voxel.js';
+import { VoxelModel, keyX, keyY, keyZ } from './voxel.js';
 
-export { VoxelModel };
+export { VoxelModel, keyX, keyY, keyZ };
 export const VS = 0.05; // world units per voxel
 export const FV = 0.025; // fine voxels (small props, details, ducks)
 
@@ -123,7 +123,7 @@ export function mirrorX(v) {
   o.merge(v);
   const out = new VoxelModel();
   for (const [k, c] of o.vox) {
-    const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512;
+    const x = keyX(k), y = keyY(k), z = keyZ(k);
     out.set(-1 - x, y, z, c);
   }
   return out;

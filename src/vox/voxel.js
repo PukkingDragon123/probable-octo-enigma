@@ -17,7 +17,12 @@ export function linearRGB(hex) {
   return v;
 }
 
-const key = (x, y, z) => (x + 512) | ((y + 512) << 10) | ((z + 512) << 20);
+// voxel keys pack x, y, z in 13 bits each (+-4096) as a plain number (safe up to 2^53)
+const KB = 8192, KO = 4096, KB2 = KB * KB;
+export const key = (x, y, z) => (x + KO) + (y + KO) * KB + (z + KO) * KB2;
+export const keyX = (k) => (k % KB) - KO;
+export const keyY = (k) => (Math.floor(k / KB) % KB) - KO;
+export const keyZ = (k) => Math.floor(k / KB2) - KO;
 
 // Each face: normal + 4 corners in CCW order when seen from outside.
 const FACES = [
@@ -112,7 +117,7 @@ export class VoxelModel {
   // Recolour existing voxels with fn(x,y,z,color) => color
   paint(fn) {
     for (const [k, c] of this.vox) {
-      const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512;
+      const x = keyX(k), y = keyY(k), z = keyZ(k);
       const nc = fn(x, y, z, c);
       if (nc == null) this.vox.delete(k);
       else this.vox.set(k, nc);
@@ -123,7 +128,7 @@ export class VoxelModel {
   // Copy all voxels of another model with an offset.
   merge(other, ox = 0, oy = 0, oz = 0) {
     for (const [k, c] of other.vox) {
-      const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512;
+      const x = keyX(k), y = keyY(k), z = keyZ(k);
       this.set(x + ox, y + oy, z + oz, c);
     }
     return this;
@@ -170,7 +175,7 @@ export class VoxelModel {
       vi += 4;
     };
     for (const [k, hex] of vox) {
-      const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512;
+      const x = keyX(k), y = keyY(k), z = keyZ(k);
       for (let f = 0; f < 6; f++) {
         const F = FACES[f];
         const nx = x + F.n[0], ny = y + F.n[1], nz = z + F.n[2];

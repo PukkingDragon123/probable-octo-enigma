@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { Location } from '../game/Location.js';
 import { HomeKit, W, PAL, mix as hmix, frame as hkFrame, plant as hkPlant } from '../world/homeKit.js';
-import { VoxelModel, vm, glowVm, signPlane, fill, sh, tone, hash3, ell, V5, V25 } from '../world/build.js';
+import { VoxelModel, vm, glowVm, signPlane, fill, cyl, sh, tone, hash3, ell, V5, V25 } from '../world/build.js';
 import { PixCanvas, mix } from '../core/pixtex.js';
 import { bendysLogo, sampleCase } from '../world/shopSigns.js';
 import { gachaMachine } from '../world/streetProps.js';
@@ -38,24 +38,69 @@ function retroPoster(seed = 1) {
   p.frame(0, 0, 30, 40, '#5a2a2a');
   return p;
 }
-function booth({ backH = 24, half = 12 } = {}) {
+function booth({ backH = 20, half = 12, chairs = false } = {}) {
   const v = new VoxelModel();
-  // pedestal table: a cream laminate top with a chrome edge on one steel post
-  fill(v, -10, 9, 12, 13, -5, 4, (x, y, z) => (y === 13 ? (x === -10 || x === 9 || z === -5 || z === 4 ? 0xc8ccd4 : 0xf4f0e8) : 0xb8bcc4));
+  const RED = 0xc8202a, RED_L = 0xe04048, RED_D = 0xa01820, CHROME = 0xd0d4dc;
+  // pedestal table on one steel post with a chrome edge
+  fill(v, -10, 9, 12, 13, -5, 4, (x, y, z) => (y === 13 ? (x === -10 || x === 9 || z === -5 || z === 4 ? CHROME : undefined) : 0xb8bcc4));
   fill(v, -1, 0, 1, 11, -1, 0, 0x9aa0a8); fill(v, -4, 3, 0, 0, -3, 2, 0x8a8e96);
-  for (const z of [-15, 15]) {
-    const back = z < 0 ? -18 : 17;
-    fill(v, -half, half - 1, 0, 8, Math.min(z - 2, z + 2), Math.max(z - 2, z + 2), (x, y) => (y === 8 ? 0xd8303a : y < 2 ? 0x5a2a2a : 0xc8202a));
-    fill(v, -half, half - 1, 9, backH, back, back + (z < 0 ? 2 : -2), (x, y) => (y === backH ? 0xe84a4a : (x + 40) % 6 === 0 ? 0xb81a22 : 0xc8202a));
+  for (const z of chairs ? [-15] : [-15, 15]) {
+    const back = z < 0 ? -18 : 17, dz = z < 0 ? 1 : -1;
+    // seat cushion: piped edge, a lighter top
+    fill(v, -half, half - 1, 0, 8, Math.min(z - 2, z + 2), Math.max(z - 2, z + 2), (x, y, zz) => (y < 2 ? 0x5a2a2a : y === 8 ? ((x + 40) % 6 === 0 ? RED : RED_L) : y === 7 ? CHROME : RED));
+    // the back: vertical tufted channels, a chrome band, a rounded cap
+    fill(v, -half, half - 1, 9, backH, back, back + dz * 2, (x, y, zz) => {
+      if (y === backH) return (x === -half || x === half - 1) ? undefined : RED_L;
+      if (y === 9 || y === backH - 1) return CHROME;
+      const ch = (x + 40) % 4;
+      if (zz === back + dz * 2 && (ch === 0)) return RED_D;
+      if (zz === back + dz * 2 && (y - 12) % 4 === 0 && ch === 2) return 0x801018;
+      return RED;
+    });
+    for (const x of [-half, half - 1]) fill(v, x, x, 0, backH - 1, Math.min(z - 2, back), Math.max(z + 2, back), (xx, y) => (y === backH - 1 ? CHROME : RED_D));
   }
-  // condiments: ketchup, mustard, napkins, a menu stand
+  // chrome diner chairs on the open side: red vinyl seat, a low curved back
+  if (chairs) for (const cx of [-6, 6]) {
+    for (const [lx, lz] of [[-3, 11], [2, 11], [-3, 17], [2, 17]]) fill(v, cx + lx, cx + lx, 0, 7, lz, lz, CHROME);
+    fill(v, cx - 4, cx + 3, 8, 9, 10, 18, (x, y) => (y === 9 ? RED_L : RED));
+    fill(v, cx - 4, cx + 3, 10, 16, 19, 19, (x, y) => (y === 16 ? RED_L : y === 10 ? CHROME : RED));
+    for (const lx of [-4, 3]) fill(v, cx + lx, cx + lx, 10, 15, 19, 19, CHROME);
+  }
+  // condiments: ketchup, mustard, a napkin dispenser, the little table jukebox
   fill(v, -7, -6, 14, 18, -1, 0, 0xd8202a); v.set(-7, 19, -1, 0xf4f0e8);
   fill(v, -4, -3, 14, 17, -1, 0, 0xf8d040);
-  fill(v, 4, 7, 14, 16, -2, 1, 0xffffff);
+  fill(v, 4, 7, 14, 17, -2, 1, (x, y) => (y === 17 ? CHROME : x === 4 || x === 7 ? CHROME : 0xffffff));
+  fill(v, 7, 9, 14, 18, -4, -3, 0xc8ccd4); v.set(8, 17, -2, 0xffd040); v.set(8, 16, -2, 0xff6a8a);
   const g = new THREE.Group(); g.add(vm(v, V5));
+  // the laminate top: cream with pink and teal boomerangs
+  const lt = new PixCanvas(40, 20, 4031);
+  lt.rect(0, 0, 40, 20, '#f6eedc');
+  for (let i = 0; i < 9; i++) { const x = (i * 13) % 38, y = (i * 7) % 17; lt.line(x, y + 2, x + 3, y, i % 2 ? '#ff9ab0' : '#5ac8c0'); lt.line(x + 3, y, x + 6, y + 2, i % 2 ? '#ff9ab0' : '#5ac8c0'); }
+  for (let i = 0; i < 14; i++) lt.px((i * 17) % 40, (i * 11) % 20, '#d8c8a8');
+  const top = signPlane(lt, 1.0); top.rotation.x = -Math.PI / 2; top.position.set(0, 14 * V5 + 0.002, 0); top.scale.set(0.98, 0.9, 1); g.add(top);
   g.userData.seats = [{ x: -0.3, z: -0.72, yaw: 0 }, { x: 0.3, z: -0.72, yaw: 0 }, { x: -0.3, z: 0.72, yaw: Math.PI }, { x: 0.3, z: 0.72, yaw: Math.PI }];
   g.userData.seatY = 9 * V5;
+  g.userData.topY = 14 * V5;
   return g;
+}
+// food on the table: an omurice plate, a hamburg steak on a sizzling iron plate, a cream soda, a parfait
+function tableFood(kind) {
+  const v = new VoxelModel();
+  if (kind === 'soda') {
+    for (let y = 0; y < 14; y++) { const r = y < 2 ? 1.5 : y < 4 ? 1 : 2.6; for (let x = -3; x <= 3; x++) for (let z = -3; z <= 3; z++) if (Math.hypot(x, z) <= r) v.set(x, y, z, y < 4 ? 0xe8f0f4 : y < 10 ? 0x48d070 : 0xfff8e8); }
+    ell(v, 0, 13, 0, 2.6, 1.6, 2.6, 0xfff8ee); v.set(1, 15, 0, 0xe8202a); v.set(-2, 14, 1, 0xf0f0f0); for (let y = 6; y < 18; y++) v.set(-2, y, -1, 0xff6a8a);
+  } else if (kind === 'hamburg') {
+    fill(v, -6, 5, 0, 0, -4, 3, 0x2a2a30); fill(v, -7, 6, 0, 1, -5, -5, 0x5a3a24);
+    ell(v, -1, 2, 0, 3.6, 1.6, 2.6, 0x7a3a1a); ell(v, -1, 3, 0, 2.6, 0.8, 1.8, 0x5a2210);
+    v.set(3, 1, 1, 0xf8a040); v.set(4, 1, 1, 0xf8a040); v.set(3, 1, -2, 0x58a838); v.set(2, 1, -2, 0x58a838);
+  } else if (kind === 'parfait') {
+    for (let y = 0; y < 12; y++) { const r = y < 2 ? 2 : y < 4 ? 0.8 : 2.4; for (let x = -3; x <= 3; x++) for (let z = -3; z <= 3; z++) if (Math.hypot(x, z) <= r) v.set(x, y, z, y < 4 ? 0xe8f0f4 : y < 6 ? 0x8a4a2a : y < 8 ? 0xfff4e8 : y < 10 ? 0xff9ac8 : 0xfff8ee); }
+    v.set(0, 12, 0, 0xe8202a); v.set(1, 12, 1, 0xf8d040); v.set(-1, 12, 0, 0x8a4a2a);
+  } else {
+    for (let x = -6; x <= 6; x++) for (let z = -5; z <= 5; z++) if ((x / 6.5) ** 2 + (z / 5.5) ** 2 <= 1) v.set(x, 0, z, 0xffffff);
+    ell(v, 0, 1.5, 0, 4.4, 1.8, 2.8, (x, y) => (y > 1 ? 0xfadc60 : 0xf8c838)); for (let x = -3; x <= 3; x++) v.set(x, 3, Math.round(Math.sin(x) * 1.2), 0xd8201a);
+  }
+  return vm(v, V25, [0.5, 0, 0.5]);
 }
 function counterBar(len = 90) {
   const v = new VoxelModel();
@@ -142,7 +187,7 @@ export function omurice() {
 export class BendysLocation extends Location {
   constructor(game) {
     super(game, 'bendys', { bg: 0x1e1420, lightMode: 'interior', grade: 'cozy', ambience: 'restaurant' });
-    this.camCfg = { wupp: 0.0122, pitch: 34, yaw: 0, follow: true, minWupp: 0.006, maxWupp: 0.02, followY: 0.9, bounds: { minX: -1.9, maxX: 1.9, minZ: -0.6, maxZ: 0.6 } };
+    this.camCfg = { wupp: 0.0122, pitch: 34, yaw: 0, follow: true, minWupp: 0.006, maxWupp: 0.02, followY: 0.9, bounds: { minX: -1.9, maxX: 1.9, minZ: -0.9, maxZ: 0.4 } };
     this.shadowSize = 9;
     this.clock = false;
     this.hourOverride = 19.4;
@@ -157,16 +202,16 @@ export class BendysLocation extends Location {
     const { w, d, h } = BEN;
     k.room({
       w, d, h, lowFront: 16, cap: 0xc8202a, base: 0xc8202a,
-      floor: (x, z) => { const c = ((Math.floor((x + 400) / 10) + Math.floor((z + 400) / 10)) & 1) ? 0xf0e4d0 : 0xa8343a; return hash3(x, 0, z) < 0.06 ? sh(c, 0.95) : c; },
+      floor: (x, z) => { const ex = Math.min(x + w / 2, w / 2 - 1 - x, z + d / 2, d / 2 - 1 - z); if (ex < 3) return ex === 1 ? 0xf4f0e8 : 0x2a2a30; const c = ((Math.floor((x + 400) / 6) + Math.floor((z + 400) / 6)) & 1) ? 0xf4ead8 : 0xc0404a; return hash3(x, 0, z) < 0.08 ? sh(c, 0.94) : (x + z) % 6 === 0 ? sh(c, 1.03) : c; },
       wall: (x, y, z, side) => (y < 20 ? (y === 19 ? 0xc8ccd4 : (side === 'back' ? x : z) % 8 === 0 ? 0xb81a22 : 0xc8202a) : y > h - 6 ? 0xf4f0e8 : tone(x, y, z, 0xfff0dc, 0xf8e8d0, 0xfff6e8, 0.08, 0.06)),
       windows: [{ side: 'left', a0: -30, a1: 10, y0: 26, y1: 48, frame: 0xc8ccd4, sky: (u, v) => hmix(0x2a3a6a, 0x5a4a8a, v) }],
     });
     // ---- booths along the back wall (left part), each with a pendant lamp
     this.booths = [];
     for (let i = 0; i < 3; i++) {
-      const b = booth(); b.position.set(-4.3 + i * 1.75, 0, -1.85); b.rotation.y = Math.PI / 2; S.add(b); this.booths.push(b);
+      const b = booth({ chairs: true }); b.position.set(-4.3 + i * 1.75, 0, -2.05); S.add(b); this.booths.push(b);
       const lv = new VoxelModel(), lg = new VoxelModel(); fill(lv, 0, 0, 0, 14, 0, 0, 0x3a3a40); for (let y = 0; y < 4; y++) for (let x = -4; x <= 4; x++) for (let z = -4; z <= 4; z++) { const r = 1.5 + y; const dd = Math.hypot(x, z); if (dd <= r && dd > r - 1.1) lv.set(x, -y, z, 0xc8202a); } lg.set(0, -3, 0, 0xfff0c0); lg.set(-1, -3, 0, 0xfff0c0); lg.set(0, -3, -1, 0xfff0c0); lg.set(-1, -3, -1, 0xfff0c0);
-      const lamp = new THREE.Group(); lamp.add(vm(lv, V25), glowVm(lg, V25, [0, 0, 0], { intensity: 1.4 })); lamp.position.set(b.position.x, 2.6, -1.85); S.add(lamp);
+      const lamp = new THREE.Group(); lamp.add(vm(lv, V25), glowVm(lg, V25, [0, 0, 0], { intensity: 1.4 })); lamp.position.set(b.position.x, 2.6, -2.05); S.add(lamp);
     }
     // ---- the counter on the right with stools, the kitchen behind it
     const ct = counterBar(76); ct.position.set(1.15, 0, -0.95); S.add(ct);
@@ -183,9 +228,9 @@ export class BendysLocation extends Location {
     const gm = gachaMachine({ seed: 77, body: 0xf8e8e0 }); gm.position.set(4.7, 0, 0.3); gm.rotation.y = -0.6; S.add(gm);
     k.add(hkPlant(k, { h: 14, r: 5, flower: 0xff8ab0 }), 4.75, 0, 2.6);
     // ---- a family table in the middle-front
-    const tb = booth(); tb.position.set(-3.1, 0, 0.75); tb.rotation.y = Math.PI / 2; S.add(tb); this.frontTable = tb;
+    const tb = booth({ chairs: true, backH: 16 }); tb.position.set(-3.1, 0, 0.55); S.add(tb); this.frontTable = tb;
     // the table in the middle where Grandpa always sits
-    const dt = booth({ backH: 15, half: 7 }); dt.position.set(0.1, 0, 0.95); dt.rotation.y = Math.PI / 2; S.add(dt); this.dinnerTable = dt;
+    const dt = booth({ backH: 12, half: 7 }); dt.position.set(0.1, 0, 0.95); dt.rotation.y = Math.PI / 2; S.add(dt); this.dinnerTable = dt;
     // framed photos over the booths: Bendo through the years, a signed baseball card, the 1979 opening
     const photo = (seed, wpx, hpx, draw) => { const p = new PixCanvas(wpx, hpx, 4100 + seed); p.rect(0, 0, wpx, hpx, '#3a2418'); p.rect(2, 2, wpx - 4, hpx - 4, '#e8dcc0'); draw(p); return p; };
     const frames = [
@@ -196,6 +241,48 @@ export class BendysLocation extends Location {
     frames.forEach((pc, i) => { const m = signPlane(pc, pc.w / 64 * 1.3); m.position.set(-4.4 + i * 0.85, 1.6 + (i % 2) * 0.12, W(-d / 2) + 0.01); m.rotation.z = (i - 1) * 0.03; S.add(m); });
     const neon = new PixCanvas(40, 14, 4120); neon.rect(0, 0, 40, 14, '#2a1418'); neon.text('OPEN', 20, 2, { font: `9px ${FONT.bold}`, color: '#ff5a7a', align: 'center', outline: '#ffb0c8' });
     const nm = signPlane(neon, 0.6, { emissive: 1.1, onU: this.onU, mode: 4 }); nm.position.set(-0.6, 1.75, W(-d / 2) + 0.01); S.add(nm);
+    // ---- string lights swagged along the back wall, tin signs, the specials board, a coffee-cup clock
+    const sl = new VoxelModel(), sg = new VoxelModel();
+    const BULB = [0xff6a8a, 0xffd040, 0x6ad8ff, 0x8aff8a, 0xffa040];
+    for (let x = -108; x <= 10; x++) {
+      const t = ((x + 108) % 30) / 30, y = 58 - Math.round(Math.sin(t * Math.PI) * 5);
+      sl.set(x, y, 0, 0x2a2a30);
+      if ((x + 108) % 6 === 3) { sg.set(x, y - 1, 0, BULB[((x + 108) / 6 | 0) % BULB.length]); sg.set(x, y - 2, 0, BULB[((x + 108) / 6 | 0) % BULB.length]); }
+    }
+    const slg = new THREE.Group(); slg.add(vm(sl, V5, [0, 0, 0], { cast: false }), glowVm(sg, V5, [0, 0, 0], { intensity: 1.5, mode: 1, onU: this.onU })); slg.position.z = W(-d / 2) + 0.12; S.add(slg);
+    const tin = (seed, draw) => { const p = new PixCanvas(28, 28, 4200 + seed); draw(p); return p; };
+    const tins = [
+      tin(1, (p) => { p.circle(13.5, 13.5, 13.5, '#2a6ab0'); p.circle(13.5, 13.5, 11, '#f4f0e8'); p.ellipse(13.5, 15, 5, 7, '#ff9ac8'); p.poly([[9, 17], [18, 17], [13.5, 27]], '#e8a040'); p.text('ICE', 13.5, 3, { font: `7px ${FONT.tiny}`, color: '#2a6ab0', align: 'center' }); }),
+      tin(2, (p) => { p.rect(0, 0, 28, 28, '#d8202a'); p.frame(1, 1, 26, 26, '#f4f0e8'); p.text('BENDY', 14, 4, { font: `7px ${FONT.tiny}`, color: '#ffffff', align: 'center' }); p.text('COLA', 14, 13, { font: `9px ${FONT.bold}`, color: '#ffe040', align: 'center' }); }),
+      tin(3, (p) => { p.rect(0, 4, 28, 20, '#f8d040'); p.frame(0, 4, 28, 20, '#3a2a20'); mascotFace(p); p.text('HOT DOG', 14, 17, { font: `7px ${FONT.tiny}`, color: '#c8202a', align: 'center' }); }),
+    ];
+    function mascotFace(p) { p.ellipse(14, 10, 9, 3, '#e8a050'); p.rect(6, 9, 16, 2, '#c8402a'); p.line(7, 9, 21, 9, '#f8d040'); }
+    [[-4.65, 2.4, 0], [-1.25, 2.48, 1], [0.35, 2.05, 2]].forEach(([x, y, i]) => { const m = signPlane(tins[i], 0.42); m.position.set(x, y, W(-d / 2) + 0.012); m.rotation.z = (i - 1) * 0.06; S.add(m); });
+    const sp = new PixCanvas(34, 44, 4230);
+    sp.rect(0, 0, 34, 44, '#6a4428'); sp.rect(2, 2, 30, 40, '#2a3430');
+    sp.text('きょうの', 17, 3, { font: `7px ${FONT.small}`, color: '#fff4d8', align: 'center' });
+    sp.text('おすすめ', 17, 11, { font: `7px ${FONT.small}`, color: '#ffd040', align: 'center' });
+    sp.ellipse(17, 26, 9, 5, '#f8f4ec'); sp.ellipse(17, 25, 6, 3, '#f8c838'); for (let x = 12; x <= 22; x += 2) sp.px(x, 24 + (x % 4 ? 0 : 1), '#d8201a');
+    sp.text('オムライス', 17, 33, { font: `7px ${FONT.small}`, color: '#ffffff', align: 'center' });
+    const spm = signPlane(sp, 0.5); spm.position.set(-0.55, 2.55, W(-d / 2) + 0.012); S.add(spm);
+    const cc = new PixCanvas(30, 26, 4240);
+    cc.rect(2, 4, 20, 18, '#ffffff'); cc.frame(2, 4, 20, 18, '#c8202a'); cc.ring(24, 13, 4, '#c8202a', 2); cc.rect(0, 22, 26, 3, '#c8202a');
+    cc.circle(12, 13, 7, '#fff4e0'); cc.line(12, 13, 12, 8, '#2a2020'); cc.line(12, 13, 16, 15, '#2a2020'); cc.px(12, 13, '#c8202a');
+    for (let k2 = 0; k2 < 3; k2++) cc.line(7 + k2 * 5, 3, 8 + k2 * 5, 0, '#c8c8d0');
+    const ccm = signPlane(cc, 0.42); ccm.position.set(0.28, 2.62, W(-d / 2) + 0.012); S.add(ccm);
+    // ---- on the counter: a cake dome, the register with a lucky cat, a milkshake mixer
+    const cv = new VoxelModel();
+    cyl(cv, 0.5, 0.5, 6, 0, 0, 0xc8ccd4); for (let y = 1; y < 4; y++) cyl(cv, 0.5, 0.5, 4.5, y, y, y === 3 ? 0xfff4e8 : 0xf8c8d8); cv.set(0, 4, 0, 0xe8202a); cv.set(2, 4, 1, 0xe8202a); cv.set(-2, 4, -1, 0xe8202a);
+    const cake = vm(cv, V25, [0.5, 0, 0.5]); cake.position.set(1.55, 1.0, -0.95); S.add(cake);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.22, depthWrite: false })); dome.position.set(1.55, 1.0, -0.95); S.add(dome);
+    const rv = new VoxelModel();
+    fill(rv, -5, 5, 0, 5, -4, 3, 0x3a3a44); fill(rv, -4, 4, 6, 9, -3, 0, 0xd8d0c0); fill(rv, -3, 3, 6, 6, 1, 3, 0xc8b8a0);
+    ell(rv, 9, 3, 0, 2.6, 3, 2.2, 0xfffcf4); v2(rv);
+    function v2(m) { m.set(8, 7, 0, 0xfffcf4); m.set(10, 7, 0, 0xfffcf4); m.set(8, 4, 2, 0x2a2a30); m.set(10, 4, 2, 0x2a2a30); m.set(9, 2, 2, 0xe8202a); m.set(12, 5, 0, 0xfffcf4); m.set(12, 6, 0, 0xfffcf4); }
+    const reg = vm(rv, V25, [0.5, 0, 0.5]); reg.position.set(4.55, 1.0, -0.95); S.add(reg);
+    const mx = new VoxelModel();
+    fill(mx, -3, 3, 0, 1, -3, 3, 0x6ad8c8); fill(mx, -1, 1, 2, 16, -3, -2, 0x6ad8c8); fill(mx, -2, 2, 14, 17, -3, 2, 0x5ac8b8); for (let y = 2; y < 10; y++) for (let x = -2; x <= 2; x++) for (let z = -2; z <= 2; z++) if (Math.hypot(x, z) <= 2 && Math.hypot(x, z) > 1) mx.set(x, y, z + 0.5, 0xd8dce4);
+    const mxm = vm(mx, V25, [0.5, 0, 0.5]); mxm.position.set(2.2, 1.0, -1.05); S.add(mxm);
     k.finish({ lights: false, pitch: 34 });
     S.add(k.group);
     this.updaters.push((dt) => k.update(dt));
@@ -212,7 +299,8 @@ export class BendysLocation extends Location {
   populate() {
     const C = this.crowd;
     let seed = 700; const S = () => (seed += 13);
-    const sit = (b, si, role, act) => { const st = b.userData.seats[si]; const yaw = b.rotation.y; const cx = b.position.x + st.x * Math.cos(yaw) + st.z * Math.sin(yaw), cz = b.position.z - st.x * Math.sin(yaw) + st.z * Math.cos(yaw); return C.add({ seed: S(), role }, { x: cx, z: cz, yaw: st.yaw + yaw, mode: 'sit', seatY: b.userData.seatY + 0.02, prop: false, act }); };
+    const serve = (b, si, kind) => { const st = b.userData.seats[si]; const f = tableFood(kind); f.position.set(st.x * 0.9, b.userData.topY + 0.004, st.z * 0.17); b.add(f); };
+    const sit = (b, si, role, act) => { if (act === 'eat' || act === 'drink') serve(b, si, act === 'drink' ? 'soda' : ['omurice', 'hamburg', 'parfait'][si % 3]); const st = b.userData.seats[si]; const yaw = b.rotation.y; const cx = b.position.x + st.x * Math.cos(yaw) + st.z * Math.sin(yaw), cz = b.position.z - st.x * Math.sin(yaw) + st.z * Math.cos(yaw); return C.add({ seed: S(), role }, { x: cx, z: cz, yaw: st.yaw + yaw, mode: 'sit', seatY: b.userData.seatY + 0.02, prop: false, act }); };
     sit(this.booths[0], 0, 'salaryman', 'eat'); sit(this.booths[0], 2, 'salaryman', 'drink');
     sit(this.booths[2], 1, 'shopper', 'eat'); sit(this.booths[2], 3, 'kid', 'eat'); sit(this.booths[2], 2, 'shopper', null);
     sit(this.booths[1], 0, 'student', 'phone'); sit(this.booths[1], 1, 'student', 'eat');
@@ -223,7 +311,7 @@ export class BendysLocation extends Location {
   async enter() {
     const g = this.game;
     g.rig.setFollow(null);
-    g.rig.play({ x: 0, y: 0.9, z: 0.2, wupp: this.camCfg.wupp, pitch: this.camCfg.pitch, yaw: 0, dur: 0 });
+    g.rig.play({ x: 0, y: 1.15, z: -0.55, wupp: this.camCfg.wupp, pitch: this.camCfg.pitch, yaw: 0, dur: 0 });
   }
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);

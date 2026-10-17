@@ -15,7 +15,7 @@
 //     face: { box: {x0,x1,y0,y1,z0,z1}, faceZ, snout: { z, y, h, beak, w } | null, cfg: {...Face style} },
 //   }
 // Units: voxels. Joints place models so their local origin is the pivot.
-import { VoxelModel } from '../vox/voxel.js';
+import { VoxelModel, keyX, keyY, keyZ } from '../vox/voxel.js';
 import { rbox, ell, tone, hash3 } from '../vox/kit.js';
 
 export { VoxelModel, rbox, ell, tone, hash3 };
@@ -56,13 +56,13 @@ export const vnew = () => new VoxelModel();
 /** mirror a model across x (voxel centre x -> -x-1) */
 export function mirror(m) {
   const o = new VoxelModel();
-  for (const [k, c] of m.vox) { const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512; o.set(-x - 1, y, z, c); }
+  for (const [k, c] of m.vox) { const x = keyX(k), y = keyY(k), z = keyZ(k); o.set(-x - 1, y, z, c); }
   return o;
 }
 /** recolour voxels of a model that pass a test */
 export function paint(m, fn) {
   for (const [k, c] of [...m.vox]) {
-    const x = (k & 1023) - 512, y = ((k >> 10) & 1023) - 512, z = ((k >> 20) & 1023) - 512;
+    const x = keyX(k), y = keyY(k), z = keyZ(k);
     const n = fn(x, y, z, c);
     if (n !== undefined) m.set(x, y, z, n);
   }
