@@ -257,7 +257,7 @@ export function paintHills(B, L) {
   const segAt = (X) => { const s = L.segAt(X); return s.k > 0.5 ? s.b : s.a; };
   // pylons and their sagging lines
   const PSP = 260;
-  const pyl = (i) => { const sg = segAt(i * PSP); return (sg === 'country' || sg === 'mountain' || sg === 'river' || sg === 'tea') && h1(i, 92) < 0.8; };
+  const pyl = (i) => { const sg = segAt(i * PSP); return (sg === 'country' || sg === 'mountain' || sg === 'river' || sg === 'tea') && h1(i, 92) < 0.3; };
   const ptop = (i) => Math.round(hz - hAt(i * PSP + 40) - 34);
   B.slots(PSP, 40, 93, (i, sx) => {
     if (!pyl(i)) return;

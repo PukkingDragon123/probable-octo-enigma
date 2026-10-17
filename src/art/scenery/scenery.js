@@ -39,11 +39,11 @@ export const LOOKS = {
 const STACK = {
   window: [
     { id: 'clouds', H: 150, hz: 146, spd: 3, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
-    { id: 'far', H: 150, hz: 136, spd: 6, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 260 },
-    { id: 'hills', H: 96, hz: 88, spd: 20, par: 0.1, fog: 0.22, ch: 64, paint: paintHills, blend: 160 },
-    { id: 'plain', H: 74, hz: 22, spd: 58, par: 0.25, fog: 0.1, ch: 128, paint: paintFarGround, blend: 40 },
+    { id: 'far', H: 150, hz: 136, spd: 6, par: 0.04, fog: 0.3, ch: 64, paint: paintFar, blend: 260 },
+    { id: 'hills', H: 96, hz: 88, spd: 20, par: 0.1, fog: 0.12, ch: 64, paint: paintHills, blend: 160 },
+    { id: 'plain', H: 74, hz: 22, spd: 58, par: 0.25, fog: 0.05, ch: 128, paint: paintFarGround, blend: 40 },
     { id: 'near', H: 176, hz: 76, gy: 104, spd: 190, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 30 },
-    { id: 'track', H: 250, hz: 130, gy: 182, spd: 560, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
+    { id: 'track', H: 250, hz: 130, gy: 182, mastTop: 0, wireY: 6, masts: false, spd: 560, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
   ],
   // outside the train: the same country at a wider scale, plus a fast bank of
   // grass and flowers in front of the train

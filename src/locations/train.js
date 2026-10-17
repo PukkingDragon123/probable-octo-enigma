@@ -435,7 +435,7 @@ export class TrainLocation extends Location {
     for (const u of this.glassU) { u.time.value = t; u.rain.value = this.rain; u.speed.value = sp; u.night.value = Math.max(tk, lk.lights * 0.6); }
     this.beamU.time.value = t;
     const sunny = Math.max(0, 1 - tk) * Math.min(1, lk.glow * 0.8 + 0.25) * (1 - this.rain * 0.8) * (1 - lk.lights * 0.7);
-    this.beamU.amt.value = 0.13 * sunny;
+    this.beamU.amt.value = 0.1 * sunny * Math.min(1, Math.max(0, (lk.glow - 0.35) * 2.5)); // only in low golden light
     this.beamU.col.value.set(lk.sun);
     // catenary shadows sweep through the car
     for (const m of this.poles) {

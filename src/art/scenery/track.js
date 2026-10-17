@@ -51,7 +51,7 @@ function embankment(B, L, X, flowers) {
     if (d < 4) return d === 0 ? CONC[4] : CONC[2 - (x % 9 === 0 ? 1 : 0)]; // cable trough lid
     if (d < 6) return CONC[0];
     let c = rampPick(GRASS, 0.75 - d * 0.012 + (n2(x / 3, y / 2, 501) - 0.5) * 0.7, x, y);
-    if (flowers && h2(x >> 1, y >> 1, 502) > 0.94) c = pk(['#f4f0ff', '#ffe060', '#c8a0ff', '#ff9ab0'][(x + y) % 4]);
+    if (flowers && h2(x >> 1, y >> 1, 502) > 0.992) c = pk(['#f4f0ff', '#ffe060'][(x + y) % 2]);
     return c;
   });
   // tall grass and weeds leaning in the train's wind
@@ -207,7 +207,7 @@ export function paintTrack(B, L) {
     if ((seg === 'city' && n2(X / 400, 0, 541) > 0.3) || (seg === 'village' && n2(X / 500, 0, 542) > 0.6)) barrier(B, L, X, n2(X / 300, 1, 543));
     anyMast = true;
   }
-  if (!anyMast) return;
+  if (!anyMast || L.masts === false) return;
   wires(B, L);
   B.slots(MAST_SP, 70, 551, (i, sx) => {
     const s = L.segAt(sx);
@@ -239,13 +239,13 @@ export function paintFore(B, L) {
     B.col(X, top + wave, B.H - 1, (x, y) => {
       const d = y - (top + wave);
       let c = rampPick(GRASS, 0.8 - d * 0.02 + (n2(x / 3, y / 2, 571) - 0.5) * 0.6, x, y);
-      if (h2(x >> 1, y >> 1, 572) > 0.95 && d < 30) c = pk(['#fff4a0', '#ffffff', '#c8a0ff', '#ff9ab0', '#ffd060'][(x + y) % 5]);
+      if (h2(x >> 1, y >> 1, 572) > 0.993 && d < 30) c = pk(['#fff4a0', '#ffffff'][(x + y) % 2]);
       return c;
     });
     if (h1(X, 573) > 0.45) { const hgt = 6 + Math.floor(h1(X, 574) * 18); for (let k = 0; k < hgt; k++) B.set(X - (k >> 2), top + wave - k, GRASS[1 + ((k + X) % 3)]); }
   }
   B.slots(90, 40, 575, (i, sx, r) => {
-    const name = ['susuki', 'tallgrass_0', 'hydrangea_blue', 'susuki', 'tallgrass_1', 'hydrangea_pink', 'azalea', 'fern_0'][Math.floor(r * 8)];
+    const name = ['susuki', 'jp_grass_1', 'jp_ashi', 'susuki', 'jp_grass_1', 'jp_grass_0', 'susuki', 'jp_satoimo'][Math.floor(r * 8)];
     const s = sprite(name);
     if (s) B.blit(s, sx + Math.floor(h1(i, 576) * 50), top + 4 - s.h, { flip: h1(i, 577) < 0.5 });
     if (h1(i, 578) < 0.12) { B.rect(sx, top - 26, 4, 30, pk('#8a8a90')); B.rect(sx + 1, top - 26, 1, 30, pk('#b4b4bc')); }

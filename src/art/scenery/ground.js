@@ -172,11 +172,11 @@ export function paintFarGround(B, L) {
     if (h1(i, 349) > 0.65) { const hy = hz + 10 + Math.floor(h1(i, 350) * 12); B.set(X + 40, hy, WHITE); B.set(X + 40, hy - 1, WHITE); B.set(X + 41, hy - 2, WHITE); }
   });
   // utility poles along the back lane
-  B.slots(64, 2, 351, (i, sx) => {
+  B.slots(128, 2, 351, (i, sx) => {
     const seg = segOf(L, sx);
-    if (!(seg === 'country' || seg === 'village' || seg === 'tea')) return;
+    if (seg !== 'village' || h1(i, 352) < 0.4) return;
     B.vline(sx, hz - 9, hz + 2, pk('#6a6460')); B.hline(sx - 2, sx + 2, hz - 8, pk('#6a6460'));
-    for (let x = sx; x < sx + 64; x++) B.set(x, hz - 8 + Math.round(Math.sin((x - sx) / 64 * Math.PI) * 2), pk('#4a4448'));
+    for (let x = sx; x < sx + 128; x++) B.set(x, hz - 8 + Math.round(Math.sin((x - sx) / 128 * Math.PI) * 2), pk('#5a5458'));
   });
 }
 
@@ -458,13 +458,13 @@ function utilityPole(B, X, gy) {
 }
 const POLE_SP = 190;
 function poleWires(B, L, gy) {
-  const has = (i) => { const sg = segOf(L, i * POLE_SP); return (sg === 'country' || sg === 'village' || sg === 'tea' || sg === 'city' || sg === 'station') && n1(i / 5, 420) > 0.42; };
+  const has = (i) => { const sg = segOf(L, i * POLE_SP); return (sg === 'country' || sg === 'village' || sg === 'tea' || sg === 'city' || sg === 'station') && n1(i / 5, 420) > 0.62; };
   B.slots(POLE_SP, 12, 421, (i, sx) => {
     if (!has(i)) return;
     utilityPole(B, sx, gy);
     if (!has(i + 1)) return;
     const ex = sx + POLE_SP;
-    for (const [dy, dx, sag, col] of [[-75, -8, 7, '#3a3a40'], [-66, 0, 10, '#2a2a30']]) {
+    for (const [dy, dx, sag, col] of [[-66, 0, 10, '#2a2a30']]) {
       for (let x = Math.max(sx + dx, B.x0); x < Math.min(ex + dx, B.x1); x++) { const t = (x - sx - dx) / POLE_SP; B.set(x, gy + dy + Math.round(Math.sin(t * Math.PI) * sag), pk(col)); }
     }
     // crows on the wire
@@ -486,6 +486,90 @@ function blackPine(B, X, gy, seed) {
     B.line(px, py, cx, py - 2, TR[1]);
     B.ellipse(cx, py - 3, w, 3.6, (xx, yy, nx, ny) => rampPick(NEED, 0.6 - ny * 0.6 - nx * 0.15 + (h2(xx, yy, seed) - 0.5) * 0.4, xx, yy));
   }
+}
+// ---- TBME-style near fields
+const VERGE = pks(['#2e5a2a', '#3a6e30', '#4a8236', '#5e9a40', '#7ab24c', '#96c85a']);
+const LANE = pks(['#7e6c52', '#8e7a5c', '#9e8a68', '#ae9a76', '#bcaa86']);
+const RICE2 = pks(['#2c5a26', '#386c2c', '#468034', '#56943c', '#6aa846', '#82bc52', '#a0d064']);
+const CABB = pks(['#4a7a3a', '#6a9a4a', '#8ab85a', '#b0d888']);
+const SOIL2 = pks(['#5a4030', '#6c4e38', '#7e5e42', '#90704e']);
+const NEAR_ROWS = (gy, H) => { const out = []; let y = gy + 4, s = 6; while (y < H) { const h = Math.round(s); out.push([y, h]); y += h; s *= 1.45; } return out; };
+function nearFieldPx(type, x, y, y0, h, gy, H, edge) {
+  const d = y - y0, depth = (y - gy) / (H - gy);
+  // the dike between fields: a grassy ridge, lit on top, a darker lip below
+  if (d === 0) return rampPick(VERGE, 0.78 + (h2(x, y, 480) - 0.5) * 0.4, x, y);
+  if (d === 1) return rampPick(VERGE, 0.42 + (h2(x, y, 481) - 0.5) * 0.4, x, y);
+  if (edge) return rampPick(VERGE, 0.55 + (h2(x, y, 482) - 0.5) * 0.5, x, y);
+  switch (type) {
+    case 'teaNear': { const k = (y - y0) % 6; return k < 2 ? pk('#3e6a2e') : rampPick(pks(['#5a9a3a', '#78b448', '#98cc5a', '#b8e070']), 0.75 - k * 0.12 + (h2(x >> 1, y, 440) - 0.5) * 0.4, x, y); }
+    case 'grass': {
+      // meadow: patches of light and shade, blade strokes, a flower now and then
+      const v = 0.42 + (n2(x / 9, y / 4, 441) - 0.5) * 0.7 + (n2(x / 2.5, y / 1.5, 442) - 0.5) * 0.3;
+      const blade = h2(x, y >> 1, 443) > 0.82 ? 0.25 : 0;
+      if (h2(x, y, 444) > 0.997) return pk(['#ffffff', '#ffe060'][(x + y) & 1]);
+      return rampPick(RICE2, v + blade, x, y);
+    }
+    case 'water': {
+      // a flooded paddy: the sky in the water, rows of seedling clumps and their reflections
+      const rowH = 2 + Math.round(depth * 3), cw = 3 + Math.round(depth * 2);
+      const k = (d - 2) % rowH, cx = (x + (Math.floor((d - 2) / rowH) & 1) * 2) % cw;
+      if (k === 0 && cx === 0) return RICE2[5];
+      if (k === 1 && cx === 0) return RICE2[2];
+      if (k === 2 && cx === 0 && depth > 0.3) return pk('#3a5a5a');
+      return water(0.28 + depth * 0.5, h2(x >> 2, y, 445) > 0.985 ? 0.8 : 0, 0.22);
+    }
+    case 'rice': {
+      // lush rows of growing rice: each row lit on top with blade tips, shaded at its foot
+      const rowH = 3 + Math.round(depth * 2), k = (d - 2) % rowH;
+      const tip = k === 0 && h2(x, y, 446) > 0.45;
+      return rampPick(RICE2, (tip ? 0.92 : 0.7 - (k / rowH) * 0.5) + (n2(x / 6, y / 2, 447) - 0.5) * 0.35 + (h2(x, y, 448) - 0.5) * 0.15, x, y);
+    }
+    case 'veg': {
+      // cabbage beds: round heads on dark soil
+      const rowH = 4 + Math.round(depth * 2), k = (d - 2) % rowH, cx = x % (rowH + 1);
+      if (k === rowH - 1) return rampPick(SOIL2, 0.3, x, y);
+      const r = Math.hypot(cx - rowH / 2, k - (rowH - 1) / 2) / (rowH / 2);
+      if (r < 1) return rampPick(CABB, 0.85 - r * 0.6 - (k / rowH) * 0.2, x, y);
+      return rampPick(SOIL2, 0.55 + (h2(x, y, 449) - 0.5) * 0.4, x, y);
+    }
+    default: return rampPick(SOIL2, (d % 2 ? 0.25 : 0.65) + (h2(x, y, 450) - 0.5) * 0.3, x, y);
+  }
+}
+// sprites scattered over the near fields: tufts and wildflowers on the dikes (small far, larger near),
+// bushes and rocks at field corners, ducks and herons in the paddies, butterflies over the flowers
+const DIKE_SMALL = ['jp_grass_2', 'jp_grass_0', 'jp_grass_2', 'jp_clover', 'jp_grass_0', 'jp_grass_2', 'jp_grass_0', 'jp_tanpopo', 'jp_grass_2', 'jp_grass_0'];
+const DIKE_BIG = ['jp_grass_1', 'jp_grass_0', 'jp_grass_1', 'susuki', 'jp_grass_1', 'jp_ashi', 'jp_grass_0', 'jp_grass_1', 'jp_tsuyukusa', 'jp_grass_0', 'jp_grass_1', 'jp_clover'];
+function scatterNear(B, L, gy, H) {
+  const rows = NEAR_ROWS(gy, H);
+  rows.forEach(([y0, h], ri) => {
+    if (y0 > H - 4) return;
+    const near = ri >= 2;
+    const sp = near ? 13 : 9;
+    const list = near ? DIKE_BIG : DIKE_SMALL;
+    const items = [];
+    B.slots(sp, 40, 600 + ri, (i, sx, r) => {
+      const X = sx + Math.floor(h1(i, 601 + ri) * sp);
+      const seg = segOf(L, X);
+      if (seg === 'river' || seg === 'sea' || seg === 'city' || seg === 'station' || seg === 'tea') return;
+      if (r < (near ? 0.45 : 0.55)) return;
+      const name = list[Math.floor(h1(i, 602 + ri) * list.length)];
+      items.push([name, X, y0 + 2, h1(i, 603 + ri) < 0.5]);
+    });
+    for (const [name, X, by, flip] of items) { const sp2 = sprite(name); if (sp2) B.blit(sp2, X - (sp2.w >> 1), by - sp2.h, { flip }); }
+  });
+  // ducks and a heron in the flooded paddies of the first rows
+  B.slots(210, 30, 620, (i, sx, r) => {
+    const seg = segOf(L, sx);
+    if (seg !== 'country' && seg !== 'village') return;
+    const [y0, h] = rows[Math.min(rows.length - 1, 1 + (i % 2))];
+    const off = Math.floor(h1(2 + (i % 2), 439) * (70 + (2 + (i % 2)) * 60));
+    const type = fieldType(2 + (i % 2) + 10, Math.floor((sx + off) / (70 + (2 + (i % 2)) * 60)), seg);
+    if (type !== 'water') return;
+    if (r < 0.35) { const dk = sprite('jp_karugamo'); if (dk) for (let k = 0; k < 3; k++) B.blit(dk, sx + k * 12, y0 + h - dk.h - 1 - (k % 2), { flip: k === 1 }); }
+    else if (r < 0.55) { const eg = sprite('jp_sagi_fish'); if (eg) B.blit(eg, sx, y0 + h - eg.h + 3, { flip: h1(i, 621) < 0.5 }); }
+  });
+  // butterflies over the verge
+  B.slots(260, 20, 630, (i, sx, r) => { if (r < 0.75) return; const b = sprite(r < 0.8 ? 'jp_monshiro' : 'jp_ageha'); if (b) B.blit(b, sx, gy - 14 - Math.floor(h1(i, 631) * 18)); });
 }
 // ---- the near-layer painter
 const NEAR_SP = 150;
@@ -524,22 +608,22 @@ export function paintNear(B, L) {
       });
       continue;
     }
-    // country / village / tea / mountain: the lane, then fields toward us
-    B.col(X, gy - 1, gy + 3, (x, y) => (y === gy + 3 ? DIKE[0] : h2(x, y, 438) > 0.6 ? pk('#a49a86') : pk('#948a76')));
-    let y = gy + 4, rowI = 0, s = 6;
-    while (y < H) {
-      const h = Math.round(s); rowI++;
+    // country / village / tea / mountain: a pebbly dirt lane with grassy verges, then fields toward us
+    B.col(X, gy - 1, gy + 3, (x, y) => {
+      const d = y - gy;
+      if (d === -1) return h2(x, y, 470) > 0.55 ? 0 : rampPick(VERGE, 0.7 + (h2(x, 1, 471) - 0.5) * 0.6, x, y);
+      if (d === 3) return rampPick(VERGE, 0.35 + (h2(x, y, 472) - 0.5) * 0.5, x, y);
+      const p = h2(x, y, 438);
+      if (p > 0.94) return pk('#c8c0b0'); if (p > 0.9) return pk('#7a705e');
+      return rampPick(LANE, 0.5 + (n2(x / 5, y, 473) - 0.5) * 0.7 + (d === 0 ? 0.2 : 0), x, y);
+    });
+    let rowI = 0;
+    for (const [y0, h] of NEAR_ROWS(gy, H)) {
+      rowI++;
       const fw = 70 + rowI * 60, off = Math.floor(h1(rowI, 439) * fw), cell = Math.floor((X + off) / fw);
       const type = seg === 'tea' ? 'teaNear' : seg === 'mountain' ? 'grass' : fieldType(rowI + 10, cell, seg);
-      const y0 = y;
-      B.col(X, y0, y0 + h - 1, (x, yy) => {
-        if (yy === y0) return DIKE[(x >> 1) % 2 ? 3 : 2];
-        if (type === 'teaNear') { const k = (yy - y0) % 6; return k < 2 ? pk('#3e6a2e') : rampPick(pks(['#5a9a3a', '#78b448', '#98cc5a', '#b8e070']), 0.75 - k * 0.12 + (h2(x >> 1, yy, 440) - 0.5) * 0.4, x, yy); }
-        if (type === 'grass') return rampPick(GRASS, 0.45 + (n2(x / 4, yy / 3, 441) - 0.5) * 0.6, x, yy);
-        if (type === 'water') { if ((yy - y0) % 4 === 2 && (x % 4) < 2) return RICE[2 + ((x >> 2) % 2)]; return water(0.3 + (yy - gy) / (H - gy) * 0.5, h2(x >> 2, yy, 442) > 0.985 ? 0.8 : 0, 0.25); }
-        return paintFieldPx(type, x, yy, y0, h, 0.8, cell);
-      });
-      y += h; s *= 1.45;
+      const edge = (X + off) % fw < 2;
+      B.col(X, y0, y0 + h - 1, (x, yy) => nearFieldPx(type, x, yy, y0, h, gy, H, edge));
     }
   }
   // poles + wires behind everything else in front
@@ -555,7 +639,7 @@ export function paintNear(B, L) {
         const cx = X + 90; B.ellipse(cx, gy - 3, 3, 3, BLACK); B.ellipse(cx + 10, gy - 3, 3, 3, BLACK); B.line(cx, gy - 3, cx + 5, gy - 8, pk('#3a8ad8')); B.line(cx + 5, gy - 8, cx + 10, gy - 3, pk('#3a8ad8'));
         B.rect(cx + 3, gy - 15, 4, 6, pk('#e8e4d8')); B.ellipse(cx + 5, gy - 17, 2, 2, pk('#c88a5a')); B.rect(cx + 3, gy - 20, 5, 2, pk('#f0d040'));
       }
-      const rd = sprite(pick < 0.5 ? 'reeds_0' : 'reeds_1'); if (rd) B.blit(rd, X + 40, gy + 22 - rd.h);
+      const rd = sprite('jp_ashi'); if (rd) B.blit(rd, X + 40, gy + 22 - rd.h);
       if (pick > 0.7) { // fisherman on the bank, rod over the water
         const fx = X + 60; B.rect(fx, gy + 10, 4, 6, pk('#5a6a4a')); B.ellipse(fx + 2, gy + 8, 2, 2, pk('#c8a070')); B.ellipse(fx + 2, gy + 6, 4, 1.2, pk('#e8e0c8'));
         B.line(fx + 3, gy + 10, fx + 30, gy - 2, pk('#3a3030')); B.line(fx + 30, gy - 2, fx + 32, gy + 24, pk('#c8c8c8'));
@@ -609,15 +693,22 @@ export function paintNear(B, L) {
     else if (r < 0.84) { x += busStop(B, x, gy) + 6; x += vending(B, x, gy, 2 + Math.floor(pick * 2)) + 6; }
     else { const t = sprite(pick < 0.5 ? 'camphor_1' : 'sakura_small'); if (t) B.blit(t, x, gy - t.h + 2); x += 70; }
     // garden trees and hedges between houses
-    if (pick < 0.5 && r < 0.6) { const t = sprite(pick < 0.2 ? 'pine_0' : pick < 0.35 ? 'camphor_0' : 'momiji_0'); if (t) B.blit(t, x - 6, gy - t.h + 2, { dark: pick < 0.35 ? 0 : 0 }); }
-    if (h1(i, 456) < 0.5) { const hy = sprite(['hydrangea_blue', 'hydrangea_pink', 'hydrangea_violet'][i % 3]); if (hy) for (let k = 0; k < 3; k++) B.blit(hy, X - 30 + k * 20, gy - hy.h + 3); }
+    if (pick < 0.5 && r < 0.6) { const t = sprite(pick < 0.2 ? 'jp_matsu' : pick < 0.35 ? 'camphor_0' : 'momiji_0'); if (t) B.blit(t, x - 6, gy - t.h + 2, { dark: pick < 0.35 ? 0 : 0 }); }
+    if (h1(i, 456) < 0.15) { const hy = sprite(['hydrangea_blue', 'hydrangea_violet'][i % 2]); if (hy) B.blit(hy, X - 26, gy - hy.h + 3); }
+    // a kitchen garden, a row of sunflowers or a flowerbed in front of the house
+    const gk = h1(i, 466);
+    if (gk < 0.32) { const cr = ['jp_negi', 'jp_nasu', 'jp_satoimo', 'jp_kyuri', 'jp_negi']; for (let k = 0; k < 3; k++) { const c2 = sprite(cr[(i + k) % cr.length]); if (c2) B.blit(c2, X - 12 + k * 30, gy + 5 - c2.h); } }
+    else if (gk < 0.4) { const sfs = [sprite('jp_himawari'), sprite('jp_himawari_1')]; if (sfs[0]) for (let k = 0; k < 4; k++) B.blit(sfs[k % 2], X + 2 + k * 11, gy + 3 - sfs[k % 2].h + (k % 2) * 2, { flip: k % 2 === 1 }); }
+
+    else if (gk < 0.75) { const bu = sprite('jp_hedge'); if (bu) for (let k = 0; k < 3; k++) B.blit(bu, X - 8 + k * 30, gy + 3 - bu.h, { flip: k === 1 }); }
     if (h1(i, 457) < 0.25) jizo(B, X - 34, gy);
     // the paddies in front: a farmer, a scarecrow, a heron, a kei truck on the lane
     if (h1(i, 458) < 0.35) farmer(B, X + 20 + Math.floor(h1(i, 459) * 60), gy + 16 + Math.floor(h1(i, 460) * 16));
     if (h1(i, 461) < 0.2) scarecrow(B, X + 70, gy + 26);
-    if (h1(i, 462) < 0.3) { const hr = sprite('heron_idle'); if (hr) B.blit(hr, X + 100, gy + 22 - hr.h + Math.floor(h1(i, 463) * 14), { flip: h1(i, 464) < 0.5 }); }
+    if (h1(i, 462) < 0.3) { const hr = sprite(h1(i, 466) < 0.5 ? 'jp_sagi' : 'jp_sagi_fish'); if (hr) B.blit(hr, X + 100, gy + 22 - hr.h + Math.floor(h1(i, 463) * 14), { flip: h1(i, 464) < 0.5 }); }
     if (h1(i, 465) < 0.22) keiTruck(B, X + 30, gy + 2, i);
   });
+  scatterNear(B, L, gy, H);
 }
 const CEDARN = pks(['#16281e', '#1e3626', '#284430', '#34543a']);
 

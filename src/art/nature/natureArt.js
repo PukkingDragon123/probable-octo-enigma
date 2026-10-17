@@ -5405,6 +5405,281 @@ reg('azalea', () => [ground(flowerBush(28, 16, 8607, P.leafGreen, AZALEA, { head
 reg('susuki', () => [ground(susukiClump(26, 34, 8708))]);
 reg('higanbana', () => [ground(higanbana(16, 18, 8809))]);
 
+// --- Kodamaya's own countryside set (summer Japan): weeds and wildflowers of
+// the paddy dikes, the kitchen garden, a clipped hedge and a garden pine, reeds,
+// and the birds and insects of the rice fields
+const JG = pals(['#163218', '#22481f', '#336426', '#4a802e', '#649a38', '#82b446', '#a4cc5c', '#c8e27e']);
+const JG_B = pals(['#16302c', '#204636', '#2e5e40', '#40784a', '#56925a', '#74ac6a', '#98c47e']);
+const JW = pals(['#8a8698', '#aeaab6', '#cecad0', '#e6e2e2', '#f6f4f0', '#ffffff']);
+function jpTuft(W, H, seed, n = 14) {
+  const p = new Px(W, H), R = mulberry(seed), cx = W / 2;
+  for (let i = 0; i < n; i++) {
+    const x = cx + (R() - 0.5) * W * 0.55, len = H * (0.45 + R() * 0.55);
+    blade(p, x, H, len, (R() - 0.5) * W * 0.5, (R() - 0.5) * 3, R() < 0.35 ? 2 : 1, JG, { bright: (R() - 0.5) * 0.3 });
+  }
+  outline(p, { noBottom: true, lit: 0.62 });
+  return p;
+}
+function jpLeaves(p, cx, H, n, R, len = 4, pal = JG) {
+  for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (R() - 0.5) * 2.4; blade(p, cx + (R() - 0.5) * 3, H, len * (0.6 + R() * 0.6), Math.cos(a) * len, (R() - 0.5) * 2, 2, pal); }
+}
+function jpTsuyukusa(seed) { // dayflower: two round sky-blue petals and a yellow eye
+  const W = 12, H = 11, p = new Px(W, H), R = mulberry(seed);
+  jpLeaves(p, W / 2, H, 6, R, 5);
+  const BL = pals(['#1e3a8a', '#2e58c0', '#4a7ae0', '#78a4f4', '#b0ccff']);
+  for (const [fx, fy] of [[4, 3], [8, 4]]) {
+    ellipse(p, fx - 1, fy, 1.6, 1.4, (x, y, nx, ny) => pick(BL, 0.6 - ny * 0.5 - nx * 0.3));
+    ellipse(p, fx + 1.2, fy, 1.6, 1.4, (x, y, nx, ny) => pick(BL, 0.5 - ny * 0.5 - nx * 0.3));
+    p.set(fx, fy + 1, hx('#ffd84a')); p.set(fx, fy + 2, hx('#3a7a2a'));
+  }
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpClover(seed) { // white clover: trefoils with pale chevrons, a white pompom
+  const W = 13, H = 10, p = new Px(W, H), R = mulberry(seed);
+  for (let i = 0; i < 5; i++) {
+    const cx = 2 + R() * (W - 4), cy = H - 2 - R() * 3;
+    for (const [dx, dy] of [[-1.3, 0.4], [1.3, 0.4], [0, -1]]) ellipse(p, cx + dx, cy + dy, 1.4, 1.2, (x, y, nx, ny) => pick(JG, 0.5 - ny * 0.6 - nx * 0.2));
+    p.set(cx - 1, cy, JG[6]);
+  }
+  const fx = 3 + R() * (W - 6);
+  line(p, fx, H - 1, fx, 3, JG[3]);
+  ellipse(p, fx, 2.5, 2.2, 2, (x, y, nx, ny) => (hash(x, y, seed) < 0.25 ? hx('#f0d8e0') : pick(JW, 0.6 - ny * 0.6 - nx * 0.3)));
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpTanpopo(seed) { // dandelion: a jagged rosette and a yellow head
+  const W = 10, H = 11, p = new Px(W, H), R = mulberry(seed);
+  for (let i = 0; i < 6; i++) { const a = Math.PI + (i / 5) * Math.PI; for (let t = 0; t < 4; t++) p.set(5 + Math.cos(a) * t * 1.2, H - 1 + Math.sin(a) * t * 0.5 - (t % 2), pick(JG, 0.1 + t * 0.15)); }
+  const fx = 5 + (R() - 0.5) * 2;
+  line(p, 5, H - 2, fx, 4, JG[3]);
+  const Y = pals(['#c87a10', '#e8a020', '#f8c838', '#ffe270', '#fff4b0']);
+  ellipse(p, fx, 3, 2.6, 2, (x, y, nx, ny) => pick(Y, 0.7 - ny * 0.6 - nx * 0.3 + (hash(x, y, seed) - 0.5) * 0.4));
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpStarFlower(W, H, seed, pal, n, petals, frilly = false) { // nadeshiko, kikyo, cosmos
+  const p = new Px(W, H), R = mulberry(seed);
+  const tops = [];
+  for (let i = 0; i < n; i++) {
+    const x0 = W / 2 + (R() - 0.5) * 3, x1 = 2.5 + R() * (W - 5), y1 = 2.5 + R() * (H * 0.45);
+    line(p, x0, H - 1, x1, y1 + 1, (x, y) => p.set(x, y, pick(JG, 0.1 + (H - y) / H * 0.5)));
+    if (R() < 0.6) blade(p, (x0 + x1) / 2, (H + y1) / 2, 2.5, (R() - 0.5) * 4, 0, 1, JG);
+    tops.push([x1, y1]);
+  }
+  for (const [cx, cy] of tops) {
+    for (let k = 0; k < petals; k++) {
+      const a = (k / petals) * Math.PI * 2 + R() * 0.3, r = frilly ? 2.2 : 1.8;
+      const ex = cx + Math.cos(a) * r, ey = cy + Math.sin(a) * r * 0.8;
+      p.set(ex, ey, pick(pal, 0.6 - Math.sin(a) * 0.4));
+      if (frilly) p.set(cx + Math.cos(a) * (r + 0.9), cy + Math.sin(a) * (r + 0.9) * 0.8, pick(pal, 0.2));
+    }
+    p.set(cx, cy, pick(pal, 0.95)); p.set(cx, cy, frilly ? pick(pal, 0.9) : hx('#ffe060'));
+  }
+  return outline(p, { noBottom: true, lit: 0.62 });
+}
+const NADE = pals(['#8a2a5a', '#b8407a', '#e06aa0', '#f49cc4', '#ffd0e4']);
+const KIKYO = pals(['#2a1e6a', '#3e3496', '#5c52c4', '#8a80e4', '#c0b8fa']);
+const COSMOS = [pals(['#8a1e5a', '#c03a82', '#e868a8', '#f8a0c8', '#ffd8ea']), pals(['#a8a0b4', '#d0c8d8', '#ece6ee', '#fbf8fb', '#ffffff']), pals(['#5a0a3a', '#86124e', '#b0206a', '#d8408a', '#f078ac'])];
+function jpHimawari(seed, W = 18, H = 40) { // sunflower: a tall hairy stem, heart leaves, a big head
+  const p = new Px(W, H), R = mulberry(seed);
+  const cx = W / 2 + (R() - 0.5) * 2;
+  for (let y = 9; y < H; y++) { p.set(cx, y, pick(JG, 0.1 + (y % 4 === 0 ? 0.3 : 0))); p.set(cx + 1, y, pick(JG, -0.3)); }
+  for (const [ly, side] of [[H - 10, -1], [H - 20, 1], [H - 28, -1]]) ellipse(p, cx + side * 4, ly, 4, 2.8, (x, y, nx, ny) => (Math.abs(ny) < 0.12 && nx * side < 0.6 ? JG[2] : pick(JG, 0.45 - ny * 0.6 - nx * side * 0.25)));
+  const PET = pals(['#b86a08', '#e09a10', '#f8c820', '#ffe050', '#fff4a0']);
+  const hy = 7;
+  for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; for (let t = 4; t < 7; t++) p.set(cx + Math.cos(a) * t, hy + Math.sin(a) * t * 0.85, pick(PET, 0.85 - t * 0.12 - Math.sin(a) * 0.3)); }
+  ellipse(p, cx, hy, 3.6, 3.2, (x, y, nx, ny) => (hash(x, y, seed) < 0.3 ? hx('#7a4a1a') : pick(pals(['#2a1408', '#4a2610', '#6a3a18']), 0.4 - ny * 0.4)));
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpNegi(seed) { // a row of green onions: blue-green tubes, white necks, a couple of seed balls
+  const W = 30, H = 15, p = new Px(W, H), R = mulberry(seed);
+  for (let x = 2; x < W - 2; x += 2) {
+    const h = 7 + R() * 7, lean = (R() - 0.5) * 2;
+    for (let t = 0; t < h; t++) { const y = H - 1 - t, xx = x + lean * t / h; p.set(xx, y, t < 3 ? pick(JW, 0.7) : pick(JG_B, 0.3 + t / h * 0.5)); }
+    if (R() < 0.18) ellipse(p, x + lean, H - h - 1, 1.4, 1.4, (xx, yy, nx, ny) => pick(JW, 0.6 - ny * 0.5));
+  }
+  return outline(p, { noBottom: true, lit: 0.62 });
+}
+function jpNasu(seed) { // eggplant bush with glossy purple fruit and star calyxes
+  const p = bushSprite(22, 20, seed, JG, { n: 3, r: 0.44 });
+  const PU = pals(['#1e0e2e', '#3a1a52', '#5a2a7a', '#8048a6', '#b080d4']);
+  const R = mulberry(seed + 5);
+  for (let i = 0; i < 4; i++) {
+    const fx = 4 + R() * 14, fy = 8 + R() * 8;
+    ellipse(p, fx, fy, 1.6, 3, (x, y, nx, ny) => pick(PU, 0.35 - nx * 0.5 - ny * 0.3));
+    p.set(fx - 0.6, fy - 1.2, PU[4]); p.set(fx, fy - 3, hx('#3e6a2a')); p.set(fx - 1, fy - 3, hx('#3e6a2a')); p.set(fx + 1, fy - 3, hx('#3e6a2a'));
+  }
+  return outline(p, { noBottom: true, lit: 0.56, only: (x, y) => y < 18 });
+}
+function jpSatoimo(seed) { // taro: big shield leaves on long stalks, water-beaded
+  const W = 26, H = 24, p = new Px(W, H), R = mulberry(seed);
+  const leaves = [[7, 9, -1], [17, 6, 1], [12, 12, 0], [20, 13, 1]];
+  for (const [lx, ly] of leaves) line(p, W / 2 + (R() - 0.5) * 2, H - 1, lx, ly + 2, (x, y) => p.set(x, y, pick(JG_B, 0.4)));
+  for (const [lx, ly, d] of leaves) ellipse(p, lx, ly, 5.2, 3.8, (x, y, nx, ny) => {
+    if (ny > 0.3 && Math.abs(nx) < 0.12) return -1; // the notch
+    const vein = Math.abs(nx - ny * 0.3 * d) < 0.08 || Math.abs(ny + 0.1) < 0.07;
+    let v = 0.4 - ny * 0.5 - nx * 0.25 + (vein ? 0.35 : 0);
+    if (hash(x, y, seed) < 0.04) return JW[5];
+    return pick(JG_B, v);
+  });
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpKyuri(seed) { // cucumber on a bamboo trellis: vines, yellow flowers, hanging fruit
+  const W = 24, H = 30, p = new Px(W, H), R = mulberry(seed);
+  const BAM = pals(['#6a5a30', '#8a7a44', '#ae9c5a', '#ccbc78']);
+  for (const x of [2, 12, 21]) for (let y = 3; y < H; y++) p.set(x, y, pick(BAM, 0.4 + (y % 7 === 0 ? 0.4 : 0)));
+  for (const y of [5, 14, 23]) for (let x = 1; x < W - 1; x++) p.set(x, y, BAM[1]);
+  for (let i = 0; i < 26; i++) { const x = 2 + R() * (W - 4), y = 4 + R() * (H - 7); ellipse(p, x, y, 2.2, 1.8, (xx, yy, nx, ny) => pick(JG, 0.5 - ny * 0.6 - nx * 0.3)); }
+  for (let i = 0; i < 5; i++) { const x = 3 + R() * (W - 6), y = 6 + R() * 16; for (let t = 0; t < 5; t++) p.set(x + (t > 3 ? 1 : 0), y + t, pick(JG_B, 0.2 + (t === 1 ? 0.4 : 0))); }
+  for (let i = 0; i < 6; i++) { const x = 3 + R() * (W - 6), y = 4 + R() * 18; p.set(x, y, hx('#ffe040')); p.set(x + 1, y, hx('#f8c820')); }
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpHedge(seed) { // a clipped hedge: a squarish block with a sunlit top and darker leaf texture
+  const W = 32, H = 15, p = new Px(W, H);
+  for (let y = 1; y < H; y++) for (let x = 1; x < W - 1; x++) {
+    const top = y < 4, side = x > W - 4;
+    if ((y === 1 && (x < 3 || x > W - 4)) || (y === 2 && (x < 2 || x > W - 3))) continue;
+    let v = top ? 0.42 : side ? -0.25 : 0.12 - y / H * 0.35;
+    v += (hash(x >> 1, y >> 1, seed) - 0.5) * 0.5;
+    p.set(x, y, pick(JG, v));
+  }
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpMatsu(seed) { // niwaki garden pine: a twisting trunk and flat cloud pads of needles
+  const W = 40, H = 36, p = new Px(W, H), R = mulberry(seed);
+  const BARK = pals(['#2a1c1a', '#40302a', '#5a4436', '#745a44']);
+  const NE = pals(['#0e2418', '#16341e', '#204628', '#2c5a30', '#3c703a', '#528a46', '#6ca456']);
+  let x = W / 2, pts = [];
+  for (let y = H - 1; y > 8; y--) { x += Math.sin(y * 0.35 + seed) * 0.6; pts.push([x, y]); p.set(x - 1, y, BARK[1]); p.set(x, y, BARK[2 + (y % 3 === 0 ? 1 : 0)]); p.set(x + 1, y, BARK[0]); }
+  const pads = [[0.3, -9, 7], [0.55, 8, 8], [0.78, -6, 7], [0.95, 3, 9]];
+  for (const [f, dx, w] of pads) {
+    const [px, py] = pts[Math.floor(f * (pts.length - 1))];
+    line(p, px, py, px + dx, py - 2, BARK[1]);
+    ellipse(p, px + dx, py - 3, w, 2.6, (xx, yy, nx, ny) => pick(NE, 0.5 - ny * 0.8 - nx * 0.2 + (hash(xx, yy, seed) - 0.5) * 0.5));
+  }
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpAshi(seed) { // reeds with soft brown plumes
+  const W = 14, H = 26, p = new Px(W, H), R = mulberry(seed);
+  for (let i = 0; i < 8; i++) {
+    const x = W / 2 + (R() - 0.5) * 6, len = H * (0.55 + R() * 0.4), lean = (R() - 0.5) * 4;
+    const [tx, ty] = blade(p, x, H, len, lean, (R() - 0.5) * 1.5, 1, JG);
+    if (R() < 0.6) for (let t = 0; t < 5; t++) { p.set(tx + lean * 0.1 + (t % 2), ty + t, pick(pals(['#6a4a30', '#8a6a48', '#b09068', '#d0b890']), 0.8 - t * 0.2)); }
+  }
+  return outline(p, { noBottom: true, lit: 0.62 });
+}
+function jpSagi(seed, fishing = false) { // little egret: white, an S neck, black bill and legs, yellow feet
+  const SAGI = { w: '#ffffff', W: '#e8e8f0', s: '#c4c4d2', k: '#1e1a22', e: '#f0c830', p: '#f4f0f8' };
+  const up = [
+    '......W.....',
+    '......ww....',
+    '.....wwwkkkk',
+    '.....wwW....',
+    '......Ww....',
+    '.......ww...',
+    '.......wW...',
+    '......wwW...',
+    '.....wwW....',
+    '....wwwwww..',
+    '..wwwwwwwWs.',
+    '.wwwwwwwWWs.',
+    'pwwwwwwWWs..',
+    '.pWWWWWss...',
+    '...sssss....',
+    '.....k.k....',
+    '.....k.k....',
+    '.....k.k....',
+    '.....k.k....',
+    '.....k.k....',
+    '....eekeek..',
+  ];
+  const fish = [
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '............',
+    '....ww......',
+    '...wwwwwww..',
+    '..wwwwwwwWs.',
+    '.wwwwwwwWWs.',
+    'wWwwwwwWWs..',
+    'wwWWWWWss...',
+    'w..ssss.....',
+    'kwk..k.k....',
+    'k....k.k....',
+    'k....k.k....',
+    '.....k.k....',
+    '.....k.k....',
+    '....eekeek..',
+  ];
+  // outline the bird but not between the thin legs
+  return outline(art(fishing ? fish : up, SAGI, { auto: 0.8, noShade: 'kep', ol: false }), { lit: 0.62, only: (x, y) => y < 15 });
+}
+function jpKarugamo(seed) { // spot-billed duck swimming: brown scaled body, pale face, dark eye stripe, yellow-tipped bill
+  const W = 17, H = 10, p = new Px(W, H);
+  const BR = pals(['#3a2a1e', '#5a4230', '#7a5c42', '#9a7a58', '#c0a07a']);
+  ellipse(p, 8, 6, 6.5, 3.2, (x, y, nx, ny) => (hash(x, y, seed) < 0.3 && ny > -0.4 ? BR[1] : pick(BR, 0.6 - ny * 0.6 - nx * 0.2)));
+  for (let x = 2; x < 6; x++) p.set(x, 4, hx('#2a5ab0'));
+  ellipse(p, 13, 3.2, 2.4, 2.2, (x, y, nx, ny) => pick(pals(['#a89a80', '#cabca0', '#e6dcc4']), 0.6 - ny * 0.6));
+  p.set(13, 3, hx('#1e1a22')); p.set(12, 3, hx('#3a3028')); p.set(14, 3, hx('#3a3028'));
+  p.set(15, 4, hx('#2a2a2a')); p.set(16, 4, hx('#f0c830'));
+  for (let x = 1; x < W - 1; x++) if (hash(x, 9, seed) < 0.6) p.set(x, 9, hx('#e8f4ff'), 200);
+  return outline(p, { lit: 0.62, only: (x, y) => y < 9 });
+}
+function jpButterfly(kind) { // monshiro (cabbage white) or ageha (swallowtail)
+  const W = kind === 'ageha' ? 12 : 9, H = kind === 'ageha' ? 10 : 7, p = new Px(W, H);
+  const K = hx('#1e1a22');
+  const A = kind === 'ageha' ? pals(['#1e1a22', '#c8a020', '#f8d840', '#fff090']) : pals(['#a8a8a0', '#e0e0d8', '#f8f8f2', '#ffffff']);
+  const cx = W / 2 - 0.5;
+  for (const s of [-1, 1]) {
+    ellipse(p, cx + s * (W * 0.24), H * 0.35, W * 0.24, H * 0.32, (x, y, nx, ny) => (kind === 'ageha' && (Math.abs(nx) > 0.75 || (y + x) % 3 === 0) ? A[0] : pick(A, 0.7 - ny * 0.6)));
+    ellipse(p, cx + s * (W * 0.18), H * 0.72, W * 0.16, H * 0.22, (x, y, nx, ny) => (kind === 'ageha' && Math.abs(nx) > 0.6 ? A[0] : pick(A, 0.5 - ny * 0.5)));
+  }
+  if (kind !== 'ageha') { p.set(cx - 2, 2, K); p.set(cx + 3, 2, K); } else { p.set(cx - 2, H - 1, hx('#2a5ab0')); p.set(cx + 3, H - 1, hx('#e8402a')); }
+  for (let y = 1; y < H - 1; y++) p.set(cx + 0.5, y, K);
+  p.set(cx - 0.5, 0, K); p.set(cx + 1.5, 0, K);
+  return p;
+}
+function jpAkatombo() { // red dragonfly at rest: four glassy wings, a red tail
+  return art([
+    '...ggg..ggg....',
+    '..gGGgggGGg....',
+    '.....rRr.......',
+    'hrrrrRRRrrrrrrr',
+    '.....rRr.......',
+    '..gGGgggGGg....',
+    '...ggg..ggg....',
+  ], { r: '#c8281e', R: '#f05a3a', h: '#ffffff', g: ['#e4f2ff', 170], G: ['#a8c4dc', 200] }, { ol: false, ground: false });
+}
+reg('jp_grass_0', () => [ground(jpTuft(12, 10, 9101, 12))]);
+reg('jp_grass_1', () => [ground(jpTuft(16, 13, 9102, 18))]);
+reg('jp_grass_2', () => [ground(jpTuft(9, 7, 9103, 8))]);
+reg('jp_tsuyukusa', () => [ground(jpTsuyukusa(9104))]);
+reg('jp_clover', () => [ground(jpClover(9105))]);
+reg('jp_tanpopo', () => [ground(jpTanpopo(9106))]);
+reg('jp_nadeshiko', () => [ground(jpStarFlower(11, 14, 9107, NADE, 3, 7, true))]);
+reg('jp_kikyo', () => [ground(jpStarFlower(11, 15, 9108, KIKYO, 3, 5))]);
+reg('jp_cosmos_0', () => [ground(jpStarFlower(14, 20, 9109, COSMOS[0], 4, 8))]);
+reg('jp_cosmos_1', () => [ground(jpStarFlower(14, 20, 9110, COSMOS[1], 4, 8))]);
+reg('jp_cosmos_2', () => [ground(jpStarFlower(13, 19, 9111, COSMOS[2], 3, 8))]);
+reg('jp_himawari', () => [ground(jpHimawari(9112))]);
+reg('jp_himawari_1', () => [ground(jpHimawari(9113, 16, 34))]);
+reg('jp_negi', () => [ground(jpNegi(9114))]);
+reg('jp_nasu', () => [ground(jpNasu(9115))]);
+reg('jp_satoimo', () => [ground(jpSatoimo(9116))]);
+reg('jp_kyuri', () => [ground(jpKyuri(9117))]);
+reg('jp_hedge', () => [ground(jpHedge(9118))]);
+reg('jp_matsu', () => [ground(jpMatsu(9119))]);
+reg('jp_ashi', () => [ground(jpAshi(9120))]);
+reg('jp_sagi', () => [ground(jpSagi(9121))]);
+reg('jp_sagi_fish', () => [ground(jpSagi(9122, true))]);
+reg('jp_karugamo', () => [ground(jpKarugamo(9123))]);
+reg('jp_monshiro', () => [centre(jpButterfly('monshiro'))]);
+reg('jp_ageha', () => [centre(jpButterfly('ageha'))]);
+reg('jp_akatombo', () => [centre(jpAkatombo())]);
+
 const EXTRA_MODS = import.meta.glob('./extra/*.js', { eager: true });
 for (const m of Object.values(EXTRA_MODS)) {
   for (const [name, fn] of Object.entries(m.EXTRA_SPRITES || {})) {

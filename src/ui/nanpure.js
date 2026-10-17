@@ -1,6 +1,6 @@
 // "Nanpure" — the little sudoku app on Mamo's phone, painted in pixels onto
 // the phone's screen canvas (which the 3D phone shows as its screen). A lock
-// screen with no notifications, then a 6x6 puzzle with a cat mascot, a
+// screen with no notifications, then a 6x6 puzzle with a
 // number pad, sparkles for finished rows, a stamp and confetti for the win.
 //   const app = new Nanpure(game, 126, 236); app.start(seed);
 //   app.tap(x, y)  (screen canvas pixels)   app.update(dt); app.draw();
@@ -59,7 +59,10 @@ function text(x, str, X, Y, size, color, { align = 'left', font, outline } = {})
 export class Nanpure {
   constructor(game, W = 126, H = 236) {
     this.game = game; this.W = W; this.H = H;
-    this.cv = document.createElement('canvas'); this.cv.width = W; this.cv.height = H;
+    // the screen is painted at twice its layout resolution: the UI keeps its chunky
+    // pixels (everything is drawn in layout units, scaled 2x); photos get the full resolution
+    this.S = 2;
+    this.cv = document.createElement('canvas'); this.cv.width = W * this.S; this.cv.height = H * this.S;
     this.x = this.cv.getContext('2d');
     this.t = 0;
   }
@@ -160,6 +163,7 @@ export class Nanpure {
   }
   draw() {
     const x = this.x;
+    x.setTransform(this.S, 0, 0, this.S, 0, 0);
     x.imageSmoothingEnabled = false;
     x.clearRect(0, 0, this.W, this.H);
     this.drawScreen(this.L);
@@ -198,7 +202,7 @@ export class Nanpure {
     const x = this.x, s = L.s;
     for (let y = 0; y < s.h; y++) { const k = y / s.h; x.fillStyle = `rgb(${Math.round(26 + 40 * k)},${Math.round(34 + 30 * k)},${Math.round(68 + 50 * k)})`; x.fillRect(s.x, s.y + y, s.w, 1); }
     for (let i = 0; i < 30; i++) px(x, i % 3 ? '#8a9ad8' : '#ffffff', s.x + ((i * 37) % s.w), s.y + ((i * 53) % (s.h * 0.6)), 1, 1);
-    ell(x, s.x + s.w * 0.72, s.y + 40, 10, 10, '#f4f0d8'); ell(x, s.x + s.w * 0.72 - 4, s.y + 37, 9, 9, '#2a3458');
+    ell(x, s.x + s.w * 0.82, s.y + 18, 6, 6, '#f4f0d8'); ell(x, s.x + s.w * 0.82 - 3, s.y + 16, 5.5, 5.5, '#2a3458');
     text(x, '15:42', s.x + s.w / 2, s.y + 30, 22, '#ffffff', { align: 'center', font: FONT.big });
     text(x, '7月18日 木曜日', s.x + s.w / 2, s.y + 58, 9, '#d8e0ff', { align: 'center', font: FONT.small });
     rrect(x, s.x + 8, s.y + 82, s.w - 16, 18, 5, 'rgba(255,255,255,0.16)');
@@ -209,9 +213,8 @@ export class Nanpure {
     icons.forEach(([c, g], k) => {
       const ix = s.x + 10 + k * ((s.w - 20 - iw) / 3);
       rrect(x, ix, iy, iw, iw, 6, c);
-      if (k === 3) { // Nanpure: a tiny grid and the cat ears
+      if (k === 3) { // Nanpure: a tiny grid
         for (let q = 0; q < 3; q++) { px(x, '#d8b48a', ix + 4, iy + 6 + q * 5, iw - 8, 1); px(x, '#d8b48a', ix + 6 + q * 5, iy + 4, 1, iw - 8); }
-        poly(x, [[ix + 3, iy + 3], [ix + 8, iy + 3], [ix + 4, iy - 2]], '#e86a5a'); poly(x, [[ix + iw - 3, iy + 3], [ix + iw - 8, iy + 3], [ix + iw - 4, iy - 2]], '#e86a5a');
         if (Math.floor(this.t * 2) % 2 === 0 && this.screen === 'lock') { x.strokeStyle = '#ffe070'; x.lineWidth = 1; x.strokeRect(ix - 1.5, iy - 1.5, iw + 3, iw + 3); }
       } else text(x, g, ix + iw / 2, iy + 5, 11, '#ffffff', { align: 'center', font: FONT.ui });
       text(x, ['音楽', 'メール', '写真', 'ナンプレ'][k], ix + iw / 2, iy + iw + 1, 9, '#e8ecff', { align: 'center', font: FONT.small });
@@ -224,9 +227,8 @@ export class Nanpure {
     for (let yy = 0; yy < s.h; yy += 8) for (let xx = (yy / 8) % 2 ? 4 : 0; xx < s.w; xx += 8) px(x, UI.bg2, s.x + xx, s.y + yy, 2, 2);
     // header: the mascot, the title, the timer
     const hy = L.head;
-    this.drawCat(s.x + 14, hy + 11);
-    text(x, 'ナンプレ', s.x + 27, hy + 1, 11, UI.title, { font: FONT.ui, outline: '#fff6e6' });
-    rrect(x, s.x + 27, hy + 14, 34, 10, 3, '#8ad0a0'); text(x, 'かんたん', s.x + 44, hy + 14, 9, '#ffffff', { align: 'center', font: FONT.small });
+    text(x, 'ナンプレ', s.x + 6, hy + 1, 11, UI.title, { font: FONT.ui, outline: '#fff6e6' });
+    rrect(x, s.x + 6, hy + 14, 34, 10, 3, '#8ad0a0'); text(x, 'かんたん', s.x + 23, hy + 14, 9, '#ffffff', { align: 'center', font: FONT.small });
     const sec = Math.floor(this.clock);
     rrect(x, s.x + s.w - 34, hy + 4, 30, 12, 4, '#ffffff');
     text(x, `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`, s.x + s.w - 19, hy + 6, 7, '#8a5a3a', { align: 'center', font: FONT.tiny });
@@ -287,22 +289,5 @@ export class Nanpure {
       x.restore();
       for (const f of this.fx) px(x, f.c, f.x, f.y, 2 + (f.t * 10 % 2 > 1 ? 1 : 0), 2);
     }
-  }
-  drawCat(cx, cy) {
-    const x = this.x, m = this.mood, t = this.t;
-    cx = Math.round(cx); cy = Math.round(cy);
-    const hop = m === 'win' ? -Math.abs(Math.sin(t * 9)) * 3 : m === 'happy' ? -Math.abs(Math.sin(t * 12)) * 2 : 0;
-    cy += hop;
-    poly(x, [[cx - 9, cy - 4], [cx - 4, cy - 7], [cx - 8, cy - 12]], '#f4a05a'); poly(x, [[cx + 9, cy - 4], [cx + 4, cy - 7], [cx + 8, cy - 12]], '#f4a05a');
-    px(x, '#ffc8c8', cx - 7, cy - 8, 2, 2); px(x, '#ffc8c8', cx + 6, cy - 8, 2, 2);
-    ell(x, cx, cy, 9, 7.5, '#f4a05a'); ell(x, cx, cy + 2, 7, 5, '#ffe2b8');
-    px(x, '#d8783a', cx - 1, cy - 7, 2, 3); px(x, '#d8783a', cx - 4, cy - 6, 1, 2); px(x, '#d8783a', cx + 3, cy - 6, 1, 2);
-    const blink = Math.floor(t * 0.6) % 6 === 0 && (t % 1.66) < 0.12;
-    if (m === 'happy' || m === 'win') { px(x, '#3a2420', cx - 5, cy - 1, 3, 1); px(x, '#3a2420', cx - 4, cy - 2, 1, 1); px(x, '#3a2420', cx + 2, cy - 1, 3, 1); px(x, '#3a2420', cx + 3, cy - 2, 1, 1); }
-    else if (blink) { px(x, '#3a2420', cx - 5, cy - 1, 3, 1); px(x, '#3a2420', cx + 2, cy - 1, 3, 1); }
-    else { px(x, '#3a2420', cx - 4, cy - 2, 2, 3); px(x, '#3a2420', cx + 3, cy - 2, 2, 3); px(x, '#ffffff', cx - 4, cy - 2, 1, 1); px(x, '#ffffff', cx + 3, cy - 2, 1, 1); }
-    px(x, '#ff8a9a', cx - 7, cy + 1, 2, 1); px(x, '#ff8a9a', cx + 6, cy + 1, 2, 1);
-    if (m === 'oops') { px(x, '#3a2420', cx - 1, cy + 3, 3, 1); px(x, '#6ab0ff', cx + 8, cy - 6, 2, 3); }
-    else { px(x, '#3a2420', cx - 2, cy + 2, 1, 1); px(x, '#3a2420', cx + 1, cy + 2, 1, 1); px(x, '#3a2420', cx - 1, cy + 3, 2, 1); }
   }
 }
