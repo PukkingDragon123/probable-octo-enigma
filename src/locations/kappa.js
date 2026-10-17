@@ -15,6 +15,8 @@ import { PixCanvas } from '../core/pixtex.js';
 import { emitMat } from '../core/materials.js';
 import { NavGrid } from '../core/nav.js';
 import { FONT } from '../ui/fonts.js';
+import { organicIsland, nebulaVoid, dreamClouds, SpiritAir } from '../world/spiritFx.js';
+import { magicWater, rotenburo, irisPond } from '../world/onsen.js';
 
 export const LAGOON = { x: 2.4, z: 2.0, rx: 3.0, rz: 1.75, depth: 7, sand: true };
 const ONSEN = { x: -3.4, z: 2.4, r: 1.3 };
@@ -101,22 +103,22 @@ function onsenWater(r) {
 
 export class KappaLocation extends Location {
   constructor(game) {
-    super(game, 'kappa', { bg: 0x9ec8f0, lightMode: 'spirit', grade: 'spiritDusk', ambience: 'spirit' });
+    super(game, 'kappa', { bg: 0x120e30, lightMode: 'spirit', grade: 'spiritDusk', ambience: 'spirit' });
     this.camCfg = { wupp: 0.0158, pitch: 46, yaw: 45, follow: true, minWupp: 0.007, maxWupp: 0.03, followY: 0.6, bounds: { minX: -5, maxX: 5.5, minZ: -0.8, maxZ: 3.6 } };
     this.shadowSize = 16;
     this.clock = false;
     this.hourOverride = 3.2; // spirit late afternoon, going gold
     this.sky = true;
-    this.lightOverride = { sun: 0xffc890, sunI: 2.1, hemiI: 1.4, sky: 0xf0d0e0, gnd: 0x7a7048, top: 0x8ab0e0, bot: 0xffd0a8 };
+    this.lightOverride = { sun: 0xffc890, sunI: 2.0, hemiI: 1.35, sky: 0xd8b8ff, gnd: 0x4a7a6a, top: 0x2a2060, bot: 0xff9ac0 };
   }
   async build() {
     const S = this.scene;
     this.onU = { value: 1 };
     this.updaters = [];
     const shape = (this.shape = islandShape({ rx: 7.6, rz: 5.0, cx: 0.2, cz: 0.8, seed: 11 }));
-    S.add(islandMesh(shape, { pond: LAGOON }));
+    S.add(organicIsland(shape, { pond: LAGOON, seed: 11 }));
     // lagoon water + sparkles, the pier, the buoy course
-    const water = pondWater(LAGOON.rx * 0.99, LAGOON.rz * 0.99); water.position.set(LAGOON.x, -0.12, LAGOON.z); water.material.opacity = 0.86; water.material.color.setHex(0xa8d8e0); S.add(water); this.updaters.push(water.userData.update);
+    const water = magicWater(LAGOON.rx * 0.99, LAGOON.rz * 0.99, { shallow: '#9ae8d8', deep: '#2a6ab0' }); water.position.set(LAGOON.x, -0.12, LAGOON.z); S.add(water); this.updaters.push(water.userData.update);
     this.water = water;
     const pr = pier(); pr.position.set(LAGOON.x - 1.4, 0.0, LAGOON.z - LAGOON.rz - 0.45); pr.rotation.y = 0.0; S.add(pr);
     this.pierEnd = { x: LAGOON.x - 1.4, z: LAGOON.z - LAGOON.rz + 1.9 };
@@ -124,22 +126,23 @@ export class KappaLocation extends Location {
     this.buoys = course.map(([dx, dz], i) => { const b = buoy(i % 2 === 0); b.position.set(LAGOON.x + dx, -0.14, LAGOON.z + dz); S.add(b); return { x: LAGOON.x + dx, z: LAGOON.z + dz, mesh: b, ph: i }; });
     this.updaters.push((dt, t) => { for (const b of this.buoys) { b.mesh.position.y = -0.14 + Math.sin(t * 1.8 + b.ph) * 0.02; b.mesh.rotation.z = Math.sin(t * 1.3 + b.ph) * 0.08; } });
     // the onsen: rock ring, milky glowing water, steam, a lantern and a bucket
-    const rocks = onsenRocks(ONSEN.r); rocks.position.set(ONSEN.x, 0, ONSEN.z); S.add(rocks);
-    const ow = onsenWater(ONSEN.r); ow.position.set(ONSEN.x, 0.04, ONSEN.z); S.add(ow);
+    const ro = rotenburo(ONSEN.r, { onU: this.onU }); ro.position.set(ONSEN.x, 0, ONSEN.z); S.add(ro); this.updaters.push(ro.userData.water.userData.update);
     this.onsen = ONSEN;
-    const lan = stoneLantern({ onU: this.onU }); lan.position.set(ONSEN.x - 1.65, 0, ONSEN.z - 0.6); S.add(lan);
-    const bk = new VoxelModel(); for (let y = 0; y < 6; y++) for (let x = -3; x <= 3; x++) for (let z = -3; z <= 3; z++) { const d = Math.hypot(x, z); if (d <= 3 && (d > 2 || y === 0)) bk.set(x, y, z, y === 3 ? 0x5a3a20 : 0xc8a06a); }
-    const bm = vm(bk, V25, [0.5, 0, 0.5]); bm.position.set(ONSEN.x + 1.4, 0.12, ONSEN.z + 0.7); S.add(bm);
+    const lan = stoneLantern({ onU: this.onU }); lan.position.set(ONSEN.x - 1.75, 0, ONSEN.z - 0.4); S.add(lan);
+    const lan2 = stoneLantern({ onU: this.onU }); lan2.position.set(ONSEN.x + 1.75, 0, ONSEN.z + 0.5); S.add(lan2);
+    // an iris pond with a red arched bridge by the front rim
+    const ip = irisPond(1.0, 0.55); ip.position.set(-0.9, 0, 4.55); S.add(ip); this.updaters.push(ip.userData.water.userData.update);
     // the hut + drying rack, cucumber farm
     const h = hut(); h.position.set(-2.4, 0, -1.9); S.add(h); this.hut = h;
     const dr = dryingRack(); dr.position.set(-0.6, 0, -1.4); S.add(dr);
     this.trellises = [];
     for (let i = 0; i < 4; i++) { const t = trellis(36, i + 3); t.position.set(1.8 + 0, 0, -2.6 + i * 0.62); t.position.x = 1.6; S.add(t); this.trellises.push(t); }
     // clouds
-    const sea = cloudSea(260); sea.position.y = -8.2; S.add(sea); this.updaters.push(sea.userData.update);
-    const ssh = seaShadow(shape.rx * 1.1, shape.rz * 1.2); ssh.position.set(shape.cx - 2.5, -8.15, shape.cz - 3.0); S.add(ssh);
+    const sky = nebulaVoid(); S.add(sky); this.updaters.push(sky.userData.update);
+    const sea = dreamClouds({ y: -10, cover: 0.6, lit: '#ffe8f0', shade: '#9a7ac8' }); S.add(sea); this.updaters.push(sea.userData.update);
+    const sea2 = dreamClouds({ y: -22, cover: 0.64, lit: '#ffc8e8', shade: '#6a5aa8', rim: '#ffd0a0' }); S.add(sea2); this.updaters.push(sea2.userData.update);
     this.puffs = [];
-    [[-11, -3.5, 2, 18], [11, -4, 3, 20], [-8, -6.5, 6.5, 22], [8, -6.8, 7, 24], [-15, 3.5, -4, 15], [14, 2.4, 1, 16], [3, 4.2, -9, 13]].forEach(([x, y, z, r], i) => { const p = cloudPuff(i + 31, { r }); p.position.set(x, y, z); S.add(p); this.puffs.push({ m: p, x0: x, ph: i }); });
+    [[-11, -3.5, 2, 18], [11, -4, 3, 20], [-15, 3.5, -4, 15], [14, 2.4, 1, 16], [3, 4.2, -9, 13]].forEach(([x, y, z, r], i) => { const p = cloudPuff(i + 31, { r: r * 0.75, tint: 0xf0dcff, shade: 0x9a80d0 }); p.position.set(x * 1.3, y - 3, z); S.add(p); this.puffs.push({ m: p, x0: x * 1.3, ph: i }); });
     // a little waterfall from the lagoon over the edge
     let ez = LAGOON.z; while (shape.inside(LAGOON.x + 1.2, ez + 0.05) && ez < 12) ez += 0.05;
     const fall = waterfall(6); fall.position.set(LAGOON.x + 1.2, -0.1, ez + 0.02); S.add(fall); this.updaters.push(fall.userData.update);
@@ -162,6 +165,11 @@ export class KappaLocation extends Location {
       nb.push(['susuki', 'tuft_0', 'fern_1', 'hydrangea_blue', 'tuft_1', 'daisy', 'tallgrass_0'][i % 7], x, 0, z, { sway: 0.45, scale: 0.6 + (i % 4) * 0.08 });
     }
     for (const [n, x, z] of [['mossrock', -4.9, 3.6], ['rock_1', 5.6, 1.4], ['riverrock_0', -2.3, 3.6], ['boulder_1', -5.4, 2.2]]) nb.push(n, x, 0, z, { scale: 0.7 });
+    // lush planting round the bath, the hut and the ponds
+    const lush = ['hydrangea_blue', 'hydrangea_violet', 'fern_0', 'hydrangea_pink', 'fern_1', 'azalea', 'tallgrass_1', 'hydrangea_blue'];
+    for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; const x = ONSEN.x + Math.cos(a) * (ONSEN.r + 0.7), z = ONSEN.z + Math.sin(a) * (ONSEN.r + 0.6); if (z < ONSEN.z - 0.6) continue; nb.push(lush[i % lush.length], x, 0, z, { sway: 0.35, scale: 0.65 }); }
+    for (let i = 0; i < 10; i++) nb.push(lush[(i + 3) % lush.length], -3.8 + i * 0.32, 0, -0.55 + (i % 2) * 0.25, { sway: 0.35, scale: 0.6 });
+    for (const [n, x, z, sc] of [['momiji_0', -6.2, -1.6, 0.75], ['sakura_small', 4.6, 4.4, 0.7], ['camphor_1', -1.4, -3.4, 0.7]]) nb.push(n, x, 0, z, { sway: 0.2, scale: sc });
     // dragonflies over the lagoon
     this.flyers = [];
     for (const [k, cx, cz, r, y] of [['dragonfly', LAGOON.x, LAGOON.z, 1.6, 0.6], ['dragonfly', LAGOON.x + 0.5, LAGOON.z - 0.3, 1.1, 0.9], ['bluebutterfly', 1.6, -1.2, 1.2, 0.8]]) {
@@ -184,6 +192,13 @@ export class KappaLocation extends Location {
     nav.open(LAGOON.x - 1.75, LAGOON.z - LAGOON.rz - 0.5, LAGOON.x - 1.05, LAGOON.z - LAGOON.rz + 2.0);
     this.navs.island = nav; this.swimNav = swim; this.navs.swim = swim;
     this.arrive = { x: -4.4, z: 0.9 };
+    nav.block(-1.9, 4.0, 0.1, 5.1); // the iris pond
+    this.air = new SpiritAir(S, shape, {
+      flowers: [{ x: -3.4, z: 3.9 }, { x: -1.0, z: 4.0 }, { x: 5.2, z: 1.2 }, { x: -2.0, z: -0.4 }, { x: 1.0, z: -1.2 }, { x: -5.6, z: 2.6 }],
+      water: [{ x: LAGOON.x, z: LAGOON.z, r: 2.2 }, { x: ONSEN.x, z: ONSEN.z, r: 1.0 }, { x: -0.9, z: 4.55, r: 0.8 }],
+      trees: [{ x: 4.6, z: 4.4 }, { x: -4.8, z: -1.0 }, { x: 6.3, z: 0.9 }],
+      souls: 12, wisps: 7,
+    });
   }
   async enter() {
     const g = this.game;
@@ -192,6 +207,7 @@ export class KappaLocation extends Location {
   }
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);
+    this.air.update(dt, t, this.game.rig.camera);
     for (const p of this.puffs) p.m.position.x = p.x0 + Math.sin(t * 0.05 + p.ph) * 1.2;
     const B = this.plants;
     for (const f of this.flyers) {

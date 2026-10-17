@@ -11,26 +11,28 @@ import { islandShape, islandMesh, oldHouse, toriiPortal, stoneLantern, pondWater
 import { natureBatch, natureFrames } from '../art/nature.js';
 import { VoxelModel, vm, fill, V5 } from '../world/build.js';
 import { HokoriFlock } from '../entities/hokori.js';
+import { organicIsland, nebulaVoid, dreamClouds, SpiritAir } from '../world/spiritFx.js';
+import { magicWater } from '../world/onsen.js';
 
 export const POND = { x: 3.9, z: 3.0, rx: 1.45, rz: 0.95 };
 
 export class SpiritLocation extends Location {
   constructor(game) {
-    super(game, 'spirit', { bg: 0x9ec8f0, lightMode: 'spirit', grade: 'spirit', ambience: 'spirit' });
+    super(game, 'spirit', { bg: 0x120e30, lightMode: 'spirit', grade: 'spirit', ambience: 'spirit' });
     this.camCfg = { wupp: 0.0158, pitch: 46, yaw: 45, follow: true, minWupp: 0.007, maxWupp: 0.03, followY: 0.8, bounds: { minX: -5.2, maxX: 5.2, minZ: -0.6, maxZ: 3.4 } };
     this.shadowSize = 16;
     this.clock = false;
     this.hourOverride = 22.6;
     this.sky = true;
     // golden spirit afternoon: warm low sun, peach sky, lilac shade
-    this.lightOverride = { sun: 0xffe0b0, sunI: 2.2, hemiI: 1.45, sky: 0xe8d8f0, gnd: 0x7a7a48, top: 0x7ab0e8, bot: 0xffe0c0 };
+    this.lightOverride = { sun: 0xffd8a8, sunI: 2.1, hemiI: 1.35, sky: 0xc8b0ff, gnd: 0x4a7a6a, top: 0x2a2060, bot: 0xff9ac0 };
   }
   async build() {
     const S = this.scene;
     this.onU = { value: 1 };
     this.updaters = [];
     const shape = (this.shape = islandShape());
-    S.add(islandMesh(shape, { pond: POND }));
+    S.add(organicIsland(shape, { pond: POND, seed: 3 }));
     // ---- the house, the portal, lanterns
     const house = (this.house = oldHouse({ onU: this.onU })); house.position.set(1.0, 0, -0.85); S.add(house); this.updaters.push(house.userData.update);
     const torii = (this.torii = toriiPortal({ onU: this.onU })); torii.position.set(-5.5, 0, 3.2); S.add(torii); this.updaters.push(torii.userData.update);
@@ -40,24 +42,25 @@ export class SpiritLocation extends Location {
     this.lanterns = [];
     for (const [lx, lz] of [[-3.7, 3.4], [-1.6, 2.1], [2.6, 1.35], [-6.4, 1.6]]) { const l = stoneLantern({ onU: this.onU }); l.position.set(lx, 0, lz); S.add(l); this.lanterns.push(l); }
     // ---- the pond (water, koi, the channel to the edge and the waterfall)
-    const water = pondWater(POND.rx * 0.98, POND.rz * 0.98); water.position.set(POND.x, -0.12, POND.z); S.add(water); this.updaters.push(water.userData.update);
+    const water = magicWater(POND.rx * 0.98, POND.rz * 0.98); water.position.set(POND.x, -0.12, POND.z); S.add(water); this.updaters.push(water.userData.update);
     this.koi = [0xf08a30, 0xffffff, 0xe8443a].map((c, i) => { const k = koi(c); S.add(k); return { m: k, a: i * 2.1, r: 0.55 + i * 0.22, sp: 0.4 + i * 0.12 }; });
     let ez = POND.z; while (shape.inside(POND.x + 0.6, ez + 0.05) && ez < 12) ez += 0.05;
     const chan = pondWater(0.22, (ez - POND.z - POND.rz) / 2 + 0.1); chan.position.set(POND.x + 0.6, -0.11, (POND.z + POND.rz + ez) / 2); S.add(chan);
     const fall = waterfall(6.5); fall.position.set(POND.x + 0.6, -0.1, ez + 0.02); S.add(fall); this.updaters.push(fall.userData.update);
     this.fallFoot = { x: POND.x + 0.6, y: -6.4, z: ez + 0.1 };
     // ---- clouds: the sea below, puffs drifting round the island, banks hiding the far islands
-    const sea = cloudSea(260); sea.position.y = -8.2; S.add(sea);
-    const ssh = seaShadow(shape.rx * 1.1, shape.rz * 1.2); ssh.position.set(shape.cx - 2.5, -8.15, shape.cz - 3.0); S.add(ssh); this.updaters.push(sea.userData.update);
+    const sky = nebulaVoid(); S.add(sky); this.updaters.push(sky.userData.update);
+    const sea = dreamClouds({ y: -10, cover: 0.6, lit: '#ffe8f8', shade: '#9a7ac8' }); S.add(sea); this.updaters.push(sea.userData.update);
+    const sea2 = dreamClouds({ y: -22, cover: 0.64, lit: '#ffc8e8', shade: '#6a5aa8', rim: '#ffd0a0' }); S.add(sea2); this.updaters.push(sea2.userData.update);
     this.puffs = [];
     const puffAt = [[-12, -3.5, 2, 18], [12.5, -4, 3, 20], [-9, -6.5, 6.5, 22], [8.5, -6.8, 7, 24], [0, -7.4, 10, 28], [-17, 4.5, -3, 15], [16, 2.4, 2, 16], [4, 4.2, -10, 13], [-5, 4.6, -11, 14]];
-    puffAt.forEach(([x, y, z, r], i) => { const p = cloudPuff(i + 1, { r }); p.position.set(x, y, z); S.add(p); this.puffs.push({ m: p, x0: x, ph: i * 1.3 }); });
+    puffAt.forEach(([x, y, z, r], i) => { if (i % 2) return; const p = cloudPuff(i + 1, { r: r * 0.75, tint: 0xf0dcff, shade: 0x9a80d0 }); p.position.set(x * 1.25, y - 3, z); S.add(p); this.puffs.push({ m: p, x0: x * 1.25, ph: i * 1.3 }); });
     // far islands (miniatures, hazy) and the banks in front of them
     this.kappa = kappaIsland(); this.kappa.position.set(6.5, -1.4, -9); this.kappa.scale.setScalar(0.7); S.add(this.kappa);
     this.peak = tenguPeak(); this.peak.position.set(-12.5, -1.0, -13); this.peak.scale.setScalar(0.6); S.add(this.peak);
     this.banks = [];
     for (const [x, y, z, r] of [[6.5, 0.2, -6.5, 30], [3.5, -1.0, -6, 24], [9.5, 1.0, -7.5, 26], [-12.5, 2.5, -10.5, 30], [-9.5, 0.2, -10, 26], [-15.5, 4, -11.5, 24], [-12.5, 6.2, -11.5, 22]]) {
-      const b = cloudPuff(Math.round(x * 7), { r }); b.position.set(x, y, z); S.add(b); this.banks.push({ m: b, x0: x, y0: y });
+      const b = cloudPuff(Math.round(x * 7), { r, tint: 0xf4e4ff, shade: 0xa890d8 }); b.position.set(x, y, z); S.add(b); this.banks.push({ m: b, x0: x, y0: y });
     }
     // ---- plants: trees, the tea field, flowers, ferns, rocks, susuki at the rim, lily pads
     const nb = (this.plants = natureBatch({ max: 700, castShadow: true }));
@@ -112,6 +115,12 @@ export class SpiritLocation extends Location {
     this.arrive = { x: -5.5, z: 3.75 };
     // Hokori milling about the garden (hidden until they're summoned in the story)
     this.hokori = new HokoriFlock(this.game, S, { n: 6, area: { x0: -2.5, x1: 3.5, z0: 1.0, z1: 3.6 }, nav });
+    // the magic in the air: wisps, souls rising from the deep, butterflies, fireflies, petals
+    this.air = new SpiritAir(S, shape, {
+      flowers: [{ x: -1.0, z: 0.4 }, { x: 0.6, z: 0.3 }, { x: 2.0, z: 0.4 }, { x: -3.6, z: 3.0 }, { x: 5.6, z: 1.0 }, { x: -6.6, z: 1.0 }, { x: 3.0, z: 4.6 }, { x: -2.2, z: 4.4 }],
+      water: [{ x: POND.x, z: POND.z, r: 1.3 }, { x: -8.0, z: 2.6, r: 0.8 }],
+      trees: [{ x: -6.2, z: -1.4 }, { x: -4.2, z: -2.6 }, { x: -2.9, z: 0.6 }],
+    });
     this.setHokori(false);
   }
   setHokori(on) { for (const f of this.hokori.list) f.h.root.visible = on; this.hokoriOn = on; }
@@ -130,6 +139,7 @@ export class SpiritLocation extends Location {
   update(dt, t) {
     for (const f of this.updaters) f(dt, t);
     if (this.hokoriOn) this.hokori.update(dt);
+    this.air.update(dt, t, this.game.rig.camera);
     for (const k of this.koi) { k.a += dt * k.sp; k.m.position.set(POND.x + Math.cos(k.a) * k.r, -0.15, POND.z + Math.sin(k.a) * k.r * 0.6); k.m.rotation.y = -k.a - Math.PI / 2; }
     for (const p of this.puffs) p.m.position.x = p.x0 + Math.sin(t * 0.05 + p.ph) * 1.2;
     const B = this.plants;
