@@ -65,11 +65,11 @@ export class SpiritLocation extends Location {
     // ---- plants: trees, the tea field, flowers, ferns, rocks, susuki at the rim, lily pads
     const nb = (this.plants = natureBatch({ max: 700, castShadow: true }));
     S.add(nb.mesh);
-    for (const [n, x, z, sc] of [['sakura_0', -6.2, -1.4, 1.0], ['sakura_1', -4.2, -2.6, 0.9], ['momiji_0', 5.4, -2.6, 0.9], ['pine_0', 7.4, -0.8, 0.8], ['sakura_small', -2.9, 0.6, 0.8], ['camphor_1', -8.0, 0.6, 0.7]]) nb.push(n, x, 0, z, { sway: 0.2, scale: sc });
+    for (const [n, x, z, sc] of [['sakura_0', -6.2, -1.4, 1.0], ['sakura_1', -4.2, -2.6, 0.9], ['momiji_0', 5.4, -2.6, 0.9], ['jp_matsu', 7.4, -0.8, 0.8], ['sakura_small', -2.9, 0.6, 0.8], ['camphor_1', -8.0, 0.6, 0.7]]) nb.push(n, x, 0, z, { sway: 0.2, scale: sc });
     for (let i = 0; i < 9; i++) nb.push(i % 2 ? 'bamboo_0' : 'bamboo_1', -8.3 + (i % 3) * 0.45, 0, 2.2 + Math.floor(i / 3) * 0.5, { sway: 0.4, scale: 0.85 });
     this.teaSpots = [];
     for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) { const x = 5.0 + c * 0.55, z = 0.2 + r * 0.6; if (!shape.inside(x + 0.3, z + 0.3)) continue; nb.push((r + c) % 3 === 0 ? 'teabush_ripe' : (r + c) % 2 ? 'teabush_0' : 'teabush_1', x, 0, z, { sway: 0.25, scale: 0.75 }); this.teaSpots.push({ x, z }); }
-    const flowers = ['hydrangea_blue', 'hydrangea_pink', 'hydrangea_violet', 'azalea', 'higanbana', 'daisy', 'aster', 'fern_0', 'fern_1', 'tuft_2'];
+    const flowers = ['hydrangea_blue', 'hydrangea_pink', 'hydrangea_violet', 'azalea', 'higanbana', 'jp_cosmos_1', 'jp_kikyo', 'jp_shida', 'jp_shida_1', 'jp_grass_2'];
     for (let i = 0; i < 7; i++) nb.push(flowers[i % 3], -1.4 + i * 0.7, 0, 0.0 + (i % 2) * 0.12, { sway: 0.35, scale: 0.7 }); // along the engawa
     for (let i = 0; i < 140; i++) {
       const a = (i / 140) * Math.PI * 2;
@@ -77,20 +77,20 @@ export class SpiritLocation extends Location {
       for (let t = 0; t < 40 && !shape.inside(x, z); t++) { x -= Math.cos(a) * 0.06; z -= Math.sin(a) * 0.06; }
       x -= Math.cos(a) * (0.15 + (i % 3) * 0.18); z -= Math.sin(a) * (0.15 + (i % 3) * 0.18);
       if (Math.hypot(x - POND.x - 0.6, z - 6) < 0.6) continue;
-      const n = ['susuki', 'tuft_0', 'fern_1', 'tallgrass_0', 'tuft_1', flowers[i % flowers.length], 'tuft_3'][i % 7];
+      const n = ['susuki', 'jp_grass_0', 'jp_shida_1', 'jp_grass_1', 'jp_grass_1', flowers[i % flowers.length], 'jp_grass_1'][i % 7];
       nb.push(n, x, 0, z, { sway: 0.45, scale: 0.6 + (i % 4) * 0.08 });
     }
-    for (const [n, x, z] of [['mossrock', -7.2, -0.2], ['rock_1', 6.8, 3.6], ['rock_0', -4.6, 4.6], ['boulder_0', 7.6, 2.0], ['riverrock_1', 2.5, 3.6], ['riverrock_0', 5.3, 2.5]]) nb.push(n, x, 0, z, { scale: 0.7 });
-    for (const [x, z] of [[3.3, 2.8], [4.5, 3.4], [4.0, 2.4], [3.6, 3.5]]) nb.push(Math.random() < 0.5 ? 'lilypad_0' : 'lilypad_1', x, -0.1, z, { scale: 0.6 });
-    nb.push('lilyflower_pink', 4.3, -0.08, 2.75, { scale: 0.6 });
-    nb.push('turtle_sun', 2.55, 0.1, 3.55, { scale: 0.55 });
+    for (const [n, x, z] of [['jp_iwa', -7.2, -0.2], ['jp_ishi_1', 6.8, 3.6], ['jp_ishi_0', -4.6, 4.6], ['jp_iwa_1', 7.6, 2.0], ['jp_ishi_0', 2.5, 3.6], ['jp_ishi_2', 5.3, 2.5]]) nb.push(n, x, 0, z, { scale: 0.7 });
+    for (const [x, z] of [[3.3, 2.8], [4.5, 3.4], [4.0, 2.4], [3.6, 3.5]]) nb.push(Math.random() < 0.5 ? 'jp_hasu_0' : 'jp_hasu_1', x, -0.1, z, { scale: 0.6 });
+    nb.push('jp_hasu_hana', 4.3, -0.08, 2.75, { scale: 0.6 });
+    nb.push('jp_kame', 2.55, 0.1, 3.55, { scale: 0.55 });
     // the stepping-stone path from the torii to the engawa step
     const path = [[-5.5, 4.0], [-4.9, 3.85], [-4.3, 3.55], [-3.2, 3.0], [-2.6, 2.7], [-2.0, 2.45], [-1.2, 2.1], [-0.5, 1.75], [0.2, 1.45], [0.9, 1.2]];
-    path.forEach(([x, z], i) => nb.push(`steppingstone_${i % 3}`, x, 0.01, z, { scale: 0.75 }));
+    path.forEach(([x, z], i) => nb.push(`jp_tobiishi_${i % 3}`, x, 0.01, z, { scale: 0.75 }));
     nb.commit();
     // dragonflies over the pond, butterflies by the flowers (sprite flyers)
     this.flyers = [];
-    for (const [k, cx, cz, r, y] of [['dragonfly', POND.x, POND.z, 1.2, 0.6], ['dragonfly', POND.x - 0.4, POND.z + 0.3, 0.8, 0.9], ['monarch', -1.0, 0.6, 1.4, 0.7], ['bluebutterfly', 5.8, 0.8, 1.0, 0.8], ['monarch', -6.0, 1.0, 1.1, 1.2]]) {
+    for (const [k, cx, cz, r, y] of [['jp_akatombo', POND.x, POND.z, 1.2, 0.6], ['jp_akatombo', POND.x - 0.4, POND.z + 0.3, 0.8, 0.9], ['jp_monshiro', -1.0, 0.6, 1.4, 0.7], ['jp_ageha', 5.8, 0.8, 1.0, 0.8], ['jp_monshiro', -6.0, 1.0, 1.1, 1.2]]) {
       const fr = natureFrames(k);
       const i = nb.push(`${k}#0`, cx, y, cz, { mode: 2, scale: 0.35 });
       this.flyers.push({ i, k, n: Math.max(1, fr.length), cx, cz, r, y, a: Math.random() * 6, sp: 0.6 + Math.random() * 0.6, f: 0, ft: 0 });

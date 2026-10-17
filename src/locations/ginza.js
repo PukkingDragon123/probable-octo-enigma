@@ -150,7 +150,7 @@ export class GinzaLocation extends Location {
     this.plants = natureBatch({ max: 760, castShadow: true });
     S.add(this.plants.mesh);
     const nb = this.plants;
-    const flowersPl = ['hydrangea_blue', 'azalea', 'hydrangea_pink', 'rose', 'daisy', 'hydrangea_violet', 'aster', 'susan'];
+    const flowersPl = ['hydrangea_blue', 'azalea', 'hydrangea_pink', 'azalea', 'jp_cosmos_1', 'hydrangea_violet', 'jp_kikyo', 'jp_tanpopo'];
     let pi = 0;
     for (const px of [-22, -4.5, 15.5, 26.5]) {
       const pl = planter(); pl.position.set(px, 0, 7.75); S.add(pl);
@@ -167,15 +167,15 @@ export class GinzaLocation extends Location {
     for (const [n, fx, fy, fz, sc] of this.flowerSpots) nb.push(n, fx, fy, fz, { sway: 0.45, scale: sc ?? 0.7 });
     for (const [n, fx, fy, fz, sc] of this.plazaFlowers) nb.push(n, fx, fy, fz, { sway: 0.45, scale: sc });
     for (const [n, tx, tz] of this.plazaTrees) nb.push(n, tx, 0.3, tz, { sway: 0.25, scale: 1.0 });
-    for (let i = 0; i < 18; i++) nb.push(['tuft_0', 'tuft_1', 'tuft_2', 'clover'][i % 4], -34 + i * 4.1 + Math.sin(i * 3.1) * 0.6, 0, 0.08 + (i % 3) * 0.04, { sway: 0.3, scale: 0.45 });
+    for (let i = 0; i < 18; i++) nb.push(['jp_grass_0', 'jp_grass_1', 'jp_grass_2', 'jp_clover'][i % 4], -34 + i * 4.1 + Math.sin(i * 3.1) * 0.6, 0, 0.08 + (i % 3) * 0.04, { sway: 0.3, scale: 0.45 });
     nb.commit();
     // ---- birds: sparrows by the florist and the shrine, pigeons near the gate
     this.birds = new Birds(S, { max: 30 });
     const fl = this.shops.florist.position.x;
-    for (let i = 0; i < 4; i++) this.birds.addGround('sparrow', fl - 1 + i * 0.5, 2.6 + (i % 2) * 0.3, { x0: fl - 2.4, x1: fl + 2.4, z0: 2.2, z1: 3.4, y: 0 }, { scale: 0.4 });
-    for (let i = 0; i < 4; i++) this.birds.addGround('dove', -31 + i * 0.6, 7.0 + (i % 2) * 0.4, { x0: -33, x1: -28.5, z0: 6.4, z1: 7.9, y: 0 }, { scale: 0.5 });
-    for (let i = 0; i < 3; i++) this.birds.addGround('sparrow', this.streetEnd + 0.6 + i * 0.4, 2.0 + (i % 2) * 0.4, { x0: this.streetEnd - 0.5, x1: this.streetEnd + 3, z0: 1.6, z1: 3.2, y: 0 }, { scale: 0.4 });
-    for (let i = 0; i < 2; i++) this.birds.addFlyer('swallow', -8 + i * 20, 5.6, 3.5, 2.6 + i * 0.6);
+    for (let i = 0; i < 4; i++) this.birds.addGround('jp_suzume', fl - 1 + i * 0.5, 2.6 + (i % 2) * 0.3, { x0: fl - 2.4, x1: fl + 2.4, z0: 2.2, z1: 3.4, y: 0 }, { scale: 0.4 });
+    for (let i = 0; i < 4; i++) this.birds.addGround('jp_hato', -31 + i * 0.6, 7.0 + (i % 2) * 0.4, { x0: -33, x1: -28.5, z0: 6.4, z1: 7.9, y: 0 }, { scale: 0.5 });
+    for (let i = 0; i < 3; i++) this.birds.addGround('jp_suzume', this.streetEnd + 0.6 + i * 0.4, 2.0 + (i % 2) * 0.4, { x0: this.streetEnd - 0.5, x1: this.streetEnd + 3, z0: 1.6, z1: 3.2, y: 0 }, { scale: 0.4 });
+    for (let i = 0; i < 2; i++) this.birds.addFlyer('jp_tsubame', -8 + i * 20, 5.6, 3.5, 2.6 + i * 0.6);
     // ---- nav: the street minus the shop displays, furniture and bike bays
     const nav = this.makeNav('street', { minX: ST.x0 + 2, minZ: ST.walkZ0, w: ST.x1 - ST.x0 - 4, d: ST.walkZ1 - ST.walkZ0 });
     const blockZ = { cafe: 0.95, florist: 1.85, shutterA: 0.75, fish: 1.3, wagashi: 1.6, thrift: 1.35, drug: 1.38, shutterB: 1.0, bendys: 0.95, books: 1.15, kodamaya: 1.0, tabako: 0.8 };
@@ -256,7 +256,7 @@ export class GinzaLocation extends Location {
     this.car = { z: -2.6, v: 0, stopZ: -2.6 };
     this.signalT = 0;
     // planters along the curb
-    const flowersPl = ['hydrangea_blue', 'azalea', 'susan', 'hydrangea_pink', 'daisy', 'rose', 'hydrangea_violet', 'aster'];
+    const flowersPl = ['hydrangea_blue', 'azalea', 'jp_tanpopo', 'hydrangea_pink', 'jp_cosmos_1', 'azalea', 'hydrangea_violet', 'jp_kikyo'];
     this.plazaFlowers = [];
     for (const [px, pi] of [[-70.4, 0], [-63.2, 2], [-52.6, 4], [-47.0, 6]]) {
       const pl = planter(); put(pl, px, 6.55);
@@ -264,7 +264,7 @@ export class GinzaLocation extends Location {
       B.push([px - 0.65, 6.25, px + 0.65, 6.85]);
     }
     // a ring of flowers round the statue, trees in the rings
-    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; this.plazaFlowers.push([['hydrangea_blue', 'azalea', 'daisy', 'hydrangea_pink', 'rose'][i % 5], P.statue.x + Math.cos(a) * 0.68, 0, P.statue.z + Math.sin(a) * 0.55, 0.5]); }
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; this.plazaFlowers.push([['hydrangea_blue', 'azalea', 'jp_cosmos_1', 'hydrangea_pink', 'azalea'][i % 5], P.statue.x + Math.cos(a) * 0.68, 0, P.statue.z + Math.sin(a) * 0.55, 0.5]); }
     this.plazaTrees = [['camphor_0', -72.6, 4.3], ['sakura_0', -48.6, 4.4]];
     // the plaza's near edge is the station road: nobody walks on it
     B.push([P.x0, P.curbZ, P.x1, ST.z1]);

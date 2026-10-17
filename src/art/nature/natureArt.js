@@ -5628,14 +5628,15 @@ function jpKarugamo(seed) { // spot-billed duck swimming: brown scaled body, pal
   for (let x = 1; x < W - 1; x++) if (hash(x, 9, seed) < 0.6) p.set(x, 9, hx('#e8f4ff'), 200);
   return outline(p, { lit: 0.62, only: (x, y) => y < 9 });
 }
-function jpButterfly(kind) { // monshiro (cabbage white) or ageha (swallowtail)
+function jpButterfly(kind, closed = false) { // monshiro (cabbage white) or ageha (swallowtail); closed = the downstroke
   const W = kind === 'ageha' ? 12 : 9, H = kind === 'ageha' ? 10 : 7, p = new Px(W, H);
+  const sq = closed ? 0.45 : 1;
   const K = hx('#1e1a22');
   const A = kind === 'ageha' ? pals(['#1e1a22', '#c8a020', '#f8d840', '#fff090']) : pals(['#a8a8a0', '#e0e0d8', '#f8f8f2', '#ffffff']);
   const cx = W / 2 - 0.5;
   for (const s of [-1, 1]) {
-    ellipse(p, cx + s * (W * 0.24), H * 0.35, W * 0.24, H * 0.32, (x, y, nx, ny) => (kind === 'ageha' && (Math.abs(nx) > 0.75 || (y + x) % 3 === 0) ? A[0] : pick(A, 0.7 - ny * 0.6)));
-    ellipse(p, cx + s * (W * 0.18), H * 0.72, W * 0.16, H * 0.22, (x, y, nx, ny) => (kind === 'ageha' && Math.abs(nx) > 0.6 ? A[0] : pick(A, 0.5 - ny * 0.5)));
+    ellipse(p, cx + s * (W * 0.24) * sq, H * 0.35, W * 0.24 * sq + 0.4, H * 0.32, (x, y, nx, ny) => (kind === 'ageha' && (Math.abs(nx) > 0.75 || (y + x) % 3 === 0) ? A[0] : pick(A, 0.7 - ny * 0.6)));
+    ellipse(p, cx + s * (W * 0.18) * sq, H * 0.72, W * 0.16 * sq + 0.4, H * 0.22, (x, y, nx, ny) => (kind === 'ageha' && Math.abs(nx) > 0.6 ? A[0] : pick(A, 0.5 - ny * 0.5)));
   }
   if (kind !== 'ageha') { p.set(cx - 2, 2, K); p.set(cx + 3, 2, K); } else { p.set(cx - 2, H - 1, hx('#2a5ab0')); p.set(cx + 3, H - 1, hx('#e8402a')); }
   for (let y = 1; y < H - 1; y++) p.set(cx + 0.5, y, K);
@@ -5653,6 +5654,210 @@ function jpAkatombo() { // red dragonfly at rest: four glassy wings, a red tail
     '...ggg..ggg....',
   ], { r: '#c8281e', R: '#f05a3a', h: '#ffffff', g: ['#e4f2ff', 170], G: ['#a8c4dc', 200] }, { ol: false, ground: false });
 }
+function jpAkatomboUp() { // wings lifted: the second frame of the flutter
+  return art([
+    '..ggg...ggg....',
+    '..gGg...gGg....',
+    '...gGg.gGg.....',
+    'hrrrrRRRrrrrrrr',
+    '.....rRr.......',
+  ], { r: '#c8281e', R: '#f05a3a', h: '#ffffff', g: ['#e4f2ff', 170], G: ['#a8c4dc', 200] }, { ol: false, ground: false });
+}
+function jpShida(seed) { // a fern: arching fronds with paired leaflets
+  const W = 20, H = 15, p = new Px(W, H), R = mulberry(seed);
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i - 2.5) * 0.42, len = 9 + R() * 4;
+    for (let t = 0; t < len; t++) {
+      const k = t / len, x = W / 2 + Math.cos(a) * t * (1 + k * 0.3), y = H - 1 + Math.sin(a) * t * (1 - k * 0.55);
+      p.set(x, y, pick(JG_B, 0.1 + k * 0.4));
+      if (t % 2 === 0 && t > 1) for (const s2 of [-1, 1]) p.set(x + s2 * Math.sin(a) * 1.2, y - s2 * Math.cos(a) * 1.2 + 0.6, pick(JG_B, 0.5 + k * 0.3 - (s2 > 0 ? 0.3 : 0)));
+    }
+  }
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpGama(seed) { // cattail: tall leaves and brown sausage heads
+  const W = 14, H = 26, p = new Px(W, H), R = mulberry(seed);
+  for (let i = 0; i < 7; i++) blade(p, W / 2 + (R() - 0.5) * 6, H, H * (0.5 + R() * 0.45), (R() - 0.5) * 5, (R() - 0.5) * 2, 1, JG);
+  const BRN = pals(['#3a2416', '#5a3a22', '#7a5230', '#9a6e44']);
+  for (const [x, top] of [[5, 3], [9, 6]]) { for (let y = top + 5; y < H; y++) p.set(x, y, JG[3]); for (let y = top; y < top + 6; y++) { p.set(x, y, pick(BRN, 0.5 - (y - top) * 0.1)); p.set(x + 1, y, BRN[0]); } p.set(x, top - 1, JG[4]); p.set(x, top - 2, JG[4]); }
+  return outline(p, { noBottom: true, lit: 0.6 });
+}
+function jpHasu(seed, W = 18, H = 9) { // a lotus pad lying on the water, seen at an angle, with a notch and veins
+  const p = new Px(W, H);
+  ellipse(p, W / 2, H / 2, W / 2 - 1, H / 2 - 1, (x, y, nx, ny) => {
+    const a = Math.atan2(ny, nx);
+    if (a > 1.2 && a < 1.55) return -1;
+    const vein = Math.abs(Math.sin(a * 4)) < 0.12 && nx * nx + ny * ny > 0.08;
+    return pick(JG_B, 0.35 - ny * 0.5 - nx * 0.15 + (vein ? 0.4 : 0) + (hash(x, y, seed) - 0.5) * 0.2);
+  });
+  return outline(p, { lit: 0.6 });
+}
+function jpHasuHana() { // a pink lotus flower
+  return art([
+    '....p....',
+    '...pPp...',
+    '.p.pPp.p.',
+    '.pPpPpPp.',
+    'ppPPyPPpp',
+    '.pPPPPPp.',
+    '..gGGGg..',
+  ], { p: '#e888b0', P: '#fcc4dc', y: '#ffe060', g: '#4a7a3a', G: '#6a9a4a' }, { auto: 0.6, ground: false });
+}
+function jpKame() { // a pond turtle (kusagame) basking on a stone: olive shell, yellow-striped head
+  return art([
+    '.....ssssss.......',
+    '...ssSSsSSsss.....',
+    '..sSSsSSsSSsSs....',
+    '.ssssssssssssss.hh',
+    'kssssssssssssskhyh',
+    '.llkkkkkkkkkkk.hhk',
+    '.ll..........ll...',
+  ], { s: '#6a5a32', S: '#8a7a44', k: '#3a3020', h: '#5a6a3a', y: '#d8c850', l: '#4a5a32' }, { auto: 0.7, noShade: 'yk' });
+}
+// little birds of the town, side on facing right: idle, hop, peck, fly frames
+const SUZUME = { c: '#7a4228', b: '#9a6a42', B: '#5e3e22', s: '#3a2418', w: '#f4ece0', k: '#1e1a22', u: '#d8cbb4', y: '#3a3028', l: '#c08a6a' };
+const SZ = {
+  idle: [[
+    '......ccc...',
+    '.....ccccc..',
+    '.....cwkwcy.',
+    '.....wwwww..',
+    '..bbbkkkww..',
+    '.bBsbbkuuu..',
+    'bBbbsbuuuu..',
+    '.bBbbbuuu...',
+    '....l..l....',
+  ]],
+  peck: [[
+    '............',
+    '............',
+    '.......ccc..',
+    '..bbbbccccc.',
+    '.bBsbbcwkwc.',
+    'bBbbsbkwwwwy',
+    '.bBbbbuu....',
+    '..bbbuuu....',
+    '....l..l....',
+  ]],
+  hop: [[
+    '......ccc...',
+    '.....ccccc..',
+    '.....cwkwcy.',
+    '.....wwwww..',
+    '..bbbkkkww..',
+    '.bBsbbkuuu..',
+    'bBbbsbuuuu..',
+    '.bBbbbuuu...',
+    '............',
+  ]],
+  fly: [[
+    '..BBB.......',
+    '...BBb..ccc.',
+    'bbbbBbbccwky',
+    '.bBbbbbwww..',
+    '..buuuuu....',
+    '............',
+  ], [
+    '............',
+    '........ccc.',
+    'bbbbbbbccwky',
+    '.bBbbBBwww..',
+    '..buuBBB....',
+    '.....BB.....',
+  ]],
+};
+const HATO = { g: '#8a92a8', G: '#a8b0c4', d: '#5a6278', n: '#4a8a7a', N: '#8a5a9a', k: '#2a2a34', e: '#f07a3a', w: '#e8ecf4', l: '#d87a7a', b: '#3a3a44' };
+const HT = {
+  idle: [[
+    '..........gg....',
+    '.........gggk...',
+    '.........gegbb..',
+    '........nNgg....',
+    '...ggggnNNg.....',
+    '.gGGGGGgnNg.....',
+    'dgdGGdGGggg.....',
+    'ddggGGGggg......',
+    '..ddgggg........',
+    '.....l..l.......',
+  ]],
+  peck: [[
+    '................',
+    '................',
+    '................',
+    '...ggggg........',
+    '.gGGGGGgg.......',
+    'dgdGGdGGngg.....',
+    'ddggGGGgnNggk...',
+    '..ddgggggegbb...',
+    '.........gg.....',
+    '.....l..l.......',
+  ]],
+  hop: [[
+    '..........gg....',
+    '.........gggk...',
+    '.........gegbb..',
+    '........nNgg....',
+    '...ggggnNNg.....',
+    '.gGGGGGgnNg.....',
+    'dgdGGdGGggg.....',
+    'ddggGGGggg......',
+    '..ddgggg........',
+    '................',
+  ]],
+  fly: [[
+    '...dGG..........',
+    '....dGG....gg...',
+    '.ggggGGggggegbb.',
+    'dgGGGGGGgnN.....',
+    '..ddggggg.......',
+  ], [
+    '................',
+    '...........gg...',
+    '.gggggggggggegbb',
+    'dgGGdGGGgnN.....',
+    '..ddgdGG........',
+    '.....dGG........',
+  ]],
+};
+const TSUBAME = { b: '#1e2848', B: '#2e3e6a', r: '#c8402a', w: '#f4f0ea', k: '#141420' };
+const TB = {
+  fly: [[
+    'BB..........',
+    '.BBb......rk',
+    'kbbbbbbbbbbk',
+    'k..wwwwwB...',
+    '.....BB.....',
+  ], [
+    '........b...',
+    '.......Bb..rk',
+    'kbbbbbbbbbbbk',
+    'k..wwwwww...',
+    '............',
+  ]],
+};
+function birdFramesJP(rows, pal) { return rows.map((r) => ground(art(r, pal, { auto: 0.7, noShade: 'kewyrl' }))); }
+for (const a of ['idle', 'hop', 'peck', 'fly']) {
+  reg(`jp_suzume_${a}`, () => birdFramesJP(SZ[a], SUZUME));
+  reg(`jp_hato_${a}`, () => birdFramesJP(HT[a], HATO));
+  reg(`jp_tsubame_${a}`, () => birdFramesJP(TB.fly, TSUBAME));
+}
+reg('jp_shida', () => [ground(jpShida(9130))]);
+reg('jp_shida_1', () => [ground(jpShida(9131))]);
+reg('jp_gama', () => [ground(jpGama(9132))]);
+reg('jp_hasu_0', () => [centre(jpHasu(9133))]);
+reg('jp_hasu_1', () => [centre(jpHasu(9134, 15, 8))]);
+reg('jp_hasu_hana', () => [ground(jpHasuHana())]);
+reg('jp_ishi_0', () => [ground(rockSprite(14, 10, 9135, { facets: 4 }))]);
+reg('jp_ishi_1', () => [ground(rockSprite(12, 9, 9136, { facets: 4 }))]);
+reg('jp_ishi_2', () => [ground(rockSprite(18, 12, 9137, { facets: 5 }))]);
+reg('jp_iwa', () => [ground(rockSprite(26, 19, 9138, { moss: 4 }))]);
+reg('jp_iwa_1', () => [ground(rockSprite(30, 21, 9139, { moss: 2 }))]);
+reg('jp_tobiishi_0', () => [centre(steppingStone(22, 13, 9140))]);
+reg('jp_tobiishi_1', () => [centre(steppingStone(18, 11, 9141))]);
+reg('jp_tobiishi_2', () => [centre(steppingStone(24, 14, 9142))]);
+reg('jp_kame', () => [ground(jpKame())]);
+reg('jp_shrub', () => [ground(bushSprite(26, 18, 9143, JG, { n: 3 }))]);
+reg('jp_shrub_1', () => [ground(bushSprite(22, 16, 9144, JG_B, { n: 3 }))]);
 reg('jp_grass_0', () => [ground(jpTuft(12, 10, 9101, 12))]);
 reg('jp_grass_1', () => [ground(jpTuft(16, 13, 9102, 18))]);
 reg('jp_grass_2', () => [ground(jpTuft(9, 7, 9103, 8))]);
@@ -5676,9 +5881,9 @@ reg('jp_ashi', () => [ground(jpAshi(9120))]);
 reg('jp_sagi', () => [ground(jpSagi(9121))]);
 reg('jp_sagi_fish', () => [ground(jpSagi(9122, true))]);
 reg('jp_karugamo', () => [ground(jpKarugamo(9123))]);
-reg('jp_monshiro', () => [centre(jpButterfly('monshiro'))]);
-reg('jp_ageha', () => [centre(jpButterfly('ageha'))]);
-reg('jp_akatombo', () => [centre(jpAkatombo())]);
+reg('jp_monshiro', () => [centre(jpButterfly('monshiro')), centre(jpButterfly('monshiro', true))]);
+reg('jp_ageha', () => [centre(jpButterfly('ageha')), centre(jpButterfly('ageha', true))]);
+reg('jp_akatombo', () => [centre(jpAkatombo()), centre(jpAkatomboUp())]);
 
 const EXTRA_MODS = import.meta.glob('./extra/*.js', { eager: true });
 for (const m of Object.values(EXTRA_MODS)) {

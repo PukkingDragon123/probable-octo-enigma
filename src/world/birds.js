@@ -14,7 +14,7 @@ export class Birds {
     this.list = [];
     this.t = 0;
   }
-  // kind: 'sparrow' | 'dove' | 'crow' ; area: { x0, x1, z0, z1, y }
+  // kind: 'jp_suzume' | 'jp_hato' | 'crow' ; area: { x0, x1, z0, z1, y }
   addGround(kind, x, z, area, o = {}) {
     const b = { kind, x, z, y: area.y ?? 0, area, state: 'idle', st: rnd(0, 2), frame: 0, ft: 0, flip: Math.random() < 0.5, vx: 0, vy: 0, vz: 0, scale: o.scale ?? 1 };
     b.i = this.batch.push(`${kind}_idle#0`, x, b.y, z, { scale: b.scale, flip: b.flip });

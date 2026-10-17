@@ -150,29 +150,29 @@ export class KappaLocation extends Location {
     // plants
     const nb = (this.plants = natureBatch({ max: 500, castShadow: true }));
     S.add(nb.mesh);
-    for (const [n, x, z, sc] of [['sakura_small', -4.8, -1.0, 0.85], ['camphor_0', 5.6, -1.6, 0.7], ['pine_1', -6.0, 1.2, 0.7], ['sakura_1', 6.3, 0.9, 0.7]]) nb.push(n, x, 0, z, { sway: 0.2, scale: sc });
+    for (const [n, x, z, sc] of [['sakura_small', -4.8, -1.0, 0.85], ['camphor_0', 5.6, -1.6, 0.7], ['jp_matsu', -6.0, 1.2, 0.7], ['sakura_1', 6.3, 0.9, 0.7]]) nb.push(n, x, 0, z, { sway: 0.2, scale: sc });
     for (let i = 0; i < 8; i++) nb.push(i % 2 ? 'bamboo_0' : 'bamboo_1', -5.6 + (i % 4) * 0.4, 0, -0.4 + Math.floor(i / 4) * 0.45, { sway: 0.4, scale: 0.8 });
-    for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2; const x = LAGOON.x + Math.cos(a) * (LAGOON.rx + 0.2), z = LAGOON.z + Math.sin(a) * (LAGOON.rz + 0.15); if (z < LAGOON.z - LAGOON.rz + 0.3 && Math.abs(x - (LAGOON.x - 1.4)) < 0.5) continue; nb.push(['reeds_0', 'cattail_0', 'reeds_1', 'tuft_2', 'cattail_1'][i % 5], x, 0, z, { sway: 0.5, scale: 0.6 }); }
-    for (const [dx, dz] of [[-2.2, 0.9], [-1.6, -1.1], [2.6, 1.3], [1.4, 0.4], [-0.4, 1.4], [2.8, -0.9]]) nb.push(Math.random() < 0.5 ? 'lilypad_0' : 'lilypad_1', LAGOON.x + dx, -0.1, LAGOON.z + dz, { scale: 0.6 });
-    nb.push('lilyflower_pink', LAGOON.x - 2.0, -0.08, LAGOON.z + 1.0, { scale: 0.6 });
-    nb.push('turtle_sun', LAGOON.x + 2.9, 0.06, LAGOON.z - 0.8, { scale: 0.55 });
+    for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2; const x = LAGOON.x + Math.cos(a) * (LAGOON.rx + 0.2), z = LAGOON.z + Math.sin(a) * (LAGOON.rz + 0.15); if (z < LAGOON.z - LAGOON.rz + 0.3 && Math.abs(x - (LAGOON.x - 1.4)) < 0.5) continue; nb.push(['jp_ashi', 'jp_gama', 'jp_ashi', 'jp_grass_2', 'jp_gama'][i % 5], x, 0, z, { sway: 0.5, scale: 0.6 }); }
+    for (const [dx, dz] of [[-2.2, 0.9], [-1.6, -1.1], [2.6, 1.3], [1.4, 0.4], [-0.4, 1.4], [2.8, -0.9]]) nb.push(Math.random() < 0.5 ? 'jp_hasu_0' : 'jp_hasu_1', LAGOON.x + dx, -0.1, LAGOON.z + dz, { scale: 0.6 });
+    nb.push('jp_hasu_hana', LAGOON.x - 2.0, -0.08, LAGOON.z + 1.0, { scale: 0.6 });
+    nb.push('jp_kame', LAGOON.x + 2.9, 0.06, LAGOON.z - 0.8, { scale: 0.55 });
     for (let i = 0; i < 120; i++) {
       const a = (i / 120) * Math.PI * 2;
       let x = shape.cx + Math.cos(a) * shape.rx, z = shape.cz + Math.sin(a) * shape.rz;
       for (let t = 0; t < 40 && !shape.inside(x, z); t++) { x -= Math.cos(a) * 0.06; z -= Math.sin(a) * 0.06; }
       x -= Math.cos(a) * (0.15 + (i % 3) * 0.18); z -= Math.sin(a) * (0.15 + (i % 3) * 0.18);
       if (((x - LAGOON.x) / (LAGOON.rx + 0.3)) ** 2 + ((z - LAGOON.z) / (LAGOON.rz + 0.3)) ** 2 < 1) continue;
-      nb.push(['susuki', 'tuft_0', 'fern_1', 'hydrangea_blue', 'tuft_1', 'daisy', 'tallgrass_0'][i % 7], x, 0, z, { sway: 0.45, scale: 0.6 + (i % 4) * 0.08 });
+      nb.push(['susuki', 'jp_grass_0', 'jp_shida_1', 'hydrangea_blue', 'jp_grass_1', 'jp_cosmos_1', 'jp_grass_1'][i % 7], x, 0, z, { sway: 0.45, scale: 0.6 + (i % 4) * 0.08 });
     }
-    for (const [n, x, z] of [['mossrock', -4.9, 3.6], ['rock_1', 5.6, 1.4], ['riverrock_0', -2.3, 3.6], ['boulder_1', -5.4, 2.2]]) nb.push(n, x, 0, z, { scale: 0.7 });
+    for (const [n, x, z] of [['jp_iwa', -4.9, 3.6], ['jp_ishi_1', 5.6, 1.4], ['jp_ishi_2', -2.3, 3.6], ['jp_iwa', -5.4, 2.2]]) nb.push(n, x, 0, z, { scale: 0.7 });
     // lush planting round the bath, the hut and the ponds
-    const lush = ['hydrangea_blue', 'hydrangea_violet', 'fern_0', 'hydrangea_pink', 'fern_1', 'azalea', 'tallgrass_1', 'hydrangea_blue'];
+    const lush = ['hydrangea_blue', 'hydrangea_violet', 'jp_shida', 'hydrangea_pink', 'jp_shida_1', 'azalea', 'jp_grass_1', 'hydrangea_blue'];
     for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; const x = ONSEN.x + Math.cos(a) * (ONSEN.r + 0.7), z = ONSEN.z + Math.sin(a) * (ONSEN.r + 0.6); if (z < ONSEN.z - 0.6) continue; nb.push(lush[i % lush.length], x, 0, z, { sway: 0.35, scale: 0.65 }); }
     for (let i = 0; i < 10; i++) nb.push(lush[(i + 3) % lush.length], -3.8 + i * 0.32, 0, -0.55 + (i % 2) * 0.25, { sway: 0.35, scale: 0.6 });
     for (const [n, x, z, sc] of [['momiji_0', -6.2, -1.6, 0.75], ['sakura_small', 4.6, 4.4, 0.7], ['camphor_1', -1.4, -3.4, 0.7]]) nb.push(n, x, 0, z, { sway: 0.2, scale: sc });
     // dragonflies over the lagoon
     this.flyers = [];
-    for (const [k, cx, cz, r, y] of [['dragonfly', LAGOON.x, LAGOON.z, 1.6, 0.6], ['dragonfly', LAGOON.x + 0.5, LAGOON.z - 0.3, 1.1, 0.9], ['bluebutterfly', 1.6, -1.2, 1.2, 0.8]]) {
+    for (const [k, cx, cz, r, y] of [['jp_akatombo', LAGOON.x, LAGOON.z, 1.6, 0.6], ['jp_akatombo', LAGOON.x + 0.5, LAGOON.z - 0.3, 1.1, 0.9], ['jp_ageha', 1.6, -1.2, 1.2, 0.8]]) {
       const fr = natureFrames(k); const i = nb.push(`${k}#0`, cx, y, cz, { mode: 2, scale: 0.35 });
       this.flyers.push({ i, k, n: Math.max(1, fr.length), cx, cz, r, y, a: Math.random() * 6, sp: 0.6 + Math.random() * 0.5, f: 0, ft: 0 });
     }

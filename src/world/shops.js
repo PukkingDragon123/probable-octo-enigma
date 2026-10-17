@@ -73,7 +73,7 @@ export function makeShop(kind, { onU = null, seed = 1 } = {}) {
         upper: 'balcony', rail: 0xe8e4dc, floor: 0x8a8a82, inWall: 0xd8e4d0, litChance: 0.4,
       });
       // tiered stand of zinc buckets spilling out onto the pavement, each with flowers
-      const kinds = ['sunflower', 'hydrangea_blue', 'rose', 'lupine_pink', 'hydrangea_pink', 'daisy', 'azalea', 'aster', 'hydrangea_violet', 'lupine_purple', 'susan', 'sunflower'];
+      const kinds = ['jp_himawari', 'hydrangea_blue', 'azalea', 'jp_nadeshiko', 'hydrangea_pink', 'jp_cosmos_1', 'azalea', 'jp_kikyo', 'hydrangea_violet', 'jp_kikyo', 'jp_tanpopo', 'jp_himawari'];
       const stand = new VoxelModel();
       for (let t = 0; t < 3; t++) fill(stand, -40, 39, t * 6, t * 6 + 1, -18 + t * 8, -11 + t * 8, 0x8a6a4a);
       for (const x of [-40, 39]) fill(stand, x, x, 0, 17, -18, 13, 0x6a4a2e);
@@ -321,7 +321,7 @@ export function makeShop(kind, { onU = null, seed = 1 } = {}) {
         const pm = vm(ph, V5); at(pm, W / 2 - 0.45, 0, 0.5); g.add(pm);
       }
       // weeds in the shutter rail, an old bicycle left here
-      U.flowers.push(['tuft_1', -W / 2 + 0.3, 0, 0.12, 0.6], ['tuft_2', W / 2 - 0.4, 0, 0.12, 0.5]);
+      U.flowers.push(['jp_grass_1', -W / 2 + 0.3, 0, 0.12, 0.6], ['jp_grass_2', W / 2 - 0.4, 0, 0.12, 0.5]);
       if (kind === 'shutterB') { const bk = bicycle({ col: 0x8a3a3a, seed: 6, kick: true }); at(bk, 0.3, 0, 0.6, -0.1); g.add(bk); }
       U.browse.push({ x: 0, z: 1.4, yaw: Math.PI });
       break;

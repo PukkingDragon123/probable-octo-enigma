@@ -142,7 +142,7 @@ export class PlatformLocation extends Location {
     const nb = this.plants;
     for (let i = 0; i < 64; i++) {
       const x = -30 + i * 0.95 + Math.sin(i * 7.3) * 0.35;
-      const name = ['susuki', 'tallgrass_0', 'azalea', 'bush_0', 'susuki', 'fern_1', 'hydrangea_blue', 'tuft_2', 'bush_1', 'hydrangea_pink'][i % 10];
+      const name = ['susuki', 'jp_grass_1', 'azalea', 'jp_shrub', 'susuki', 'jp_shida_1', 'hydrangea_blue', 'jp_grass_2', 'jp_shrub_1', 'hydrangea_pink'][i % 10];
       nb.push(name, x, -1.25, PLAT.z1 + 3.9 + (i % 3) * 0.22, { sway: 0.5 });
     }
     for (const [n, x, z] of [['sakura_0', -13, 5.4], ['camphor_1', 3, 5.8], ['sakura_1', 15, 5.2], ['camphor_0', -26, 5.8], ['ginkgo_0', 25, 5.4]]) nb.push(n, x, -1.25, PLAT.z1 + z, { sway: 0.22 });
@@ -202,7 +202,7 @@ export class PlatformLocation extends Location {
     const aed = aedBox(); aed.position.set(-16.75, 0.75, cz + 0.4); aed.rotation.y = Math.PI / 2; S.add(aed);
     for (const x of [-16, -1, 14.4]) { const ep = emergencyPost(); ep.position.set(x, 0, 1.55); S.add(ep); }
     const mir = convexMirror(); mir.position.set(21.4, 0, 1.4); mir.rotation.y = -0.6; S.add(mir);
-    for (const x of [-16.6, 10.4, 13.6]) { const pp = plantPot({ col: [0xc87a4a, 0x3a6a8a, 0xb85a4a][Math.abs(Math.round(x)) % 3] }); pp.position.set(x, 0, cz + 0.6); S.add(pp); nb.push(['bush_1', 'hydrangea_violet', 'fern_0'][Math.abs(Math.round(x)) % 3], x + 0.02, 0.35, cz + 0.62, { sway: 0.4, scale: 0.8 }); }
+    for (const x of [-16.6, 10.4, 13.6]) { const pp = plantPot({ col: [0xc87a4a, 0x3a6a8a, 0xb85a4a][Math.abs(Math.round(x)) % 3] }); pp.position.set(x, 0, cz + 0.6); S.add(pp); nb.push(['jp_shrub_1', 'hydrangea_violet', 'jp_shida'][Math.abs(Math.round(x)) % 3], x + 0.02, 0.35, cz + 0.62, { sway: 0.4, scale: 0.8 }); }
     nb.commit();
     // posters on the waiting room back + floor boarding markers at each door
     for (const [i, kind] of [[0, 'travel'], [1, 'manners'], [2, 'festival']]) { const pp = signPlane(poster(kind, i), 0.5); pp.position.set(-20.8 + i * 0.6, 0.55, cz + 0.79); S.add(pp); }
@@ -214,10 +214,10 @@ export class PlatformLocation extends Location {
     this.signMesh = signPlane(welcomeSign(), 0.62, { double: true });
     // ---- birds: sparrows by the benches, doves at the quiet west end, swallows under the roof
     this.birds = new Birds(S, { max: 40 });
-    for (let i = 0; i < 5; i++) this.birds.addGround('sparrow', -9.6 + i * 0.4, 5.0 + (i % 2) * 0.4, { x0: -11, x1: -6, z0: 4.6, z1: 6.2, y: 0 }, { scale: 0.4 });
-    for (let i = 0; i < 4; i++) this.birds.addGround('sparrow', 8.4 + i * 0.5, 5.2 + (i % 2) * 0.5, { x0: 7, x1: 11, z0: 4.6, z1: 6.4, y: 0 }, { scale: 0.4 });
-    for (let i = 0; i < 4; i++) this.birds.addGround('dove', -21 + i * 0.7, 5.4 + (i % 2) * 0.5, { x0: -21.6, x1: -17, z0: 4.8, z1: 6.6, y: 0 }, { scale: 0.5 });
-    for (let i = 0; i < 2; i++) this.birds.addFlyer('swallow', -7.2, 3.0, cz, 2.4 + i * 0.9);
+    for (let i = 0; i < 5; i++) this.birds.addGround('jp_suzume', -9.6 + i * 0.4, 5.0 + (i % 2) * 0.4, { x0: -11, x1: -6, z0: 4.6, z1: 6.2, y: 0 }, { scale: 0.4 });
+    for (let i = 0; i < 4; i++) this.birds.addGround('jp_suzume', 8.4 + i * 0.5, 5.2 + (i % 2) * 0.5, { x0: 7, x1: 11, z0: 4.6, z1: 6.4, y: 0 }, { scale: 0.4 });
+    for (let i = 0; i < 4; i++) this.birds.addGround('jp_hato', -21 + i * 0.7, 5.4 + (i % 2) * 0.5, { x0: -21.6, x1: -17, z0: 4.8, z1: 6.6, y: 0 }, { scale: 0.5 });
+    for (let i = 0; i < 2; i++) this.birds.addFlyer('jp_tsubame', -7.2, 3.0, cz, 2.4 + i * 0.9);
     // ---- nav: the whole platform minus the facilities
     const nav = this.makeNav('plat', { minX: PLAT.x0 + 0.4, minZ: 0.5, w: L - 0.8, d: D - 1.0 });
     for (const [x0, x1] of [[-21.5, -16.9], [-7.4, -4.2], [-0.6, 3.6], [4.2, 8.2]]) nav.block(x0, cz - 1.2, x1, cz + 0.85);
