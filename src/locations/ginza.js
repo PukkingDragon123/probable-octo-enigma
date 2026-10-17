@@ -13,13 +13,16 @@ import { makeShop, SHOPS } from '../world/shops.js';
 import { lightPool, pottedPlant } from '../world/shotengai.js';
 import { lanternString, streamer, bicycle, planter, streetBench, yakiimoCart, shrineCorner, arcadeGate, roofShadow, broom, crate, sleepingCat, arcadeEdge, nobori } from '../world/streetProps.js';
 import { manholeCover } from '../world/shopSigns.js';
-import { vendingMachine } from '../world/props.js';
+import { vendingMachine, bench } from '../world/props.js';
+import { stationHouse, koban, konbini, gameCenter, ramenShop, bakery, lotteryKiosk, kodamaStatue, mosaic, treeRing, clockPost, suzuranLamp, townBanner, busStop, phoneBooth, postBox, taxi, keiCar, carSignal, pedSignal, sideStreet, officeBlock, hotelSign, izakayaSign, plazaTexture, roadTexture, groundPlane } from '../world/ekimae.js';
 import { natureBatch } from '../art/nature.js';
 import { Crowd } from '../world/crowd.js';
 import { Birds } from '../world/birds.js';
 import { phoneMesh } from '../entities/parts.js';
 
-export const ST = { x0: -38, x1: 38, z0: 0, z1: 8.6, walkZ0: 0.7, walkZ1: 8.1 };
+export const ST = { x0: -86, x1: 38, z0: 0, z1: 8.6, walkZ0: 0.7, walkZ1: 8.1 };
+// the station square (west of the arcade) and the little road you cross to reach the gate
+export const PLAZA = { x0: -86, x1: -41.5, roadX0: -41.5, roadX1: -36.5, arcadeX0: -36.5, curbZ: 6.85, depth: 10.6, station: -76, statue: { x: -60.5, z: 3.7 } };
 const ORDER = ['cafe', 'florist', 'shutterA', 'fish', 'wagashi', 'thrift', 'drug', 'shutterB', 'bendys', 'books', 'kodamaya', 'tabako'];
 const ALLEY_AFTER = { fish: 1.0, bendys: 1.0 };
 
@@ -89,9 +92,9 @@ export class GinzaLocation extends Location {
     this.updaters = [];
     // ---- paving
     const tex = makeTexture(streetTexture().c, { repeat: true, mips: false });
-    tex.repeat.set((ST.x1 - ST.x0) / 4, 1);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(ST.x1 - ST.x0, ST.z1), litMat({ map: tex, vertexColors: false }));
-    floor.rotation.x = -Math.PI / 2; floor.position.set((ST.x0 + ST.x1) / 2, 0, ST.z1 / 2); floor.receiveShadow = true;
+    tex.repeat.set((ST.x1 - PLAZA.arcadeX0) / 4, 1);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(ST.x1 - PLAZA.arcadeX0, ST.z1), litMat({ map: tex, vertexColors: false }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set((PLAZA.arcadeX0 + ST.x1) / 2, 0, ST.z1 / 2); floor.receiveShadow = true;
     S.add(floor);
     // ---- the shop row
     this.shops = {};
@@ -113,6 +116,7 @@ export class GinzaLocation extends Location {
       if (ALLEY_AFTER[kind]) { this.alley(x, ALLEY_AFTER[kind], i); x += ALLEY_AFTER[kind]; }
     });
     this.streetEnd = x;
+    this.buildPlaza(pools);
     // warm light spilling from the shops onto the paving
     for (const pl of pools) { const m = lightPool(pl.w, pl.d, { color: pl.col ?? 0xffc070, intensity: 0.26, onU: this.onU }); m.position.set(pl.x, 0.012, pl.z); S.add(m); }
     // ---- overhead: lantern strings, tanabata streamers, the roof's striped shadow
@@ -129,7 +133,7 @@ export class GinzaLocation extends Location {
       st.position.set(sx + (si % 2) * 0.8, 6.42, 1.05);
       S.add(st); this.updaters.push(st.userData.update);
     }
-    S.add(roofShadow(ST.x0, ST.x1, -1, ST.z1 + 1, 7.6, { every: 2.4, rib: 0.09 }));
+    S.add(roofShadow(-33.4, ST.x1, -1, ST.z1 + 1, 7.6, { every: 2.4, rib: 0.09 }));
     const edge = arcadeEdge(this.streetEnd + 33, { onU: this.onU }); edge.position.set(-33, 6.48, 1.05); S.add(edge);
     // nobori banners outside the shops that want customers
     const nob = [['cafe', 2.2, 'モーニング', '#6a3a22', '#fff4d8'], ['florist', -2.45, '花', '#3a8a5a', '#ffffff'], ['fish', 2.6, '大漁', '#1a3a6a', '#ffffff'], ['wagashi', 2.1, 'だんご', '#f4ecd8', '#5a2a6a'],
@@ -143,7 +147,7 @@ export class GinzaLocation extends Location {
     // ---- street furniture down the middle and along the near curb
     this.benches = [];
     for (const bx of [-12.5, 8.6]) { const b = streetBench(); b.position.set(bx, 0, 7.5); b.rotation.y = Math.PI; S.add(b); this.benches.push(b); }
-    this.plants = natureBatch({ max: 420, castShadow: true });
+    this.plants = natureBatch({ max: 760, castShadow: true });
     S.add(this.plants.mesh);
     const nb = this.plants;
     const flowersPl = ['hydrangea_blue', 'azalea', 'hydrangea_pink', 'rose', 'daisy', 'hydrangea_violet', 'aster', 'susan'];
@@ -161,6 +165,8 @@ export class GinzaLocation extends Location {
     this.imo = yakiimoCart({ onU: this.onU }); this.imo.position.set(-26.2, 0, 6.3); this.imo.rotation.y = 0.15; S.add(this.imo); this.updaters.push(this.imo.userData.update);
     // flowers from the florist + weeds
     for (const [n, fx, fy, fz, sc] of this.flowerSpots) nb.push(n, fx, fy, fz, { sway: 0.45, scale: sc ?? 0.7 });
+    for (const [n, fx, fy, fz, sc] of this.plazaFlowers) nb.push(n, fx, fy, fz, { sway: 0.45, scale: sc });
+    for (const [n, tx, tz] of this.plazaTrees) nb.push(n, tx, 0.3, tz, { sway: 0.25, scale: 1.0 });
     for (let i = 0; i < 18; i++) nb.push(['tuft_0', 'tuft_1', 'tuft_2', 'clover'][i % 4], -34 + i * 4.1 + Math.sin(i * 3.1) * 0.6, 0, 0.08 + (i % 3) * 0.04, { sway: 0.3, scale: 0.45 });
     nb.commit();
     // ---- birds: sparrows by the florist and the shrine, pigeons near the gate
@@ -180,10 +186,124 @@ export class GinzaLocation extends Location {
     nav.block(-27.2, 5.8, -25.1, 6.9);
     nav.block(-33.6, 0, -32.6, 0.6);
     for (const [px, pz] of this.poles || []) nav.blockCircle(px, pz, 0.22);
+    for (const [a, b, c, d] of this.plazaBlocks) nav.block(a, b, c, d);
+    for (const [px, pz, r] of this.plazaCircles) nav.blockCircle(px, pz, r);
     this.navs.street = nav;
     // ---- people
     this.crowd = new Crowd(this.game, this);
     this.populate();
+  }
+  // ---- the station square: the station, the koban, Kodama Mart, the game
+  // centre, ramen, the bakery; the statue, trees, lamps, the bus stop and taxi
+  // rank; then the road with its crossing up to the arcade gate
+  buildPlaza(pools) {
+    const S = this.scene, onU = this.onU, P = PLAZA;
+    const B = (this.plazaBlocks = []), Ci = (this.plazaCircles = []);
+    const put = (o, x, z, yaw = 0, y = 0) => { o.position.set(x, y, z); o.rotation.y = yaw; S.add(o); if (o.userData.update) this.updaters.push(o.userData.update); return o; };
+    // ground: granite square, the crossing road (running off between the houses)
+    const pf = groundPlane(plazaTexture(P.depth), P.x1 - P.x0, P.depth, { repeat: (P.x1 - P.x0) / 8 });
+    pf.position.set((P.x0 + P.x1) / 2, 0, P.depth / 2); S.add(pf);
+    const zFar = 15;
+    const rd = groundPlane(roadTexture(P.roadX1 - P.roadX0, zFar, P.depth), P.roadX1 - P.roadX0, zFar + P.depth);
+    rd.position.set((P.roadX0 + P.roadX1) / 2, 0, (P.depth - zFar) / 2); S.add(rd);
+    const af = groundPlane(plazaTexture(P.depth), 3.4, P.depth, { repeat: 3.4 / 8 }); af.position.set(-34.8, -0.004, P.depth / 2); S.add(af);
+    // the buildings along the far side
+    const st = put(stationHouse({ onU }), P.station, 0);
+    this.stationDoor = { x: P.station + st.userData.door.x, z: 0.55 };
+    put(officeBlock({ w: 4.4, floors: 4, onU, seed: 3, wall: 0xb8c4c8, sign: hotelSign() }), -84.2, -0.4);
+    const vmA = vendingMachine({ brand: 'Pocori', color: 0x2a7ad8, seed: 31, onU }); put(vmA, -69.45, -0.35); vmA.scale.setScalar(0.92);
+    put(officeBlock({ w: 4.8, floors: 4, onU, seed: 5, wall: 0xd8c8b0, sign: izakayaSign() }), -67.6, -3.6);
+    const kb = put(koban({ onU }), -67.3, 0);
+    this.kobanSpot = { x: -67.3 + kb.userData.officer.x, z: kb.userData.officer.z };
+    const shopAt = (g, x) => { put(g, x, 0); for (const pl of g.userData.pools || []) pools.push({ ...pl, x: pl.x + x }); return g; };
+    this.plazaShops = {
+      konbini: shopAt(konbini({ onU }), -61.65),
+      game: shopAt(gameCenter({ onU }), -54.5),
+      ramen: shopAt(ramenShop({ onU }), -48.5),
+      bakery: shopAt(bakery({ onU }), -43.7),
+    };
+    if (this.plazaShops.ramen.userData.noren) this.updaters.push((dt, t) => { this.plazaShops.ramen.userData.noren.rotation.x = Math.sin(t * 1.2 + 1) * 0.07 - 0.03; });
+    put(lotteryKiosk({ onU }), -35.2, 0);
+    S.add(sideStreet({ onU }));
+    // the station-front: phone booth, post box, bus stop and its bench
+    put(phoneBooth({ onU }), -80.9, 1.05); B.push([-81.4, 0.5, -80.4, 1.6]);
+    put(postBox(), -79.5, 0.85); Ci.push([-79.5, 0.85, 0.3]);
+    for (const cx of [-79.0, -73.0]) Ci.push([cx, 1.4, 0.22]);
+    put(busStop({ onU }), -77.8, 6.55); Ci.push([-77.8, 6.55, 0.2]);
+    const bb = put(bench({ color: 0x2a6ad8, seats: 3 }), -75.6, 6.45); B.push([-76.4, 6.1, -74.8, 6.85]);
+    this.busBench = bb;
+    // the statue on its mosaic, ringed with flowers; trees in granite rings
+    const ms = mosaic(3.0); ms.position.set(P.statue.x, 0.012, P.statue.z); S.add(ms);
+    put(kodamaStatue(), P.statue.x, P.statue.z); Ci.push([P.statue.x, P.statue.z, 0.75]);
+    this.treeRings = [];
+    for (const [tx, tz] of [[-72.6, 4.3], [-48.6, 4.4]]) { const tr = put(treeRing(), tx, tz); this.treeRings.push(tr); Ci.push([tx, tz, 1.2]); }
+    put(clockPost({ onU }), -70.0, 1.05); Ci.push([-70.0, 1.05, 0.2]);
+    [[-79.4, 6.05], [-55.2, 6.05], [-44.6, 6.05], [-38.6 + 3.3, 8.25]].forEach(([lx, lz], i) => { put(suzuranLamp({ onU, banner: townBanner(i) }), lx, lz); Ci.push([lx, lz, 0.18]); });
+    // taxis waiting at the rank, bikes in the rack
+    this.taxis = [put(taxi({ onU }), -66.0, 8.75, -Math.PI / 2), put(taxi({ onU, body: 0x2a6ab0 }), -60.6, 8.75, -Math.PI / 2)];
+    for (let i = 0; i < 5; i++) { const bk = bicycle({ col: [0xf4f0e8, 0xe8a0c0, 0x3a5a8a, 0xf0c040, 0x5a8a5a][i], seed: 40 + i }); put(bk, -58.6 + i * 0.5, 6.4, 0.75 + (i % 2 ? 0.08 : -0.05)); }
+    B.push([-58.9, 6.0, -56.3, 6.85]);
+    // the crossing: car signal on a cantilever, pedestrian lights at the corners, a kei car waiting
+    this.carSig = put(carSignal({ arm: 2.35, onU }), -36.6, -0.6);
+    this.peds = [
+      put(pedSignal({ onU }), P.roadX0 - 0.25, 0.45, Math.PI / 2 - 0.55),
+      put(pedSignal({ onU }), P.roadX1 + 0.25, 0.45, -Math.PI / 2 + 0.55),
+      put(pedSignal({ onU }), P.roadX0 - 0.25, 8.3, Math.PI / 2 - 0.25),
+      put(pedSignal({ onU }), P.roadX1 + 0.25, 8.3, -Math.PI / 2 + 0.25),
+    ];
+    for (const pz of [0.45, 8.3]) for (const px of [P.roadX0 - 0.25, P.roadX1 + 0.25]) Ci.push([px, pz, 0.15]);
+    this.kei = put(keiCar({ onU }), -37.75, -2.6);
+    this.car = { z: -2.6, v: 0, stopZ: -2.6 };
+    this.signalT = 0;
+    // planters along the curb
+    const flowersPl = ['hydrangea_blue', 'azalea', 'susan', 'hydrangea_pink', 'daisy', 'rose', 'hydrangea_violet', 'aster'];
+    this.plazaFlowers = [];
+    for (const [px, pi] of [[-70.4, 0], [-63.2, 2], [-52.6, 4], [-47.0, 6]]) {
+      const pl = planter(); put(pl, px, 6.55);
+      for (let k = 0; k < 4; k++) this.plazaFlowers.push([flowersPl[(pi + k) % flowersPl.length], px - 0.45 + k * 0.3, pl.userData.soilY, 6.55 + (k % 2) * 0.06, 0.7]);
+      B.push([px - 0.65, 6.25, px + 0.65, 6.85]);
+    }
+    // a ring of flowers round the statue, trees in the rings
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; this.plazaFlowers.push([['hydrangea_blue', 'azalea', 'daisy', 'hydrangea_pink', 'rose'][i % 5], P.statue.x + Math.cos(a) * 0.68, 0, P.statue.z + Math.sin(a) * 0.55, 0.5]); }
+    this.plazaTrees = [['camphor_0', -72.6, 4.3], ['sakura_0', -48.6, 4.4]];
+    // the plaza's near edge is the station road: nobody walks on it
+    B.push([P.x0, P.curbZ, P.x1, ST.z1]);
+    // the ramen shop's vent, the konbini oden
+    const rs = this.plazaShops.ramen;
+    this.vents = [{ x: rs.position.x + rs.userData.vent.x, y: rs.userData.vent.y, z: rs.userData.vent.z }];
+    const kn = this.plazaShops.konbini;
+    this.vents.push({ x: kn.position.x + kn.userData.oden.x, y: kn.userData.oden.y + 0.05, z: kn.userData.oden.z, small: true });
+    // a light pool under the station canopy and the koban lamp
+    pools.push({ x: P.station, z: 1.4, w: 6.4, d: 2.4, col: 0xfff0d0 }, { x: -67.3, z: 0.9, w: 1.8, d: 1.4, col: 0xff8070 });
+  }
+  // the crossing: a 24 s cycle (walk 9 s, blink 3, all red 1, cars 8, amber 2, all red 1)
+  updateCrossing(dt) {
+    this.signalT = (this.signalT + dt) % 24;
+    const t = this.signalT;
+    const ped = t < 9 ? 'go' : t < 12 ? 'blink' : 'stop';
+    const car = t >= 13 && t < 21 ? 'go' : t >= 21 && t < 23 ? 'slow' : 'stop';
+    this.crossing = { ped, car };
+    const blink = ped === 'blink' && Math.floor(t * 4) % 2 === 0;
+    for (const s of this.peds) s.userData.setState(ped === 'stop' ? 'stop' : 'go', blink);
+    this.carSig.userData.setState(car);
+    // the bird-song chirp that tells you it's safe to cross
+    if (ped === 'go' && this.game.audio && Math.abs(this.game.rig.target.x + 39) < 14) {
+      this._chirpT = (this._chirpT || 0) - dt;
+      if (this._chirpT <= 0) { this._chirpT = 0.55; this.game.audio.play('sparrowChirp', { volume: 0.18, pitch: 1.35 }); }
+    }
+    // the kei car: waits at the line; on green (and with nobody on the zebra) it drives through
+    const C = this.car;
+    let busy = false;
+    const inBox = (x, z) => x > PLAZA.roadX0 - 0.1 && x < PLAZA.roadX1 + 0.1 && z > 0.3 && z < 8.8;
+    for (const c of this.chars) if (inBox(c.x, c.z)) { busy = true; break; }
+    const want = car === 'go' && !busy;
+    if (C.z > -0.2 || want) C.v = Math.min(5, C.v + dt * 3);
+    else if (C.z < C.stopZ) C.v = Math.max(0.6, Math.min(5, (C.stopZ - C.z) * 0.9));
+    else C.v = Math.max(0, C.v - dt * 8);
+    if (!want && C.z <= C.stopZ && C.z + C.v * dt > C.stopZ) { C.z = C.stopZ; C.v = 0; }
+    C.z += C.v * dt;
+    if (C.z > 12) { C.z = -19; C.v = 3.5; }
+    this.kei.position.z = C.z;
   }
   // an alley between two shops: dark, a glowing vending machine, a bicycle, pipes
   alley(x, w, i) {
@@ -201,28 +321,34 @@ export class GinzaLocation extends Location {
   }
   nearSide() {
     const g = new THREE.Group();
-    const v = new VoxelModel();
-    const x0 = Math.round(ST.x0 / V5), x1 = Math.round(ST.x1 / V5);
+    const X0 = Math.round(PLAZA.arcadeX0 / V5), X1 = Math.round(ST.x1 / V5);
     const z0 = Math.round(ST.z1 / V5), z1 = z0 + 40;
-    // dark interior floors of the opposite shops
-    fill(v, x0, x1, -1, -1, z0, z1, (x, y, z) => ((x + z) % 7 === 0 ? 0x2e2836 : 0x342e3c));
-    // cut wall stubs: the shopfront line, party walls every few metres, cut caps lighter
     const walls = [0x8a7a6a, 0x6a7a7a, 0x8a6a5a, 0x7a7a8a, 0x9a8a6a];
-    let sx = x0, k = 0;
-    while (sx < x1) {
-      const w = 80 + Math.floor(hash3(sx, 0, 5) * 50);
-      const col = walls[k++ % walls.length];
-      for (let x = sx; x < Math.min(x1, sx + w); x++) {
-        const door = (x - sx) > 18 && (x - sx) < w - 18; // open shopfront between pillars
-        const h = door ? 2 : 9;
-        for (let y = 0; y < h; y++) v.set(x, y, z0, y === h - 1 ? 0xd8ccb8 : col);
+    // built in chunks (voxel coordinates must stay within +-512 of each model's origin)
+    let sx = X0, k = 0;
+    while (sx < X1) {
+      const base = sx;
+      const v = new VoxelModel();
+      const end = Math.min(X1, base + 600);
+      while (sx < end) {
+        const w = 80 + Math.floor(hash3(sx, 0, 5) * 50);
+        const col = walls[k++ % walls.length];
+        // dark interior floor of the opposite shop
+        fill(v, sx - base, Math.min(X1, sx + w) - base, -1, -1, z0, z1, (x, y, z) => ((x + base + z) % 7 === 0 ? 0x2e2836 : 0x342e3c));
+        // the cut shopfront line (open between pillars), party wall, cut caps lighter
+        for (let x = sx; x < Math.min(X1, sx + w); x++) {
+          const door = (x - sx) > 18 && (x - sx) < w - 18;
+          const h = door ? 2 : 9;
+          for (let y = 0; y < h; y++) v.set(x - base, y, z0, y === h - 1 ? 0xd8ccb8 : col);
+        }
+        for (let z = z0; z < z1; z++) for (let y = 0; y < 9; y++) v.set(sx - base, y, z, y === 8 ? 0xd8ccb8 : sh(col, 0.85));
+        if (k % 2) fill(v, sx + 20 - base, sx + 44 - base, 0, 6, z0 + 10, z0 + 16, (x, y) => (y === 6 ? 0xd8ccb8 : 0x5a4a3a));
+        sx += w;
       }
-      for (let z = z0; z < z1; z++) for (let y = 0; y < 9; y++) v.set(sx, y, z, y === 8 ? 0xd8ccb8 : sh(col, 0.85));
-      // a few things standing inside: a cut counter, a shelf base
-      if (k % 2) fill(v, sx + 20, sx + 44, 0, 6, z0 + 10, z0 + 16, (x, y) => (y === 6 ? 0xd8ccb8 : 0x5a4a3a));
-      sx += w;
+      const m = vm(v, V5, [0, 0, 0], { cast: false });
+      m.position.x = base * V5;
+      g.add(m);
     }
-    g.add(vm(v, V5, [0, 0, 0], { cast: false }));
     return g;
   }
 
@@ -283,14 +409,36 @@ export class GinzaLocation extends Location {
     C.group([{ seed: S(), role: 'salaryman' }, { seed: S(), role: 'worker' }], { x: wx('books', 1.6), z: 4.4, r: 0.56, a0: 1.57 });
     // ---- sitters on the street benches (facing the shops)
     for (const b of this.benches) b.userData.seats.forEach((st, i) => { if (i === 1) return; C.add({ seed: S(), role: ['granny', 'salaryman', 'student'][i % 3] }, { x: b.position.x - st.x, z: b.position.z - 0.02, yaw: Math.PI, mode: 'sit', seatY: st.y, prop: false, act: i === 2 ? 'phone' : null }); });
+    // ---- the station square
+    const PS = this.plazaShops;
+    // the officer standing guard outside the koban
+    const cop = C.add({ id: 'local_koban', name: 'Inuyama-san', species: 'shiba', skin: 0xd8964a, light: 0xf8ecd8, earInner: 0xf8e0c8, ears: 'shiba', tail: 'shiba', tailColor: 0xd8964a, outfit: { kind: 'suit', color: 0x24346a, tie: 0x24346a, shirt: 0xd8e0f0 }, sleeve: 0x24346a, pants: 0x24346a, shoe: 0x1e1e24, hat: { type: 'cap', color: 0x24346a }, scale: 0.98 }, { x: this.kobanSpot.x, z: this.kobanSpot.z + 0.1, yaw: 0, mode: 'stand', prop: false, calm: true });
+    cop.c.name = 'Inuyama-san';
+    this.locals.koban = cop;
+    cop.shout = ['Evening! Mind the crossing.', 'Welcome to Kodama-machi!'];
+    // the konbini clerk at the till, two people reading magazines at the window
+    const kn = PS.konbini;
+    C.add({ id: 'local_konbini', species: 'hamster', skin: 0xf0b878, light: 0xfff4e0, earInner: 0xffb8a8, ears: 'round', tail: 'none', outfit: { kind: 'apron', base: 0xf4f4f0, apron: 0x1fa050 }, sleeve: 0xf4f4f0, pants: 0x3a3a44, scale: 0.9, face: { girl: true } }, { x: kn.position.x + kn.userData.keeper.x, z: kn.userData.keeper.z, yaw: 0, mode: 'stand', prop: false, calm: true });
+    kn.userData.readers.forEach((r, i) => C.add({ seed: S(), role: i ? 'salaryman' : 'student' }, { x: kn.position.x + r.x, z: r.z, yaw: 0, mode: 'stand', prop: false, calm: true, act: 'phone' }));
+    // kids at the gacha machines, teens at the UFO catchers, a customer at the ramen ticket machine
+    kn.userData.browse.forEach((b, i) => C.add({ seed: S(), role: 'kid' }, { x: kn.position.x + b.x, z: b.z, yaw: b.yaw, mode: 'stand', calm: true, act: i ? 'point' : null }));
+    PS.game.userData.browse.forEach((b, i) => { if (i === 1) return; C.add({ seed: S(), role: 'student' }, { x: PS.game.position.x + b.x, z: b.z + 0.65, yaw: b.yaw, mode: 'stand', calm: true }); });
+    for (const k of ['ramen', 'bakery']) for (const b of PS[k].userData.browse) C.add({ seed: S(), role: k === 'ramen' ? 'salaryman' : 'shopper' }, { x: PS[k].position.x + b.x, z: b.z, yaw: b.yaw, mode: 'stand', calm: true });
+    // a queue at the bus stop, people resting on the tree rings, a tourist photographing the statue
+    ['granny', 'student', 'officeLady'].forEach((role, i) => C.add({ seed: S(), role }, { x: -76.9 + i * 0.62, z: 5.95, yaw: -Math.PI / 2, mode: 'stand', calm: true, act: i === 1 ? 'phone' : null }));
+    this.treeRings.forEach((tr, ti) => tr.userData.seats.forEach((st, i) => { if ((ti + i) % 3 === 2) return; C.add({ seed: S(), role: ['granny', 'student', 'salaryman', 'shopper'][(ti * 2 + i) % 4] }, { x: tr.position.x + st.x, z: tr.position.z + st.z, yaw: st.yaw, mode: 'sit', seatY: st.y, prop: false, act: i ? 'phone' : null }); }));
+    C.add({ seed: S(), role: 'tourist' }, { x: PLAZA.statue.x + 2.1, z: PLAZA.statue.z - 0.5, yaw: Math.atan2(-2.1, 0.5), mode: 'stand', calm: true, act: 'phone' });
+    // a taxi driver stretching by his cab
+    C.add({ seed: S(), role: 'worker' }, { x: -63.4, z: 6.7, yaw: Math.PI, mode: 'stand', calm: true });
     // ---- walkers both ways along the street with pauses at shops
     const east = [], west = [];
+    for (const [px, pz, pp] of [[PLAZA.station + 2.5, 2.0, 0.6], [-69.5, 2.4, 0.4], [-62.8, 1.7, 1.4], [-55.4, 1.6, 1.2], [-48.6, 1.9, 0.8], [-43.6, 1.9, 0.9], [-39.2, 2.6, 0.2]]) east.push({ x: px, z: pz, pause: pp, yaw: Math.PI });
     for (const k of ORDER) { const s = sp(k); const b = s.userData.browse[0]; if (!b) continue; east.push({ x: s.position.x + b.x, z: 2.6 + hash3(s.position.x, 1, 2) * 0.6, pause: 0.4 + hash3(s.position.x, 2, 2) * 2.4, yaw: Math.PI }); }
-    west.push(...east.map((w) => ({ x: w.x + 0.8, z: 5.9 + hash3(w.x, 3, 3) * 0.9, pause: 0.2 + hash3(w.x, 4, 3) * 0.8 })).reverse());
+    west.push(...east.map((w) => ({ x: w.x + 0.8, z: w.x < PLAZA.roadX0 ? 5.0 + hash3(w.x, 3, 3) * 0.5 : 5.9 + hash3(w.x, 3, 3) * 0.9, pause: 0.2 + hash3(w.x, 4, 3) * 0.8 })).reverse());
     const loopE = [...east, { x: ST.x1 - 4, z: 3.0 }, { x: ST.x1 - 4, z: 6.4 }, ...west, { x: ST.x0 + 5, z: 6.4 }, { x: ST.x0 + 5, z: 3.0 }];
     const roles = ['shopper', 'salaryman', 'student', 'officeLady', 'granny', 'tourist', 'shopper', 'worker', 'student', 'shopper'];
-    for (let i = 0; i < 16; i++) {
-      const start = Math.floor((i / 16) * loopE.length);
+    for (let i = 0; i < 28; i++) {
+      const start = Math.floor((i / 28) * loopE.length);
       const w0 = loopE[start];
       C.add({ seed: S(), role: roles[i % roles.length] }, { x: w0.x + (hash3(i, 5, 5) - 0.5), z: w0.z, yaw: 1.57, mode: 'walk', path: loopE.map((w) => ({ ...w, x: w.x + (hash3(i, w.x | 0, 1) - 0.5) * 0.6, z: w.z + (hash3(i, w.z * 10 | 0, 2) - 0.5) * 0.5 })), start: start + 1, nav: this.navs.street });
     }
@@ -322,6 +470,11 @@ export class GinzaLocation extends Location {
   update(dt, t) {
     this.onU.value = 1;
     for (const f of this.updaters) f(dt, t);
+    if (this.peds) this.updateCrossing(dt);
+    if (this.vents && (this._ventT = (this._ventT || 0) - dt) <= 0) {
+      this._ventT = 0.3;
+      for (const v of this.vents) if (!v.small || Math.random() < 0.5) this.game.particles?.emit('steam', { x: v.x + (Math.random() - 0.5) * 0.1, y: v.y, z: v.z, n: 1 });
+    }
     this.crowd?.update(dt);
     if (this.birds) {
       const P = this._pushers || (this._pushers = []);

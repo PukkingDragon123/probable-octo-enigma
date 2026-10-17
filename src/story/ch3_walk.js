@@ -1,5 +1,7 @@
 // Chapter 3 — down Kodama Ginza.
-// Dusk under the arcade. Grandpa walks Mamo from the station gate to Kodamaya,
+// Dusk. Out of the station, across the square past the koban and the town's
+// mascot statue, over the crossing (wait for the chirping green man), then
+// under the arcade. Grandpa walks Mamo from the station gate to Kodamaya,
 // and everyone on the street has something to say: Anaguma-jii presses a hot
 // sweet potato on him, Shibata-san waves from the café, Ponta bellows across
 // the street, Grandpa goes quiet in front of the toy shop that closed. At the
@@ -10,6 +12,7 @@ import { CHARACTERS } from '../data/characters.js';
 import { duffel } from '../world/props.js';
 import { phoneMesh } from '../entities/parts.js';
 import { VoxelModel, vm, fill, V25 } from '../world/build.js';
+import { PLAZA } from '../locations/ginza.js';
 
 const LANE = 3.65; // the pair walks down the middle carpet
 
@@ -23,14 +26,15 @@ function sweetPotato() {
 export async function walkChapter(g) {
   const D = g.director;
   const later = (sec, fn) => D.wait(sec).then(fn);
-  const L = await g.goTo('ginza', { camX: -29 }, { transition: null });
+  const L = await g.goTo('ginza', { camX: -76 }, { transition: null });
   const P = g.player, C = L.crowd, S = L.shops;
   const sx = (k, dx = 0) => S[k].position.x + dx;
   await D.cutscene(async () => {
     g.renderer.uniforms.fade.value = 1;
     g.audio?.music?.('street');
-    // ---- cast: Mamo (hood up, bag, phone) and Grandpa, entering from the gate
-    g.place(P, -36.4, LANE + 0.2, Math.PI / 2);
+    // ---- cast: Mamo (hood up, bag, phone) and Grandpa, just inside the station doors
+    const door = L.stationDoor;
+    g.place(P, door.x + 0.35, -0.75, 0);
     P.setHood(true);
     P.setExpr('hollow', { react: false });
     P.stopAction();
@@ -38,14 +42,69 @@ export async function walkChapter(g) {
     P.hold(phoneMesh(), 'R');
     const G = new Character(CHARACTERS.genzo);
     L.add(G);
-    G.setPos(-35.6, LANE - 0.3); G.faceNow(Math.PI / 2);
+    G.setPos(door.x - 0.45, -0.95); G.faceNow(0);
     G.setExpr('happy', { react: false });
-    // ---- establishing: the gate, lanterns, the long street at dusk
-    D.cam({ x: -27, y: 2.6, z: 2.2, wupp: 0.024, pitch: 26, yaw: 0, dur: 0 });
+    // Grandpa leads, a step ahead; Mamo trails along the same waypoints
+    const duo = async (pts, { gdx = 0.7, gdz = -0.45, pdz = 0 } = {}) => {
+      const gp = (async () => { for (const q of pts) await G.walkTo(q.x + gdx, q.z + gdz); })();
+      await D.walkPath(P, pts.map((q) => ({ x: q.x, z: q.z + pdz })));
+      await gp;
+    };
+    // ---- establishing: the station at dusk, the square, the taxis waiting
+    D.cam({ x: door.x + 1.5, y: 2.6, z: 2.4, wupp: 0.021, pitch: 26, yaw: 0, dur: 0 });
     await D.fadeIn(1.8);
+    D.caption('Kodama-machi Station Square', { dur: 3.4, kind: 'place' });
+    D.cam({ x: door.x + 4.5, y: 1.9, z: 2.6, wupp: 0.0175, pitch: 27, dur: 6, ease: 'inOutSine' });
+    // out through the glass doors into the warm evening
+    await duo([{ x: door.x + 0.35, z: 1.6 }, { x: door.x + 2.2, z: 2.45 }], { gdx: 0.55, gdz: -0.3 });
+    P.play('phone', { loop: true, scroll: true });
+    D.mark('square');
+    D.follow(P, { wupp: 0.0158 });
+    // the officer outside the koban calls out
+    const cop = L.locals.koban?.c;
+    const copWave = duo([{ x: -68.6, z: 2.45 }, { x: -66.6, z: 3.2 }]);
+    await D.wait(1.6);
+    if (cop) { cop.faceTo(G.x, G.z); cop.play('wave'); D.say(cop, 'Genzō-san! Evening! Is this the grandson?', { expr: 'happy', auto: 1.8, name: 'Inuyama-san' }); }
+    await copWave;
+    G.faceTo(cop?.x ?? G.x, cop?.z ?? 0); G.play('wave');
+    await D.say(G, "Evening, Inuyama-kun! Mamoru — he's staying the summer.", { expr: 'laugh' });
+    P.stopAction(); if (cop) P.faceTo(cop.x, cop.z); P.play('bow');
+    await D.wait(0.9);
+    // ---- the statue: Kodama-kun in his knitted bib
+    D.mark('statue');
+    const SX = PLAZA.statue.x, SZ = PLAZA.statue.z;
+    await duo([{ x: SX - 2.0, z: 5.2 }, { x: SX + 1.0, z: SZ + 1.15 }], { gdx: -2.05, gdz: -0.35 });
+    G.faceTo(SX, SZ); P.faceTo(SX, SZ);
+    await D.cam({ x: SX, y: 1.15, z: SZ + 0.5, wupp: 0.0102, pitch: 20, dur: 1.6, clip: 2.4 });
+    await D.say(G, "And that's Kodama-kun. Guardian of the town — so the posters say.", { expr: 'happy' });
+    P.lookAt({ x: SX, y: 1.6, z: SZ }, 1);
+    await D.think(P, '(...Why is it wearing a bib?)', { auto: 1.8 });
+    G.setExpr('laugh');
+    await D.say(G, 'Tsuru-baa knits him a new one every winter. Nobody remembers why.', { expr: 'laugh' });
+    P.lookAt(null);
+    // ---- the crossing: wait for the little green man
+    D.mark('crossing');
+    D.follow(P, { wupp: 0.0158 });
+    P.play('phone', { loop: true, scroll: true });
+    const RX = PLAZA.roadX0;
+    await duo([{ x: SX + 4, z: 5.0 }, { x: RX - 0.65, z: 4.3 }], { gdx: 0.35, gdz: -0.55 });
+    L.signalT = 18.5; // the cars still have the green
+    G.faceYaw(Math.PI / 2); P.faceYaw(Math.PI / 2);
+    await D.cam({ x: RX + 1.4, y: 1.0, z: 3.8, wupp: 0.0118, pitch: 24, dur: 1.4, clip: 2 });
+    await D.say(G, 'Wait for the little green man.', { expr: 'gentle' });
+    for (let i = 0; i < 40 && L.crossing?.ped !== 'go'; i++) await D.wait(0.25);
+    await D.wait(0.5);
+    P.stopAction();
+    D.emote(P, 'note');
+    await D.think(P, '(...It chirps.)', { auto: 1.4 });
+    P.play('phone', { loop: true, scroll: true });
+    D.follow(P, { wupp: 0.0158 });
+    await duo([{ x: -36.2, z: 4.0 }, { x: -34.4, z: LANE + 0.15 }], { gdx: 0.6, gdz: -0.45 });
+    // ---- under the gate: the long arcade at dusk
+    D.cam({ x: -27, y: 2.6, z: 2.2, wupp: 0.024, pitch: 26, yaw: 0, dur: 1.6, ease: 'inOutSine' });
     D.caption('Kodama Ginza Shopping Street', { dur: 3.5, kind: 'place' });
+    await D.wait(1.0);
     D.cam({ x: -24, y: 2.0, z: 2.3, wupp: 0.019, pitch: 28, dur: 5, ease: 'inOutSine' });
-    await D.wait(2.2);
     // they walk in under the gate
     P.play('phone', { loop: true, scroll: true });
     G.walkTo(-28.8, LANE - 0.3);
