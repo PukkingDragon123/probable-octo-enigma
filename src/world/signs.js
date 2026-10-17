@@ -113,12 +113,12 @@ export function vendingFront({ brand = 'Pocori', color = '#2a7ad8', seed = 1, w 
   return p;
 }
 
-// the station kiosk header ("NewDeys")
+// the station kiosk header ("KodaDays")
 export function kioskBoard() {
   const p = new PixCanvas(110, 18, 14);
   p.rect(0, 0, 110, 18, '#f6f6f2'); p.rect(0, 15, 110, 3, '#1f8a7a'); p.rect(0, 0, 110, 1, '#ffffff');
-  p.text('NewDeys', 8, 2, { font: `12px ${FONT.bold}`, color: '#1f8a7a' });
-  p.text('ニューデイズ', 102, 4, { font: `7px ${FONT.tiny}`, color: '#3a3a44', align: 'right' });
+  p.text('KodaDays', 8, 2, { font: `12px ${FONT.bold}`, color: '#1f8a7a' });
+  p.text('コダデイズ', 102, 4, { font: `7px ${FONT.tiny}`, color: '#3a3a44', align: 'right' });
   return p;
 }
 
