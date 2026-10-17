@@ -45,6 +45,8 @@ const BODY = { hipY: 0.3, thigh: 0.15, shin: 0.15 };
 const DEFAULT_DIMS = { hipY: 6, hipX: 2, thigh: 3, spineY: 0, chestY: 6.5, shoulderX: 4.6, shoulderY: -1.2, shoulderZ: 0, upper: 2.2, fore: 2.2, grip: 2.2, neckY: 0.4, headScale: 1, tail: [-0.5, -3.5], carry: [3.5, 6], shellAt: [0, 1.2, -3] };
 
 export class Character {
+  // how much faces tilt up toward the camera (low, side-on cameras turn it down)
+  static faceUpK = 1;
   constructor(def) {
     this.def = def;
     this.id = def.id || 'npc';
@@ -416,7 +418,7 @@ export class Character {
       T.tail[1] += Math.sin(ph) * 0.3 * walkK;
     }
     // faces tilt a touch up towards the (high) camera so they read
-    T.head[0] -= this.def.faceUp ?? 0.2;
+    T.head[0] -= (this.def.faceUp ?? 0.2) * Character.faceUpK;
     // idle: breathing + weight shift + occasional fidget
     const br = Math.sin(this.t * 1.9);
     T.spine[0] += br * 0.015;

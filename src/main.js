@@ -2,6 +2,7 @@ import './ui/base.css';
 import { loadFonts } from './ui/fonts.js';
 import { Game } from './game/Game.js';
 import { Phone } from './ui/phone.js';
+import { PovPhone } from './ui/povPhone.js';
 import { TitleScreen } from './ui/title.js';
 import { hasSave } from './game/state.js';
 import { registerLocations } from './locations/index.js';
@@ -12,6 +13,7 @@ const canvas = document.getElementById('game');
 const ui = document.getElementById('ui');
 const game = new Game(canvas, ui);
 game.phone = new Phone(game, ui);
+game.pov = new PovPhone(game, ui);
 registerLocations(game);
 game.story = new Story(game);
 game.resize();
@@ -47,3 +49,4 @@ if (viewLoc) {
   });
 }
 window.__step = (s) => game.step(s);
+if (import.meta.env?.DEV) window.__game = game;
