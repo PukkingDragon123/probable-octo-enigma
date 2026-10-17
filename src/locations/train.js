@@ -9,6 +9,7 @@ import { Location } from '../game/Location.js';
 import { VoxelModel, vm, glowVm, fill, tone, hash3, sh, V5, V25 } from '../world/build.js';
 import { rbox } from '../vox/kit.js';
 import { Scenery } from '../art/scenery/scenery.js';
+import { shinkansenCar, CAR_LEN } from '../world/shinkansen.js';
 import { PixCanvas, makeTexture } from '../core/pixtex.js';
 import { emitMat } from '../core/materials.js';
 import { Character } from '../entities/rig.js';
@@ -17,8 +18,10 @@ import { makeFolk } from '../data/folk.js';
 import { FONT } from '../ui/fonts.js';
 
 export const SEAT_PITCH = 1.25;
+// where the outside set stands (well away from the cut-away car)
+export const OUT = { x0: 12, y: 0, z: 70, car7: 12 - (CAR_LEN + 0.12) };
 export const CAR = { rows: [-5, 5], wallZ: -0.8, aisleZ: 0.34, winY0: 0.7, winY1: 1.75, seatY: 0.275 };
-const ROWX = (i) => i * SEAT_PITCH;           // seat cushion centre
+export const ROWX = (i) => i * SEAT_PITCH;    // seat cushion centre
 const WINX = (i) => i * SEAT_PITCH + 0.05;    // window centre beside that row
 
 // ---------------------------------------------------------------- the car body (0.05 m voxels)
@@ -122,6 +125,50 @@ function seatRow(seed = 1) {
   // armrests (aisle, middle, window), with the lever on the aisle side
   for (const z of [-32, -16, 1]) for (let x = -9; x <= 8; x++) { v.set(x, 16, z, x === 8 ? armL : arm); v.set(x, 17, z, armL); if (x === -9 || x === 6) for (let y = 7; y <= 15; y++) v.set(x, y, z, arm); }
   v.set(6, 18, 1, 0x2a2c32); v.set(6, 19, 1, 0x2a2c32);
+  return v;
+}
+
+// the aisle side: floor out to the near wall, three-seat rows, blinds down, a ceiling
+function nearSide() {
+  const v = new VoxelModel();
+  const X0 = -160, X1 = 159, ZW = 46;
+  const wall = 0xf0e6d2, wallD = 0xe2d6be, panel = 0xc9b89a, blind = 0xf4dca8, blindD = 0xe8c888, frame = 0x9a948a;
+  for (let x = X0; x <= X1; x++) {
+    for (let z = 19; z <= ZW; z++) { const d = ((x + z) % 8 === 0 || (x - z) % 8 === 0); v.set(x, -1, z, d ? 0x5a4456 : 0x684e60); }
+    for (let y = 0; y <= 49; y++) {
+      const i = Math.round((x * V5 - 0.05) / SEAT_PITCH), dx = x - Math.round((i * SEAT_PITCH + 0.05) / V5);
+      const win = Math.abs(dx) <= 10 && y >= 14 && y <= 34;
+      let c = y < 2 ? 0x6a5a58 : y < 11 ? panel : tone(x, y, 0, wall, wallD, wall, 0.04, 0.04);
+      if (win) c = (y - 14) % 3 === 2 ? blindD : blind; // pleated blinds, lit from outside
+      else if (Math.abs(dx) <= 11 && y >= 13 && y <= 35) c = frame;
+      v.set(x, y, ZW, c);
+    }
+    for (let z = -15; z <= ZW; z++) v.set(x, 50, z, z % 12 === 0 ? 0xd8d0c0 : 0xf2eee4);
+    // the near luggage rack
+    for (let z = ZW - 8; z <= ZW - 1; z++) if ((z & 1) === 0) v.set(x, 40, z, 0xa8b0ba);
+  }
+  return v;
+}
+// the near three-seat rows (0.025 m voxels), facing +x, from the aisle to the wall
+function seatRow3() {
+  const v = new VoxelModel();
+  const fab = 0x34589a, fabD = 0x284680, fabL = 0x466ab0, cover = 0xf8f6f0;
+  for (let s = 0; s < 3; s++) {
+    const z0 = 32 + s * 17, z1 = z0 + 16;
+    rbox(v, -9, 9, 7, 10, z0 + 1, z1 - 1, 1.6, (x, y, z) => tone(x, y, z, fab, fabD, fabL, 0.1, 0.06));
+    for (let y = 11; y <= 41; y++) {
+      const lean = Math.floor((y - 11) / 7);
+      for (let z = z0 + 1; z <= z1 - 1; z++) for (let x = -14 - lean; x <= -10 - lean; x++) {
+        const edge = z === z0 + 1 || z === z1 - 1;
+        let c = edge ? fabD : tone(x, y, z, fab, fabD, fabL, 0.08, 0.05);
+        if (y >= 31 && x >= -11 - lean) c = cover;
+        v.set(x, y, z, c);
+      }
+    }
+    for (let z = z0 + 3; z <= z1 - 3; z++) for (let y = 21; y <= 28; y++) v.set(-16, y, z, y === 21 || y === 28 ? 0x8a909a : 0xaab0b8);
+    for (let y = 0; y <= 6; y++) for (let x = -3; x <= 3; x++) v.set(x, y, Math.round((z0 + z1) / 2), 0x4a505a);
+  }
+  for (const z of [32, 49, 66, 83]) for (let x = -9; x <= 8; x++) { v.set(x, 16, z, 0x6c7482); v.set(x, 17, z, 0x8a92a0); }
   return v;
 }
 
@@ -250,7 +297,7 @@ export class TrainLocation extends Location {
     this.rain = 0;
   }
   get speed() { return this.scenery.speed; }
-  set speedGoal(v) { this.scenery.speedGoal = v; }
+  set speedGoal(v) { this.scenery.speedGoal = v; if (this.outScenery) this.outScenery.speedGoal = v; }
   get speedGoal() { return this.scenery.speedGoal; }
   async build() {
     const S = this.scene;
@@ -258,6 +305,15 @@ export class TrainLocation extends Location {
     // the world outside
     this.scenery = new Scenery({ tsz: 0.0075, horizonY: 1.14, z: -1.45, refZ: CAR.wallZ, skyW: 30, skyH: 7 });
     S.add(this.scenery.group);
+    // outside: the whole Kodama running through the country, for establishing shots
+    // (far from the cut-away car; the camera visits it at z ~ OUT.z)
+    this.outScenery = new Scenery({ tsz: 0.034, horizonY: OUT.y + 7.5, z: OUT.z - 8, refZ: OUT.z, layout: 'outside', skyW: 90, skyH: 34 });
+    S.add(this.outScenery.group);
+    this.outTrain = new THREE.Group();
+    const cars = [shinkansenCar({ nose: true, number: 8 }), shinkansenCar({ number: 7, panto: true }), shinkansenCar({ number: 6 })];
+    cars.forEach((c, i) => { c.position.x = -i * (CAR_LEN + 0.12); this.outTrain.add(c); });
+    this.outTrain.position.set(OUT.x0, OUT.y + 1.2, OUT.z);
+    S.add(this.outTrain);
     // seat rows along the far side
     const rowM = seatRow();
     this.rows = {};
@@ -311,6 +367,16 @@ export class TrainLocation extends Location {
       m.castShadow = true; m.position.set(-9 + i * 3.6, 1.5, -1.9);
       S.add(m); this.poles.push(m);
     }
+    // the aisle side of the car (only seen in first person): three-seat rows,
+    // the near wall with its blinds pulled down against the sun, the ceiling
+    this.povSide = new THREE.Group();
+    this.povSide.add(vm(nearSide(), V5, [0, 0, 0]));
+    const row3 = seatRow3();
+    for (let i = CAR.rows[0]; i <= CAR.rows[1]; i++) { const m = vm(row3, V25, [0, 0, 0]); m.position.set(ROWX(i), 0, 0); this.povSide.add(m); }
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(14, 0.02, 0.22), emitMat({ color: 0xfff4dc, intensity: 1.2 }));
+    lamp.position.set(0, 2.49, 0.65); this.povSide.add(lamp);
+    this.povSide.visible = false;
+    S.add(this.povSide);
     // the passengers of car 7
     this.passengers = [];
     const seat = (def, i, expr, act, opts = {}) => {
@@ -352,12 +418,18 @@ export class TrainLocation extends Location {
     Character.faceUpK = 0.1; // the camera is low and side-on here
   }
   exit() { const l = this.game.lighting; l.override = null; l.fixedAzimuth = null; Character.faceUpK = 1; }
-  setTime(name, dur) { this.scenery.setTime(name, dur); }
-  setSegment(seg, o) { this.scenery.setSegment(seg, o); }
+  setTime(name, dur) { this.scenery.setTime(name, dur); this.outScenery.setTime(name, dur); }
+  setSegment(seg, o) { this.scenery.setSegment(seg, o); if (seg !== 'tunnel' && seg !== 'station') this.outScenery.setSegment(seg, { now: true }); }
+  get outside() { return this.game.rig.target.z > OUT.z - 30 && !this.game.rig.pov; }
   update(dt, t) {
     const g = this.game, rig = g.rig, R = g.renderer;
     const sc = this.scenery;
-    sc.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2 });
+    const pov = rig.pov ? { eye: rig.persp.position, fwd: rig.persp.getWorldDirection(this._fwd || (this._fwd = new THREE.Vector3())) } : null;
+    sc.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2, persp: pov });
+    this.povSide.visible = !!pov;
+    const out = this.outside;
+    this.outScenery.group.visible = out; this.outTrain.visible = out;
+    if (out) this.outScenery.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2 });
     const tk = sc.tunnelK, lk = sc.look, sp = sc.speed;
     // the glass and the beams
     for (const u of this.glassU) { u.time.value = t; u.rain.value = this.rain; u.speed.value = sp; u.night.value = Math.max(tk, lk.lights * 0.6); }
@@ -380,6 +452,8 @@ export class TrainLocation extends Location {
     const sun = parseInt(lk.sun.slice(1), 16);
     const sunI = (lk.glow > 0.5 ? 2.2 : 2.6) * (1 - tk) * (1 - lk.lights * 0.75) * (1 - this.rain * 0.6);
     L.override = { elev: 0.62 - lk.glow * 0.2, sunI, sun, hemiI: 1.05 + tk * 0.1 + lk.lights * 0.1, sky: tk > 0.5 ? 0xfff0dc : parseInt(lk.hor.slice(1), 16), gnd: 0x8a7a80 };
+    if (this.outside) { L.override = { elev: 0.5 - lk.glow * 0.18, azimuth: 0.55, sunI: 2.4 * (1 - lk.lights * 0.6), sun, hemiI: 1.2, sky: parseInt(lk.hor.slice(1), 16), gnd: 0x6a8a5a }; L.fixedAzimuth = null; }
+    else L.fixedAzimuth = Math.PI - 0.45;
     this.fill.intensity = 0.3 + tk * 1.4 + lk.lights * 1.0;
     // passing tunnel lamps: orange pulses through the glass
     const ph = (t * sp * 2.55) % 1;

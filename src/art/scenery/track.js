@@ -17,7 +17,7 @@ const BLACK = pk('#1e1a22'), WHITE = pk('#f4f2ec');
 
 const MAST_SP = 380;
 function mast(B, X, L) {
-  const top = L.hz - 92, gy = L.gy;
+  const top = L.mastTop ?? L.hz - 92, gy = L.gy;
   // steel H-beam pole with a lattice brace, cantilever arm and insulators
   for (let y = top; y < gy; y++) {
     B.rect(X, y, 12, 1, MAST[1]);
@@ -27,7 +27,7 @@ function mast(B, X, L) {
   }
   B.rect(X - 2, gy - 4, 16, 4, CONC[1]);
   // cantilever toward the train (left in view), with insulator stacks
-  const ay = L.hz - 66;
+  const ay = (L.wireY ?? L.hz - 60) - 6;
   B.rect(X - 60, ay, 60, 3, MAST[1]); B.hline(X - 60, X - 1, ay, MAST[3]);
   for (let k = 0; k < 40; k++) B.set(X - 4 - k, ay - 18 + Math.round(k * 0.45), MAST[2]);
   for (const ix of [X - 8, X - 54]) for (let k = 0; k < 4; k++) { B.rect(ix - 2, ay + 3 + k * 2, 5, 1, pk('#8a6a5a')); B.set(ix, ay + 4 + k * 2, pk('#5a4a40')); }
@@ -35,7 +35,7 @@ function mast(B, X, L) {
 }
 function wires(B, L) {
   // messenger wire sagging between masts, straight contact wire with droppers, a feeder up top
-  const mY = L.hz - 60, cY = L.hz - 50, fY = L.hz - 86;
+  const mY = L.wireY ?? L.hz - 60, cY = mY + 10;
   for (let X = B.x0; X < B.x1; X++) {
     const t = (((X % MAST_SP) + MAST_SP) % MAST_SP) / MAST_SP;
     const sag = Math.round(Math.sin(t * Math.PI) * 7);
@@ -117,7 +117,7 @@ function nameBoard() {
   if (NAMEBOARD) return NAMEBOARD;
   const p = new PixCanvas(96, 34, 9);
   p.rect(0, 0, 96, 34, '#f4f4f0'); p.frame(0, 0, 96, 34, '#5a5e66');
-  p.text('こだまちょう', 48, 2, { font: `12px ${FONT.ui}`, color: '#1e1e24', align: 'center' });
+  p.text('こだままち', 48, 2, { font: `12px ${FONT.ui}`, color: '#1e1e24', align: 'center' });
   p.rect(1, 18, 94, 4, '#2a8a4a');
   p.text('Kodama-machi', 48, 22, { font: `9px ${FONT.small}`, color: '#2a2a30', align: 'center' });
   p.text('木霊町', 48, 11, { font: `7px ${FONT.tiny}`, color: '#5a5a60', align: 'center' });
@@ -227,5 +227,27 @@ export function paintTrack(B, L) {
       B.ellipse(sx + 100, L.hz - 70, 8, 8, WHITE); B.ellipse(sx + 100, L.hz - 70, 6, 6, pk('#f8f8f4')); B.vline(sx + 100, L.hz - 75, L.hz - 70, BLACK); B.hline(sx + 100, sx + 104, L.hz - 70, BLACK);
     }
     for (let k = 0; k < 4; k++) if (h1(i * 4 + k, 562) < 0.75) person(B, sx + 14 + k * 46 + Math.floor(h1(i * 4 + k, 563) * 20), pf, i * 4 + k);
+  });
+}
+
+// ---- the foreground bank in front of the train (outside shots): tall grass,
+// susuki, wildflowers and hydrangeas whipping past, a fence post now and then
+export function paintFore(B, L) {
+  const top = L.gy;
+  for (let X = B.x0; X < B.x1; X++) {
+    const wave = Math.round(Math.sin(X * 0.05) * 2 + Math.sin(X * 0.013) * 3);
+    B.col(X, top + wave, B.H - 1, (x, y) => {
+      const d = y - (top + wave);
+      let c = rampPick(GRASS, 0.8 - d * 0.02 + (n2(x / 3, y / 2, 571) - 0.5) * 0.6, x, y);
+      if (h2(x >> 1, y >> 1, 572) > 0.95 && d < 30) c = pk(['#fff4a0', '#ffffff', '#c8a0ff', '#ff9ab0', '#ffd060'][(x + y) % 5]);
+      return c;
+    });
+    if (h1(X, 573) > 0.45) { const hgt = 6 + Math.floor(h1(X, 574) * 18); for (let k = 0; k < hgt; k++) B.set(X - (k >> 2), top + wave - k, GRASS[1 + ((k + X) % 3)]); }
+  }
+  B.slots(90, 40, 575, (i, sx, r) => {
+    const name = ['susuki', 'tallgrass_0', 'hydrangea_blue', 'susuki', 'tallgrass_1', 'hydrangea_pink', 'azalea', 'fern_0'][Math.floor(r * 8)];
+    const s = sprite(name);
+    if (s) B.blit(s, sx + Math.floor(h1(i, 576) * 50), top + 4 - s.h, { flip: h1(i, 577) < 0.5 });
+    if (h1(i, 578) < 0.12) { B.rect(sx, top - 26, 4, 30, pk('#8a8a90')); B.rect(sx + 1, top - 26, 1, 30, pk('#b4b4bc')); }
   });
 }

@@ -57,6 +57,8 @@ uniform vec2 rtSize;
 uniform vec2 subpixel;
 uniform float pixelScale;
 uniform float depthRange;
+uniform float persp;
+uniform vec2 nearFar;
 uniform float outlineAmt;
 uniform vec2 edgeRange;
 uniform vec3 outlineTint;
@@ -81,7 +83,12 @@ uniform float fogOn;
 uniform float time;
 uniform float warmth;       // golden-hour / lantern warmth push
 
-float D(vec2 p) { return texture2D(tDepth, (p + 0.5) / rtSize).x * depthRange; }
+float D(vec2 p) {
+  float z = texture2D(tDepth, (p + 0.5) / rtSize).x;
+  if (persp < 0.5) return z * depthRange;
+  float n = nearFar.x, f = nearFar.y;
+  return 2.0 * n * f / (f + n - (z * 2.0 - 1.0) * (f - n));
+}
 vec3 C(vec2 p) { return texture2D(tColor, (p + 0.5) / rtSize).rgb; }
 float bayer2(vec2 a) { a = floor(a); return fract(a.x * 0.5 + a.y * a.y * 0.75); }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
@@ -97,6 +104,7 @@ void main() {
   float dt = D(lp + vec2(0.0, 1.0));
   // Laplacian of depth: planar ramps cancel out, silhouettes and creases don't.
   float lap = (dl + dr + db + dt) - 4.0 * d;
+  if (persp > 0.5) lap = lap / max(d, 0.02); // perspective: relative to how far away it is
   float edge = smoothstep(edgeRange.x, edgeRange.y, lap);
   float crease = smoothstep(edgeRange.x * 0.07, edgeRange.x * 0.3, lap) * (1.0 - edge);
   // tinted inner outline: darker and a little purple, never flat black
@@ -326,16 +334,16 @@ export const GRADES = {
   // The Bear Must Eat's cozy grade is the base for everything: warm gain,
   // lifted violet shadows, tinted outlines, tilt-shift haze, soft bloom.
   // Human World: the same warmth, a hair less saturated, slightly cooler lift
-  human: { saturation: 1.08, grade: [1.03, 1.0, 0.95], lift: [0.018, 0.012, 0.045], contrast: 1.04, vignette: 0.3, vignetteColor: [0.55, 0.42, 0.62], haze: 0.22, hazeColor: [1.0, 0.9, 0.8], outlineTint: [0.36, 0.3, 0.42], warmth: 0.05, bloom: 0.42 },
-  humanDusk: { saturation: 1.12, grade: [1.06, 0.99, 0.92], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.38, 0.55], haze: 0.24, hazeColor: [1.0, 0.82, 0.66], outlineTint: [0.4, 0.3, 0.4], warmth: 0.32, bloom: 0.58 },
-  humanNight: { saturation: 1.12, grade: [0.97, 0.98, 1.06], lift: [0.02, 0.018, 0.07], contrast: 1.06, vignette: 0.42, vignetteColor: [0.3, 0.26, 0.5], haze: 0.24, hazeColor: [0.36, 0.36, 0.6], outlineTint: [0.3, 0.28, 0.44], warmth: 0.0, bloom: 0.62 },
+  human: { saturation: 1.24, grade: [1.03, 1.0, 0.95], lift: [0.014, 0.01, 0.036], contrast: 1.07, vignette: 0.3, vignetteColor: [0.55, 0.42, 0.62], haze: 0.15, hazeColor: [1.0, 0.9, 0.8], outlineTint: [0.36, 0.3, 0.42], warmth: 0.05, bloom: 0.42 },
+  humanDusk: { saturation: 1.26, grade: [1.06, 0.99, 0.92], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.38, 0.55], haze: 0.24, hazeColor: [1.0, 0.82, 0.66], outlineTint: [0.4, 0.3, 0.4], warmth: 0.32, bloom: 0.58 },
+  humanNight: { saturation: 1.22, grade: [0.97, 0.98, 1.06], lift: [0.02, 0.018, 0.07], contrast: 1.06, vignette: 0.42, vignetteColor: [0.3, 0.26, 0.5], haze: 0.24, hazeColor: [0.36, 0.36, 0.6], outlineTint: [0.3, 0.28, 0.44], warmth: 0.0, bloom: 0.62 },
   // Spirit Realm: warmer, more saturated, golden haze
-  spirit: { saturation: 1.18, grade: [1.05, 1.0, 0.93], lift: [0.03, 0.012, 0.05], contrast: 1.04, vignette: 0.28, vignetteColor: [0.62, 0.45, 0.62], haze: 0.28, hazeColor: [1.0, 0.88, 0.74], outlineTint: [0.42, 0.3, 0.4], warmth: 0.3, bloom: 0.5 },
-  spiritDusk: { saturation: 1.16, grade: [1.08, 0.97, 0.9], lift: [0.04, 0.012, 0.06], contrast: 1.05, vignette: 0.36, vignetteColor: [0.55, 0.35, 0.55], haze: 0.32, hazeColor: [1.0, 0.75, 0.62], outlineTint: [0.42, 0.28, 0.4], warmth: 0.55, bloom: 0.66 },
+  spirit: { saturation: 1.34, grade: [1.05, 1.0, 0.93], lift: [0.03, 0.012, 0.05], contrast: 1.04, vignette: 0.28, vignetteColor: [0.62, 0.45, 0.62], haze: 0.28, hazeColor: [1.0, 0.88, 0.74], outlineTint: [0.42, 0.3, 0.4], warmth: 0.3, bloom: 0.5 },
+  spiritDusk: { saturation: 1.3, grade: [1.08, 0.97, 0.9], lift: [0.04, 0.012, 0.06], contrast: 1.05, vignette: 0.36, vignetteColor: [0.55, 0.35, 0.55], haze: 0.32, hazeColor: [1.0, 0.75, 0.62], outlineTint: [0.42, 0.28, 0.4], warmth: 0.55, bloom: 0.66 },
   // the sad train ride: still warm and readable, a touch quieter and bluer
-  melancholy: { saturation: 0.98, grade: [1.0, 1.0, 1.02], lift: [0.026, 0.026, 0.06], contrast: 1.03, vignette: 0.38, vignetteColor: [0.42, 0.4, 0.6], haze: 0.22, hazeColor: [0.9, 0.88, 0.92], outlineTint: [0.36, 0.32, 0.44], warmth: 0.0, bloom: 0.4 },
+  melancholy: { saturation: 1.12, grade: [1.01, 1.0, 1.0], lift: [0.02, 0.018, 0.048], contrast: 1.06, vignette: 0.36, vignetteColor: [0.42, 0.4, 0.6], haze: 0.14, hazeColor: [0.9, 0.88, 0.92], outlineTint: [0.36, 0.32, 0.44], warmth: 0.0, bloom: 0.4 },
   // interiors lit by warm bulbs (TBME's homes / lab)
-  cozy: { saturation: 1.1, grade: [1.04, 1.0, 0.94], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.4, 0.55], haze: 0.18, hazeColor: [1.0, 0.86, 0.72], outlineTint: [0.4, 0.3, 0.38], warmth: 0.3, bloom: 0.48 },
+  cozy: { saturation: 1.22, grade: [1.04, 1.0, 0.94], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.4, 0.55], haze: 0.18, hazeColor: [1.0, 0.86, 0.72], outlineTint: [0.4, 0.3, 0.38], warmth: 0.3, bloom: 0.48 },
 };
 
 
@@ -379,7 +387,7 @@ export class PixelRenderer {
     const U = (this.uniforms = {
       tColor: { value: null }, tDepth: { value: null }, tBloom: { value: null }, tFog: { value: null },
       rtSize: { value: new THREE.Vector2(1, 1) }, subpixel: { value: new THREE.Vector2() },
-      pixelScale: { value: 2 }, depthRange: { value: 1 },
+      pixelScale: { value: 2 }, depthRange: { value: 1 }, persp: { value: 0 }, nearFar: { value: new THREE.Vector2(1, 600) },
       outlineAmt: { value: 0.6 }, edgeRange: { value: new THREE.Vector2(0.07, 0.2) },
       outlineTint: { value: new THREE.Vector3(0.36, 0.32, 0.42) }, highlightAmt: { value: 0.1 },
       screenSize: { value: new THREE.Vector2(1, 1) },
@@ -522,6 +530,8 @@ export class PixelRenderer {
     const u = this.uniforms;
     u.subpixel.value.copy(cameraRig.subpixel);
     u.depthRange.value = cam.far - cam.near;
+    u.persp.value = cam.isPerspectiveCamera ? 1 : 0;
+    u.nearFar.value.set(cam.near, cam.far);
     u.time.value = time;
     if (u.fogOn.value) {
       u.invVP.value.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse);

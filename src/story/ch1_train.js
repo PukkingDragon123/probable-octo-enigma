@@ -1,13 +1,18 @@
 // Chapter 1 — the Kodama, bound for Kodama-machi.
-// Mamo rides alone, hood up, earbuds in, on his phone. Mom's texts, station
-// announcements, Fuji, a kind attendant and an ekiben, a photo of Dad, a
-// tunnel, and the lights of the city at dusk.
+// A side-on cinematic through the car's big windows: paddies, old farmhouses,
+// an iron bridge, a tunnel that comes out on the tea country and Fuji, the sea
+// at sunset, rain, the town lights at dusk. Mamo rides alone, hood up, earbuds
+// in. No word from Mom yet. He takes out his phone — and we're in his eyes:
+// his own hands, the little sudoku app. Solve it and the attendant comes by
+// with her cart and the last bento. Then a photo of Dad, and the arrival.
 import * as THREE from 'three';
 import { VoxelModel } from '../vox/voxel.js';
 import { rbox, tone, buildGeo, matFor } from '../vox/kit.js';
 import { Character } from '../entities/rig.js';
 import { CHARACTERS } from '../data/characters.js';
 import { phoneMesh } from '../entities/parts.js';
+import { dadPhoto } from '../ui/phone.js';
+import { ROWX, OUT } from '../locations/train.js';
 
 const FV = 0.025, V5 = 0.05;
 function vm(model, scale, pivot = [0, 0, 0]) {
@@ -66,112 +71,166 @@ export function makeCart() {
 }
 
 const ANN = [
-  { ja: 'まもなく、静岡です。', en: 'We will soon make a brief stop at Shizuoka.', ticker: '次は 静岡   NEXT  Shizuoka' },
-  { ja: 'まもなく、浜松です。お出口は左側です。', en: 'We will soon make a brief stop at Hamamatsu. The doors on the left side will open.', ticker: '次は 浜松   NEXT  Hamamatsu' },
-  { ja: 'まもなく、終点、木霊町です。お忘れ物のないよう、ご注意ください。', en: 'We will soon arrive at Kodama-machi, the last stop. Please make sure you have all your belongings.', ticker: 'まもなく 木霊町   ARRIVING  Kodama-machi' },
+  { ja: 'まもなく、静岡です。', en: 'We will soon make a brief stop at Shizuoka.' },
+  { ja: 'まもなく、終点、木霊町です。お忘れ物のないよう、ご注意ください。', en: 'We will soon arrive at Kodama-machi, the last stop. Please make sure you have all your belongings.' },
 ];
+// camera shots (side-on carriage; Mamo's window seat is row 0)
+const MX = ROWX(0) + 0.02;
+const SHOT = {
+  wide: { x: MX + 0.2, y: 1.3, z: -0.2, wupp: 0.0075, pitch: 4, yaw: 0 },
+  mamo: { x: MX + 0.42, y: 0.92, z: -0.5, wupp: 0.0042, pitch: 6, yaw: 30 },
+  window: { x: MX + 0.35, y: 1.12, z: -0.62, wupp: 0.0054, pitch: 3, yaw: 10 },
+  face: { x: MX + 0.3, y: 0.95, z: -0.55, wupp: 0.0028, pitch: 4, yaw: 40 },
+  talk: { x: MX + 0.28, y: 0.95, z: -0.12, wupp: 0.0052, pitch: 6, yaw: 58 },
+};
+// the eyes, for first person
+const EYE = { x: MX + 0.05, y: 0.98, z: -0.56 };
+const LOOK_PHONE = { x: MX + 0.62, y: 0.68, z: -1.08 };
 
 export async function trainTitleBackdrop(g) {
   const L = await g.goTo('train', {}, { transition: null });
-  L.pano.setTime('golden', 0.01);
-  L.pano.setSegment('rice');
-  L.setTicker('こだま号   KODAMA  for Kodama-machi');
+  L.setSegment('country', { now: true });
+  L.setTime('golden', 0);
   g.player.setHood(true);
   g.player.setExpr('hollow', { react: false });
   g.player.play('phone', { loop: true });
   if (!g.player.held.R) g.player.hold(phoneMesh(), 'R');
-  g.rig.play({ x: 0.4, y: 1.0, z: -0.8, wupp: 0.0095, pitch: 16, yaw: 56, dur: 0 });
-  g.rig.sway = 0.6;
+  // the Kodama running through the paddies at golden hour
+  g.rig.play({ x: OUT.car7 + 2, y: 4.4, z: OUT.z, wupp: 0.03, pitch: 2, yaw: 0, dur: 0 });
   g.audio?.music?.('title');
+}
+
+// tap anywhere to go on (a little hand bobs over the thing to tap)
+function waitTap(g, pos, autoT = 2.2) {
+  const D = g.director;
+  return new Promise((res) => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; removeEventListener('pointerdown', on, true); g.emotes.unhint('tapme'); res(); };
+    const on = (e) => { e.stopPropagation(); e.preventDefault(); finish(); };
+    g.emotes.hint('tapme', pos, 'hintHand');
+    addEventListener('pointerdown', on, true);
+    if (g.autoPlay) D.wait(autoT).then(finish);
+  });
 }
 
 export async function trainChapter(g) {
   const D = g.director;
   const L = g.location?.id === 'train' ? g.location : await g.goTo('train', {}, { transition: null });
-  const P = g.player, phone = g.phone;
+  const P = g.player;
+  const thought = (t, dur = 2.6) => D.caption(t, { kind: 'thought', dur });
   await D.cutscene(async () => {
     // ---- setup
     g.renderer.uniforms.fade.value = 1;
-    L.pano.setTime('day', 0.01);
-    L.pano.setSegment('rice');
+    L.setSegment('country', { now: true });
+    L.setTime('day', 0);
     L.speedGoal = 1;
-    L.setTicker('こだま号   KODAMA  for Kodama-machi');
     P.setHood(true);
     P.setExpr('hollow', { react: false });
-    P.play('phone', { loop: true });
-    if (!P.held.R) P.hold(phoneMesh(), 'R');
+    P.stopAction();
+    P.lookAt(null);
     g.audio?.music?.('phoneSad');
     g.audio?.ambience?.('train');
     g.renderer.setGrade('melancholy', 0);
-    // ---- open on his face, then pull back to the window
-    D.cam({ x: 0.3, y: 0.85, z: -1.0, wupp: 0.0042, pitch: 10, yaw: 72, dur: 0, clip: 0.9 });
+    // ---- outside: the Kodama running through the paddies, nose to car 7
+    D.cam({ x: OUT.x0 + 20, y: 4.7, z: OUT.z, wupp: 0.034, pitch: 2, yaw: 0, dur: 0 });
     await D.fadeIn(2.2);
-    D.caption('The Kodama · bound for Kodama-machi', { dur: 3.5, kind: 'place' });
+    D.caption('The Kodama · bound for Kodama-machi', { dur: 4.2, kind: 'place' });
+    await D.cam({ x: OUT.car7 + 5, y: 4.2, z: OUT.z, wupp: 0.03, pitch: 2, yaw: 0, dur: 9, ease: 'inOutSine' });
+    // push in on one window...
+    await D.cam({ x: OUT.car7 + 3.3, y: 2.62, z: OUT.z, wupp: 0.006, pitch: 2, yaw: 0, dur: 2.4, ease: 'inCubic' });
+    await D.fadeOut(0.3);
+    // ---- ...and inside, side-on: a slow dolly along the windows to Mamo
+    D.cam({ ...SHOT.wide, x: MX - 3.4, dur: 0 });
+    await D.fadeIn(0.6);
+    await D.cam({ ...SHOT.wide, dur: 7.5, ease: 'inOutSine' });
+    D.mark('mamo');
+    await D.cam({ ...SHOT.mamo, dur: 2.6, ease: 'inOutSine' });
+    P.lookAt({ x: MX + 0.6, y: 1.1, z: -1.4 }, 0.45);
     await D.wait(1.2);
-    await D.cam({ x: 0.4, y: 1.0, z: -0.9, wupp: 0.0085, pitch: 17, yaw: 58, dur: 5.5, ease: 'inOutSine', clip: 0 });
-    await D.wait(0.5);
-    phone.track.t = 31;
-    phone.show('music', { compact: true });
-    await D.wait(3.2);
-    // ---- Mom
-    phone.receive('Mom', 'Did you eat something?');
-    await D.wait(1.4);
-    phone.go('messages');
-    await D.wait(1.2);
-    phone.receive('Mom', "Grandpa will meet you at Kodama-machi station. He's so excited to see you.");
-    await D.wait(2.2);
-    phone.receive('Mom', "I'm sorry I can't come with you. I love you, Mamo.");
-    await D.wait(2.0);
-    await phone.type('me too', { erase: true, speed: 0.12 });
-    await D.wait(0.6);
-    await phone.type('ok', { speed: 0.15 });
-    await D.wait(0.8);
-    phone.go('music');
     await D.think(P, '...', { auto: 1.4 });
-    phone.hide();
-    // ---- first announcement
-    L.setTicker(ANN[0].ticker);
+    // the little one in row 2, nose on the glass
+    D.say(L.kid, 'Mama, look! The rice fields go on forever!', { ambient: true, auto: 2.4, name: '' });
+    await D.wait(2.6);
+    // ---- the first announcement, then the river
     const a1 = g.audio?.announce?.({ ja: ANN[0].ja, en: ANN[0].en });
     D.caption('“We will soon make a brief stop at Shizuoka.”', { dur: 4, kind: 'subtitle' });
-    await Promise.race([a1, D.wait(7)]);
-    L.pano.setSegment('river');
-    await D.wait(4);
-    L.pano.setSegment('mountain');
-    L.pano.setTime('golden', 10);
-    await D.wait(2.5);
-    await D.cam({ x: 0.2, y: 1.05, z: -1.0, wupp: 0.0075, pitch: 14, yaw: 48, dur: 2.5 });
-    P.lookAt({ x: 0.3, y: 1.1, z: -2.5 });
+    await Promise.race([a1, D.wait(6)]);
+    D.mark('river');
+    L.setSegment('river');
+    D.cam({ ...SHOT.wide, x: MX + 1.6, dur: 3.5, ease: 'inOutSine' });
+    await D.wait(6.5);
+    // ---- a tunnel, and out into the tea country with Fuji
+    L.setSegment('tunnel');
+    g.audio?.ambience?.('tunnel');
+    await D.wait(3.2);
+    L.setSegment('tea');
+    L.setTime('golden', 6);
+    g.audio?.ambience?.('train');
+    D.mark('fuji');
+    await D.cam({ ...SHOT.window, dur: 2.4 });
+    P.lookAt({ x: MX + 0.9, y: 1.3, z: -1.6 }, 0.5);
+    await D.wait(2.0);
     await D.think(P, 'Fuji...', { auto: 1.6 });
-    await D.think(P, 'Dad always said it looks shy from the train. It hides in the clouds when you try to look at it.', { auto: 2.6 });
+    await D.think(P, 'Dad always said it looks shy from the train. It hides in the clouds when you try to look at it.', { auto: 2.8 });
     P.lookAt(null);
-    // ---- the attendant and the bento
+    // ---- the phone
+    D.mark('phone');
+    await D.cam({ ...SHOT.mamo, dur: 1.6 });
+    if (!P.held.R) P.hold(phoneMesh(), 'R');
+    P.play('phone', { loop: true });
+    await D.wait(0.8);
+    const hp = new THREE.Vector3(); P.anchorPos('R', hp);
+    await waitTap(g, { x: hp.x, y: hp.y + 0.12, z: hp.z });
+    // into his eyes
+    D.cam({ ...SHOT.face, dur: 0.5, ease: 'inCubic' });
+    await D.fadeOut(0.45);
+    P.root.visible = false;
+    const won = g.fp.play({ eye: EYE, look: LOOK_PHONE, seed: 7 });
+    g.fp.app.lockHold = 5;
+    D.letterbox(false);
+    await D.fadeIn(0.6);
+    D.mark('pov');
+    await D.wait(1.2);
+    await thought('No messages.', 2.2);
+    await thought('...Mom must still be sad.', 2.6);
+    await won;
+    // ---- the cart comes down the aisle
+    D.mark('cart');
     const att = new Character(CHARACTERS.attendant);
     L.add(att);
-    att.setPos(6.4, L.aisleZ, 0); att.faceNow(-Math.PI / 2);
+    att.setPos(MX + 3.8, L.aisleZ, 0); att.faceNow(-Math.PI / 2);
     const cart = makeCart();
     L.scene.add(cart);
-    const cartFollow = () => { cart.position.set(att.x - 0.55, 0, att.z); cart.rotation.y = 0; };
+    const cartFollow = () => { cart.position.set(att.x - 0.55, 0, att.z); };
     cartFollow();
-    att.onFrame = cartFollow;
-    D.cam({ x: 1.3, y: 0.9, z: -0.4, wupp: 0.009, pitch: 18, yaw: 62, dur: 2.5, clip: 0 });
-    const walking = D.walk(att, 1.25, L.aisleZ, { free: true });
-    const iv = setInterval(cartFollow, 16);
-    await D.say(att, 'Bento, snacks, drinks~! Anyone for a bento?', { expr: 'smile', auto: 1.2 });
+    const tick = setInterval(cartFollow, 16);
+    g.audio?.voice?.(CHARACTERS.attendant.voice, 'Bento, snacks, drinks~!', {});
+    D.caption('“Bento, snacks, drinks~!”', { dur: 2.6, kind: 'subtitle' });
+    const walking = D.walk(att, MX + 0.42, L.aisleZ, { free: true });
+    await D.wait(1.6);
+    g.fp.lowerGoal = 1;
+    g.rig.setPov({ eye: EYE, look: { x: MX + 0.9, y: 0.95, z: L.aisleZ + 0.2 }, fov: 56, ease: 2.2 });
     await walking;
-    clearInterval(iv); cartFollow();
+    cartFollow();
     att.faceTo(P.x, P.z);
-    await D.say(att, 'Excuse me, young man? Something to eat?', { expr: 'smile' });
-    await D.wait(0.8);
-    D.emote(att, 'dots');
-    await D.wait(1.0);
-    await D.say(att, 'Helloooo?', { expr: 'confused', act: 'wave' });
+    const hd = new THREE.Vector3(); att.headPos(hd);
+    g.rig.setPov({ eye: EYE, look: { x: hd.x, y: hd.y - 0.1, z: hd.z }, fov: 52, ease: 2.5 });
+    await D.wait(0.6);
+    await D.say(att, 'Excuse me, young man? Would you like a bento?', { expr: 'smile', act: 'wave' });
+    // back out of his eyes
+    await D.fadeOut(0.3);
+    g.fp.stop();
+    P.root.visible = true;
+    D.letterbox(true);
+    D.cam({ ...SHOT.talk, dur: 0 });
+    await D.fadeIn(0.35);
     P.stopAction();
     P.setExpr('surprised');
     D.emote(P, 'excl');
     P.squash(-0.2);
     await D.wait(0.4);
     P.faceTo(att.x, att.z);
-    await D.say(P, "Huh? Oh— um. Sorry. No... no thanks.", { expr: 'awkward' });
+    await D.say(P, "Huh? Oh— um. No... no thanks.", { expr: 'awkward' });
     g.audio?.play?.('growl', { pitch: 2.4, volume: 0.35 });
     D.emote(P, 'sweat');
     P.setExpr('embarrassed');
@@ -185,17 +244,23 @@ export async function trainChapter(g) {
     att.play('give', { dur: 1.0 });
     await D.wait(0.45);
     att.drop('both');
+    P.drop('R');
     P.hold(bento, 'both');
     P.play('carry', { loop: true });
     g.audio?.play?.('boxLift', { volume: 0.4 });
     await D.wait(0.5);
     await D.say(P, '...Thank you.', { expr: 'shy' });
     await D.say(att, "Eat it while it's warm! Have a lovely trip~", { expr: 'joy', act: 'wave' });
-    const leaving = D.walk(att, 7.5, L.aisleZ, { free: true });
-    const iv2 = setInterval(cartFollow, 16);
-    leaving.then(() => { clearInterval(iv2); L.remove(att); L.scene.remove(cart); });
-    // ---- open the bento
-    await D.cam({ x: 0.45, y: 0.6, z: -0.95, wupp: 0.0034, pitch: 40, yaw: 62, dur: 1.6, clip: 1.0 });
+    clearInterval(tick);
+    const leaving = D.walk(att, MX - 4.5, L.aisleZ, { free: true });
+    const tick2 = setInterval(cartFollow, 16);
+    leaving.then(() => { clearInterval(tick2); L.remove(att); L.scene.remove(cart); });
+    // ---- the sea at sunset, and the bento
+    D.mark('bento');
+    L.setSegment('sea');
+    L.setTime('sunset', 10);
+    P.faceNow(Math.PI / 2);
+    await D.cam({ x: MX + 0.3, y: 0.58, z: -0.42, wupp: 0.0031, pitch: 38, yaw: 34, dur: 1.8, clip: 1.0 });
     for (let k = 0; k <= 1.0001; k += 0.04) { bento.userData.open(k); await D.wait(0.02); }
     g.audio?.play?.('bentoOpen', { volume: 0.5 });
     const bp = new THREE.Vector3(); bento.getWorldPosition(bp);
@@ -203,54 +268,74 @@ export async function trainChapter(g) {
     g.particles.emit('steam', { x: bp.x, y: bp.y + 0.08, z: bp.z, n: 3 });
     P.setExpr('surprised', { react: false });
     await D.think(P, "...It's pretty.", { auto: 1.6 });
-    await D.cam({ x: 0.3, y: 0.85, z: -0.95, wupp: 0.0055, pitch: 12, yaw: 70, dur: 1.4, clip: 1.0 });
+    await D.cam({ ...SHOT.window, x: MX + 0.5, wupp: 0.0058, dur: 2.0, clip: 0 });
     P.play('eat', { loop: true, onBite: () => g.audio?.play?.('munch', { volume: 0.35 }) });
     P.setExpr('delicious');
-    await D.wait(2.4);
+    await D.wait(2.6);
     P.setExpr('gentle');
     D.emote(P, 'heart');
     await D.wait(2.2);
-    // ---- Dad
+    // ---- rain, and a photo of Dad (in his eyes again)
+    D.mark('dad');
     P.stopAction();
     bento.visible = false;
     P.drop('both');
+    L.setSegment('village');
+    L.setTime('rain', 6);
+    L.rain = 0.9;
+    g.audio?.ambience?.('rain');
+    await D.cam({ ...SHOT.mamo, dur: 1.6 });
+    P.hold(phoneMesh(), 'R');
     P.play('phone', { loop: true });
     P.setExpr('hollow');
+    await D.wait(1.0);
+    await D.fadeOut(0.4);
+    P.root.visible = false;
+    g.fp.play({ eye: EYE, look: { x: MX + 0.5, y: 0.72, z: -1.18 }, seed: 9 });
+    g.fp.app.showPhoto(dadPhoto(), 'Dad caught nothing. I caught one. He was so proud.');
+    D.letterbox(false);
+    await D.fadeIn(0.6);
+    await D.wait(2.2);
+    g.rig.setPov({ eye: EYE, look: { x: MX + 0.2, y: 1.0, z: -1.4 }, fov: 56, ease: 1.2 });
+    g.fp.lowerGoal = 0.6;
+    await D.wait(1.6);
+    await thought("Dad would've loved this view.", 3.0);
     await D.wait(0.8);
-    phone.show('photo', { compact: true });
-    L.pano.rain = 0.6;
-    L.pano.setTime('sunset', 8);
-    g.audio?.ambience?.('rain');
-    await D.wait(2.5);
+    await D.fadeOut(0.5);
+    g.fp.stop();
+    P.root.visible = true;
     P.setExpr('teary');
-    await D.think(P, "Dad would've loved this view.", { auto: 2.4 });
-    await D.wait(1.2);
-    phone.hide();
-    // ---- tunnel
-    L.pano.setSegment('tunnel');
+    D.letterbox(true);
+    // ---- the last tunnel, and the town lights at dusk
+    D.mark('tunnel');
+    D.cam({ ...SHOT.wide, x: MX - 0.8, dur: 0 });
+    L.setSegment('tunnel');
     g.audio?.ambience?.('tunnel');
-    g.renderer.setGrade('humanNight', 0.6);
-    await D.wait(3.5);
-    L.pano.rain = 0;
-    L.pano.setTime('dusk', 0.01);
-    L.pano.setSegment('city');
+    await D.fadeIn(0.8);
+    g.renderer.setGrade('humanNight', 1.2);
+    await D.wait(3.4);
+    L.rain = 0;
+    L.setSegment('city');
+    L.setTime('dusk', 0.01);
     g.audio?.ambience?.('train');
     g.renderer.setGrade('melancholy', 1.5);
-    await D.cam({ x: 0.3, y: 1.0, z: -1.0, wupp: 0.0095, pitch: 15, yaw: 55, dur: 3 });
-    await D.wait(2.5);
+    await D.cam({ ...SHOT.wide, x: MX + 0.4, dur: 4, ease: 'inOutSine' });
+    await D.wait(1.5);
     // ---- arriving
-    L.setTicker(ANN[2].ticker);
+    D.mark('arrive');
     D.caption('“We will soon arrive at Kodama-machi, the last stop.”', { dur: 5, kind: 'subtitle' });
-    const a3 = g.audio?.announce?.({ ja: ANN[2].ja, en: ANN[2].en });
-    L.speedGoal = 0.15;
+    const a3 = g.audio?.announce?.({ ja: ANN[1].ja, en: ANN[1].en });
+    L.speedGoal = 0.35;
     P.stopAction();
     P.setExpr('sad');
-    await Promise.race([a3, D.wait(8)]);
-    L.pano.setSegment('station');
+    await Promise.race([a3, D.wait(7)]);
+    L.setSegment('station');
+    await D.wait(2.4);
     L.speedGoal = 0;
-    await D.wait(2.0);
+    await D.cam({ ...SHOT.mamo, dur: 2.5 });
+    await D.wait(1.0);
     g.audio?.play?.('trainDoor', { volume: 0.6 });
-    await D.think(P, "...Here we go.", { auto: 1.4 });
+    await D.think(P, '...Here we go.', { auto: 1.4 });
     await D.fadeOut(1.4);
     g.audio?.music?.(null);
   });

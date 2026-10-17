@@ -17,7 +17,11 @@ const _F = new THREE.Vector3();
 
 export class CameraRig {
   constructor() {
-    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 600);
+    this.ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 600);
+    this.camera = this.ortho;
+    // first person: a real perspective camera at someone's eyes (setPov / clearPov)
+    this.persp = new THREE.PerspectiveCamera(58, 16 / 9, 0.015, 4000);
+    this.pov = null;
     this.target = new THREE.Vector3(0, 0, 0);
     this.goal = this.target.clone();
     this.yaw = 0; this.yawGoal = 0;
@@ -112,11 +116,43 @@ export class CameraRig {
   }
   cancelShot() { if (this.shot) { const r = this.shot.resolve; this.shot = null; r && r(); } }
 
+  // ------------------------------------------------------------ first person
+  // pov: { eye: {x,y,z}, look: {x,y,z}, fov, roll } — eased toward each new goal
+  setPov(o, { snap = false } = {}) {
+    const P = this.pov || (this.pov = { eye: new THREE.Vector3(), look: new THREE.Vector3(), fov: 58, roll: 0, goal: null, k: 1, bob: 0, sway: 0, offset: new THREE.Vector2() });
+    P.goal = { eye: new THREE.Vector3(o.eye.x, o.eye.y, o.eye.z), look: new THREE.Vector3(o.look.x, o.look.y, o.look.z), fov: o.fov ?? P.fov, roll: o.roll ?? 0 };
+    P.ease = o.ease ?? 3;
+    if (snap || !this._povOn) { P.eye.copy(P.goal.eye); P.look.copy(P.goal.look); P.fov = P.goal.fov; P.roll = P.goal.roll; }
+    this._povOn = true;
+    this.camera = this.persp;
+  }
+  clearPov() { this.pov = null; this._povOn = false; this.camera = this.ortho; }
+  _updatePov(dt, renderer) {
+    const P = this.pov, G = P.goal, k = 1 - Math.exp(-P.ease * dt);
+    P.eye.lerp(G.eye, k); P.look.lerp(G.look, k); P.fov += (G.fov - P.fov) * k; P.roll += (G.roll - P.roll) * k;
+    const c = this.persp, T = this.time;
+    c.aspect = renderer.rtW / renderer.rtH;
+    c.fov = P.fov;
+    // breathing, the train's sway, and a little look toward the pointer
+    const sw = this.sway;
+    _v.set(Math.sin(T * 0.9) * 0.002 + Math.sin(T * 7.1) * 0.0006 * sw, Math.sin(T * 1.6) * 0.0025 + Math.sin(T * 11.3) * 0.0008 * sw, 0);
+    c.position.copy(P.eye).add(_v);
+    _F.copy(P.look);
+    _F.x += P.offset.x * 0.12; _F.y += P.offset.y * 0.08;
+    c.up.set(Math.sin(P.roll + Math.sin(T * 0.7) * 0.004 * sw), Math.cos(P.roll), 0);
+    c.lookAt(_F);
+    c.updateProjectionMatrix();
+    c.updateMatrixWorld(true);
+    this.subpixel.set(0, 0);
+    this.target.copy(P.eye); this.goal.copy(P.eye);
+  }
+
   // ------------------------------------------------------------ per frame
   update(dt, renderer) {
     if (!(dt >= 0)) dt = 0;
     this.time += dt;
     this._rt.w = renderer.rtW; this._rt.h = renderer.rtH;
+    if (this.pov) { this._updatePov(dt, renderer); return; }
     if (this.shot) {
       const S = this.shot;
       S.t += dt;
@@ -149,7 +185,7 @@ export class CameraRig {
     if (!Number.isFinite(this.wupp)) this.wupp = this.wuppGoal = 0.016;
     if (!Number.isFinite(this.target.x) || !Number.isFinite(this.target.z)) this.target.set(0, 0, 0);
 
-    const cam = this.camera;
+    const cam = this.ortho;
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
     let tx = this.target.x, ty = this.target.y, tz = this.target.z;
     if (this.shake > 0) {
@@ -192,6 +228,11 @@ export class CameraRig {
     const ndcX = (lowX / renderer.rtW) * 2 - 1;
     const ndcY = (lowY / renderer.rtH) * 2 - 1;
     const ray = outRay || new THREE.Ray();
+    if (this.camera.isPerspectiveCamera) {
+      ray.origin.setFromMatrixPosition(this.camera.matrixWorld);
+      ray.direction.set(ndcX, ndcY, 0.5).unproject(this.camera).sub(ray.origin).normalize();
+      return ray;
+    }
     ray.origin.set(ndcX, ndcY, -1).unproject(this.camera);
     _F.set(0, 0, -1).transformDirection(this.camera.matrixWorld);
     ray.direction.copy(_F);

@@ -246,6 +246,7 @@ export class Game extends Emitter {
     this.transitions.update(rawDt);
     // camera follows the player by default in gameplay
     this.rig.update(dt, this.renderer);
+    this.fp?.update(rawDt);
     this.letterbox = damp(this.letterbox, this.letterboxGoal, 6, rawDt);
     this.renderer.uniforms.letterbox.value = this.letterbox;
     const f = this.rig.target;
@@ -258,7 +259,8 @@ export class Game extends Emitter {
     this.renderer.updateGrade(rawDt);
     // outline thresholds scale with zoom so far views don't fill with creases
     const k = Math.max(1, this.rig.wupp / 0.0125);
-    this.renderer.setEdges(0.05 * k, 0.16 * k);
+    if (this.rig.pov) this.renderer.setEdges(0.35, 0.9);
+    else this.renderer.setEdges(0.05 * k, 0.16 * k);
   }
   render() { if (this.location) this.renderer.render(this.location.scene, this.rig, this.time); }
   start() {

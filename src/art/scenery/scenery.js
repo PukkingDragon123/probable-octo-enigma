@@ -16,16 +16,19 @@ import * as THREE from 'three';
 import { Brush } from './core.js';
 import { paintClouds, paintFar, paintHills } from './far.js';
 import { paintFarGround, paintNear } from './ground.js';
-import { paintTrack } from './track.js';
+import { paintTrack, paintFore } from './track.js';
 
 const RING = 2048;
+// first person: how far away each layer stands, and the angle one texel spans
+const PERSP_D = { clouds: 1300, far: 950, hills: 520, plain: 210, near: 64, track: 6.5 };
+const ANG = 0.0042;
 export const SEGMENTS = ['country', 'river', 'tea', 'mountain', 'village', 'sea', 'city', 'tunnel', 'station'];
 
 // time-of-day looks
 export const LOOKS = {
-  day: { top: '#3f84de', hor: '#cfe6f6', sun: '#fff6dc', glow: 0.22, tint: '#ffffff', haze: '#d0e2f2', cLit: '#ffffff', cShade: '#aebfdc', rim: '#ffffff', lights: 0, stars: 0, sunX: 0.78, sunY: 0.9, hazeK: 1 },
-  golden: { top: '#5f84cf', hor: '#ffd6a2', sun: '#ffd890', glow: 0.6, tint: '#ffe6c2', haze: '#f2d2b2', cLit: '#fff0d4', cShade: '#b8a2c0', rim: '#fff0b0', lights: 0.08, stars: 0, sunX: 0.8, sunY: 0.5, hazeK: 1.1 },
-  sunset: { top: '#45489a', hor: '#ff9866', sun: '#ffa050', glow: 1.0, tint: '#ffbe9c', haze: '#e89c8c', cLit: '#ffb68a', cShade: '#76578e', rim: '#ffe09c', lights: 0.5, stars: 0, sunX: 0.82, sunY: 0.16, hazeK: 1.15 },
+  day: { top: '#2a74e0', hor: '#b8e0fa', sun: '#fff4d0', glow: 0.25, tint: '#fffbf0', haze: '#c4ddf4', cLit: '#ffffff', cShade: '#aebfdc', rim: '#ffffff', lights: 0, stars: 0, sunX: 0.78, sunY: 0.9, hazeK: 1 },
+  golden: { top: '#4c78d4', hor: '#ffcc8a', sun: '#ffd27a', glow: 0.65, tint: '#ffe2b4', haze: '#f6caa0', cLit: '#fff0d4', cShade: '#b8a2c0', rim: '#fff0b0', lights: 0.08, stars: 0, sunX: 0.8, sunY: 0.5, hazeK: 1.1 },
+  sunset: { top: '#3c3c9e', hor: '#ff8a52', sun: '#ff9a40', glow: 1.0, tint: '#ffb48e', haze: '#f0907e', cLit: '#ffb68a', cShade: '#76578e', rim: '#ffe09c', lights: 0.5, stars: 0, sunX: 0.82, sunY: 0.16, hazeK: 1.15 },
   dusk: { top: '#1f275a', hor: '#cc7878', sun: '#ff7a60', glow: 0.45, tint: '#8e86b8', haze: '#6e6292', cLit: '#c486a0', cShade: '#363866', rim: '#ff9a8a', lights: 1, stars: 0.35, sunX: 0.85, sunY: -0.1, hazeK: 1 },
   night: { top: '#090d24', hor: '#242a56', sun: '#c8d4ff', glow: 0.05, tint: '#56598a', haze: '#262a4c', cLit: '#4a5080', cShade: '#181c38', rim: '#6a70a0', lights: 1, stars: 1, sunX: 0.7, sunY: 0.8, hazeK: 0.8 },
   rain: { top: '#727c8e', hor: '#b2bac4', sun: '#e4e8f0', glow: 0.04, tint: '#b0b8c6', haze: '#a6aebb', cLit: '#cdd2da', cShade: '#7a8092', rim: '#e0e4ea', lights: 0.35, stars: 0, sunX: 0.8, sunY: 0.8, hazeK: 1.4 },
@@ -41,6 +44,17 @@ const STACK = {
     { id: 'plain', H: 74, hz: 22, spd: 58, par: 0.25, fog: 0.1, ch: 128, paint: paintFarGround, blend: 40 },
     { id: 'near', H: 176, hz: 76, gy: 104, spd: 190, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 30 },
     { id: 'track', H: 250, hz: 130, gy: 182, spd: 560, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
+  ],
+  // outside the train: the same country at a wider scale, plus a fast bank of
+  // grass and flowers in front of the train
+  outside: [
+    { id: 'clouds', H: 200, hz: 196, spd: 4, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
+    { id: 'far', H: 150, hz: 136, spd: 8, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 260 },
+    { id: 'hills', H: 96, hz: 88, spd: 26, par: 0.1, fog: 0.22, ch: 64, paint: paintHills, blend: 160 },
+    { id: 'plain', H: 74, hz: 22, spd: 70, par: 0.25, fog: 0.1, ch: 128, paint: paintFarGround, blend: 40 },
+    { id: 'near', H: 210, hz: 76, gy: 104, spd: 210, par: 0.55, fog: 0.04, ch: 128, paint: paintNear, blend: 30 },
+    { id: 'track', H: 240, hz: 15, gy: 230, mastTop: 12, wireY: 36, spd: 520, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
+    { id: 'fore', H: 120, hz: -193, gy: 20, spd: 900, par: 1.2, fog: 0.0, ch: 256, paint: paintFore, blend: 1, smear: 1, front: 9.5 },
   ],
 };
 
@@ -187,7 +201,7 @@ export class Scenery {
     const W = RING * this.tsz, Hh = d.H * this.tsz;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, Hh), mat);
     mesh.frustumCulled = false;
-    mesh.position.z = this.z + i * 0.004;
+    mesh.position.z = this.z + i * 0.004 + (d.front || 0);
     this.group.add(mesh);
     const L = {
       ...d, tex, data, mat, mesh, brush: new Brush(data, RING, d.H),
@@ -228,7 +242,7 @@ export class Scenery {
       if (cur === seg && !covered) continue;
       if (covered || now) { L.changes = [{ x: -1e9, seg }]; L.painted = null; }
       else L.changes.push({ x: L.painted ?? 0, seg });
-      if (seg === 'tea' && L.id === 'far') L.fujiX = (L.painted ?? 0) + (covered || now ? 120 : 300);
+      if (seg === 'tea' && L.id === 'far') L.fujiX = (covered || now) ? (L._c ?? L.scroll) + 170 : (L.painted ?? 0) + 300;
     }
     for (const L of this.layers) if (L.id === 'far') L.dyGoal = seg === 'tea' ? -34 : 0;
   }
@@ -273,20 +287,32 @@ export class Scenery {
     const sm = this.skyMat.uniforms;
     sm.glow.value = lk.glow; sm.stars.value = lk.stars;
     // sky follows the camera; the sun sits at a fixed place in the view
-    this.sky.position.x = px; this.sky.scale.x = sx;
-    this.sky.position.y = this.horizonY + this.horizonDrop + this.skyH * 0.2;
-    const hv = (this.horizonY + this.horizonDrop - (this.sky.position.y - this.skyH / 2)) / this.skyH;
-    sm.horizonV.value = hv;
-    const viewW = halfW * 2 / this.skyW;
-    sm.sunPos.value.set(0.5 + (lk.sunX - 0.5) * viewW, hv + lk.sunY * (1 - hv) * 0.55);
+    const P = view.persp;
+    if (P) {
+      const D = 1500, ss = 360;
+      this.sky.scale.set(ss, ss, 1);
+      this.sky.position.set(P.eye.x + this.planeX(P, D), P.eye.y + this.skyH * ss * 0.2, P.eye.z - D);
+      sm.horizonV.value = 0.3;
+      sm.aspect.value = this.skyW / this.skyH;
+      sm.sunPos.value.set(0.5 + (lk.sunX - 0.5) * 0.12, 0.3 + lk.sunY * 0.7 * 0.4);
+    } else {
+      this.sky.scale.set(sx, 1, 1);
+      this.sky.position.x = px; this.sky.position.z = this.z - 0.2;
+      this.sky.position.y = this.horizonY + this.horizonDrop + this.skyH * 0.2;
+      const hv = (this.horizonY + this.horizonDrop - (this.sky.position.y - this.skyH / 2)) / this.skyH;
+      sm.horizonV.value = hv;
+      const viewW = halfW * 2 / this.skyW;
+      sm.sunPos.value.set(0.5 + (lk.sunX - 0.5) * viewW, hv + lk.sunY * (1 - hv) * 0.55);
+    }
     // tunnel darkness
     const track = this.layer('track');
     let tk = 0;
     if (track && track.painted != null) {
-      const c = track.scroll + camX * cy * track.par / this.tsz;
+      const c = track._c ?? (track.scroll + camX * cy * track.par / this.tsz);
+      const hw = P ? 1.0 / ANG : halfW / this.tsz;
       let n = 0;
       for (let i = 0; i <= 8; i++) {
-        const X = c + (i / 8 - 0.5) * halfW * 2 / this.tsz;
+        const X = c + (i / 8 - 0.5) * hw * 2;
         const s = track.segAt(X);
         if ((s.b === 'tunnel' && X - s.x0 > 100) || (s.a === 'tunnel' && s.b !== 'tunnel' && X - s.x0 < 10)) n++;
       }
@@ -294,10 +320,21 @@ export class Scenery {
     }
     this._tk = tk;
     U.dim.value = this.dim;
-    for (const L of this.layers) {
+    this.layers.forEach((L, li) => {
       L.scroll += dt * this.speed * L.spd;
-      const center = L.scroll + camX * cy * L.par / this.tsz;
-      const half = halfW / this.tsz + 24;
+      let center = L.scroll + camX * cy * L.par / this.tsz;
+      let half = halfW / this.tsz + 24;
+      let ps = 0, pX = 0;
+      if (P) { // first person: the strip stands far off, scaled so a texel spans ANG radians
+        const D = PERSP_D[L.id] ?? 100;
+        ps = ANG * D / this.tsz;
+        pX = this.planeX(P, D);
+        center = L.scroll + pX / (this.tsz * ps);
+        half = 1.9 / ANG + 24;
+        L.mesh.position.set(P.eye.x + pX, P.eye.y + (L.hz + L.dy - L.H / 2) * this.tsz * ps, P.eye.z - D + li * 0.01);
+        L.mesh.scale.set(ps, ps, 1);
+      }
+      L._c = center; L._half = half;
       if (L.painted == null || center - half < L.painted - RING + L.ch || center + half > L.painted + RING) {
         L.painted = Math.floor((center - half - 32) / L.ch) * L.ch;
       }
@@ -305,13 +342,18 @@ export class Scenery {
       while (L.painted < center + half + 16 && n < 40) { this.paintChunk(L); n++; }
       if (L.dirty) { L.tex.needsUpdate = true; L.dirty = false; }
       L.mat.uniforms.offset.value = center;
-      L.mesh.position.x = px; L.mesh.scale.x = sx;
-      this.placeLayer(L);
+      if (!P) { L.mesh.position.x = px; L.mesh.position.z = this.z + li * 0.004 + (L.front || 0); L.mesh.scale.set(sx, 1, 1); this.placeLayer(L); }
       if (L.smear) L.mat.uniforms.smear.value = Math.min(24, this.speed * L.spd * (1 / 60) * 1.2);
       if (L.dy !== L.dyGoal) L.dy += Math.sign(L.dyGoal - L.dy) * Math.min(Math.abs(L.dyGoal - L.dy), dt * 6);
       // the other layers vanish while the tunnel covers the view
       if (L !== track) L.mesh.visible = tk < 0.999;
-    }
+    });
     this.sky.visible = tk < 0.999;
+  }
+  // where a far plane at distance D should be centred so the view ray hits its middle
+  planeX(P, D) {
+    const f = P.fwd;
+    const t = f.z < -0.15 ? D / -f.z : D / 0.15;
+    return Math.max(-D * 1.6, Math.min(D * 1.6, f.x * t));
   }
 }

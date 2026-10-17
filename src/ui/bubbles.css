@@ -46,5 +46,6 @@
 .caption.c-place { font-size: 30px; letter-spacing: 2px; }
 .caption.c-subtitle { font-size: 18px; color: #e8f0ff; }
 .caption b { color: #ffd060; font-weight: 400; }
+.caption.c-thought { font-size: 18px; font-style: italic; color: #f4ecff; background: rgba(30, 22, 44, 0.55); border-radius: 18px; padding: 6px 18px; }
 
 .bubble.ambient { pointer-events: none; opacity: 0.94; }
