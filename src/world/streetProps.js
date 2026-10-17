@@ -181,7 +181,8 @@ export function gachaMachine({ seed = 1, body = 0xf4f2ec, dust = 0 } = {}) {
   };
   tier(0, seed); tier(Hh, seed + 1);
   fill(v, -1, W, -4, -1, -1, 10, 0x8a8e96); // stand
-  fill(v, -1, W, 2 * Hh, 2 * Hh + 1, -1, 10, 0xd8302a); // top header bar
+  const capC = [0xd8302a, 0x2a7ad8, 0xf0b020, 0x3aa860, 0xe85a9a, 0x8a5ad8, 0xff7a2a][seed % 7];
+  fill(v, 0, W - 1, 2 * Hh, 2 * Hh + 1, -1, 10, (x, y, z) => (y === 2 * Hh + 1 && (z === 4 || z === 5) ? sh(capC, 1.25) : y === 2 * Hh + 1 && (x === 0 || x === W - 1) ? sh(capC, 0.8) : capC)); // top header cap
   const g = grp(vm(v, V25, [W / 2, 0, 5]));
   g.position.y = 0;
   g.children[0].position.y = 4 * V25;

@@ -52,7 +52,7 @@ const STACK = {
     { id: 'far', H: 150, hz: 136, spd: 8, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 260 },
     { id: 'hills', H: 96, hz: 88, spd: 26, par: 0.1, fog: 0.22, ch: 64, paint: paintHills, blend: 160 },
     { id: 'plain', H: 74, hz: 22, spd: 70, par: 0.25, fog: 0.1, ch: 128, paint: paintFarGround, blend: 40 },
-    { id: 'near', H: 210, hz: 76, gy: 104, spd: 210, par: 0.55, fog: 0.04, ch: 128, paint: paintNear, blend: 30 },
+    { id: 'near', H: 300, hz: 76, gy: 104, spd: 210, par: 0.55, fog: 0.04, ch: 128, paint: paintNear, blend: 30 },
     { id: 'track', H: 240, hz: 15, gy: 230, mastTop: 12, wireY: 36, spd: 520, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
     { id: 'fore', H: 120, hz: -193, gy: 20, spd: 900, par: 1.2, fog: 0.0, ch: 256, paint: paintFore, blend: 1, smear: 1, front: 9.5 },
   ],

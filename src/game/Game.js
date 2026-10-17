@@ -247,6 +247,7 @@ export class Game extends Emitter {
     // camera follows the player by default in gameplay
     this.rig.update(dt, this.renderer);
     this.fp?.update(rawDt);
+    this.rotBtns?.update();
     this.letterbox = damp(this.letterbox, this.letterboxGoal, 6, rawDt);
     this.renderer.uniforms.letterbox.value = this.letterbox;
     const f = this.rig.target;

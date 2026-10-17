@@ -132,10 +132,10 @@ export async function trainChapter(g) {
     g.audio?.ambience?.('train');
     g.renderer.setGrade('melancholy', 0);
     // ---- outside: the Kodama running through the paddies, nose to car 7
-    D.cam({ x: OUT.x0 + 20, y: 4.7, z: OUT.z, wupp: 0.034, pitch: 2, yaw: 0, dur: 0 });
+    D.cam({ x: OUT.x0 + 20, y: 6.2, z: OUT.z, wupp: 0.034, pitch: 2, yaw: 0, dur: 0 });
     await D.fadeIn(2.2);
     D.caption('The Kodama · bound for Kodama-machi', { dur: 4.2, kind: 'place' });
-    await D.cam({ x: OUT.car7 + 5, y: 4.2, z: OUT.z, wupp: 0.03, pitch: 2, yaw: 0, dur: 9, ease: 'inOutSine' });
+    await D.cam({ x: OUT.car7 + 5, y: 5.2, z: OUT.z, wupp: 0.03, pitch: 2, yaw: 0, dur: 9, ease: 'inOutSine' });
     // push in on one window...
     await D.cam({ x: OUT.car7 + 3.3, y: 2.62, z: OUT.z, wupp: 0.006, pitch: 2, yaw: 0, dur: 2.4, ease: 'inCubic' });
     await D.fadeOut(0.3);

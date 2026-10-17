@@ -1,0 +1,4 @@
+.rot-btns { position: fixed; right: 14px; bottom: 14px; display: flex; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 25; }
+.rot-btns.on { opacity: 1; pointer-events: auto; }
+.rot-btns button { width: 46px; height: 46px; border-radius: 50%; border: 3px solid #3a2418; background: #f4e4c4; color: #6a2c20; font-size: 24px; line-height: 1; box-shadow: 0 3px 0 #3a2418; cursor: pointer; font-family: inherit; }
+.rot-btns button:active { transform: translateY(2px); box-shadow: 0 1px 0 #3a2418; }

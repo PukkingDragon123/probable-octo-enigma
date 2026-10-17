@@ -110,11 +110,11 @@ export async function shopChapter(g) {
     await D.say(G, 'Haven\'t had much reason to open, lately...', { expr: 'sad', auto: 1.6 });
     // ---- the photo
     D.mark('photo');
-    P.walkTo(3.25, -0.05, { nav: L.nav });
+    P.walkTo(4.0, -0.05, { nav: L.nav });
     await D.wait(1.8);
     P.faceYaw(Math.PI);
-    P.lookAt({ x: 3.25, y: 2.25, z: -3 }, 1);
-    await D.cam({ x: 3.25, y: 2.25, z: -2.95, wupp: 0.0042, pitch: 10, dur: 1.8, ease: 'inOutSine', clip: 1.4 });
+    P.lookAt({ x: 4.75, y: 2.45, z: -3 }, 1);
+    await D.cam({ x: 4.75, y: 2.45, z: -2.95, wupp: 0.0042, pitch: 10, dur: 1.8, ease: 'inOutSine', clip: 1.4 });
     await D.wait(1.0);
     await D.think(P, '...', { auto: 1.2 });
     G.walkTo(2.1, 0.5, { nav: L.nav });
