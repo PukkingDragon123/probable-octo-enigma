@@ -42,7 +42,7 @@ export const LOOKS = {
 const STACK = {
   window: [
     { id: 'clouds', H: 96, hz: 92, spd: 1.6, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
-    { id: 'far', H: 110, hz: 100, spd: 3, par: 0.04, fog: 0.3, ch: 64, paint: paintFar, blend: 160, ink: 'sil', silCol: pk('#4a5884') },
+    { id: 'far', H: 110, hz: 100, spd: 3, par: 0.04, fog: 0.2, ch: 64, paint: paintFar, blend: 160, ink: 'sil', silCol: pk('#4a5884') },
     { id: 'hills', H: 96, hz: 88, spd: 10, par: 0.1, fog: 0.1, ch: 64, paint: paintHills, blend: 100, ink: 'sil', silCol: pk('#10241a'), inkCol: INK },
     { id: 'plain', H: 56, hz: 22, spd: 28, par: 0.25, fog: 0.04, ch: 128, paint: paintFarGround, blend: 40, ink: 'obj', inkCol: pk('#1c1a24') },
     { id: 'near', H: 140, hz: 76, gy: 84, spd: 95, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 30, ink: 'obj', inkCol: INK },
@@ -246,7 +246,7 @@ export class Scenery {
       if (cur === seg && !covered) continue;
       if (covered || now) { L.changes = [{ x: -1e9, seg }]; L.painted = null; }
       else L.changes.push({ x: L.painted ?? 0, seg });
-      if (seg === 'tea' && L.id === 'far') L.fujiX = (covered || now) ? (L._c ?? L.scroll) + 170 : (L.painted ?? 0) + 300;
+      if (seg === 'tea' && L.id === 'far') L.fujiX = (covered || now) ? (L._c ?? L.scroll) + 24 : (L.painted ?? 0) + 40;
     }
     for (const L of this.layers) if (L.id === 'far') L.dyGoal = 0;
   }

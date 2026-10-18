@@ -74,6 +74,7 @@ const FAR_BACK = pks(['#8a9cc6', '#98a9cf', '#a7b6d8', '#b5c2df']);
 const FAR_FRONT = pks(['#6b7eae', '#7689b6', '#8395c0', '#91a2c9']);
 const SNOW = pks(['#c2cce6', '#d8dff0', '#eef2fa', '#ffffff']);
 const MIST = pk('#dfe6f0');
+const FUJI = pks(['#4a5c94', '#56699e', '#6476a8', '#7284b2']);
 const CITY_FAR = pks(['#7a86a6', '#8892b0', '#96a0bc']);
 
 function backH(seg, X) {
@@ -100,10 +101,10 @@ function frontH(seg, X) {
 function fujiH(L, X) {
   const fx = L.fujiX;
   if (fx == null) return 0;
-  const d = Math.abs(X - fx), R = 150;
+  const d = Math.abs(X - fx), R = 120;
   if (d > R) return 0;
-  let h = 40 * Math.pow(1 - d / R, 1.55);
-  if (d < 5) h = 40 * Math.pow(1 - 5 / R, 1.55) - (d < 3 ? 1 : 0);
+  let h = 29 * Math.pow(1 - d / R, 1.5);
+  if (d < 4) h = 29 * Math.pow(1 - 4 / R, 1.5) - (d < 2 ? 1 : 0);
   return h + 3;
 }
 
@@ -124,13 +125,13 @@ export function paintFar(B, L) {
       if (isFuji) {
         const d = X - L.fujiX;
         // snow cap with streaks down the gullies
-        const snowLine = 21 + 8 * n1(X / 4, 31) * (1 - Math.abs(d) / 150) + (h1(X >> 1, 32) > 0.7 ? 5 * h1(X, 33) : 0);
+        const snowLine = 8 + 5 * n1(X / 4, 31) * (1 - Math.abs(d) / 120) + (h1(X >> 1, 32) > 0.7 ? 5 * h1(X, 33) : 0);
         const fromTop = (hz - y);
         const lit = d < 0 ? 0.72 : 0.32;
-        if (fromTop > Math.max(0, fu - snowLine) && fromTop > fu - 25) return flat(SNOW, lit + 0.18 - depth * 0.25 + (n2(X / 3, y / 2, 34) - 0.5) * 0.2);
+        if (fromTop > Math.max(0, fu - snowLine) && fromTop > fu - 12) return flat(SNOW, lit + 0.18 - depth * 0.25 + (n2(X / 3, y / 2, 34) - 0.5) * 0.2);
         const v = lit - depth * 0.35 + (n2(X / 4, y / 3, 35) - 0.5) * 0.25;
-        if (fromTop < 6) return MIST;
-        return flat(FAR_BACK, v);
+        if (fromTop < 3) return MIST;
+        return flat(FUJI, v);
       }
       const v = 0.45 + (slope > 0 ? 0.35 : -0.25) * Math.min(1, Math.abs(slope) / 2) - depth * 0.3 + (n2(X / 5 + y * 0.2, y / 4, 36) - 0.5) * 0.3;
       const fromTop = (hz - y);
