@@ -258,10 +258,13 @@ export class Game extends Emitter {
     for (const c of L.chars) { if (pushers.length >= 8) break; pushers.push({ x: c.x, y: c.y, z: c.z, r: 0.45 }); }
     updateSpriteUniforms(this.rig.camera, { sunDir: this.lighting.sunDir(), pushers, cut: L.cut || null });
     this.renderer.updateGrade(rawDt);
-    // outline thresholds scale with zoom so far views don't fill with creases
+    // ink lines: depth-gap thresholds (world units; relative to distance in
+    // first person) scale with zoom, and the lines thin out as the camera
+    // pulls back, so far views don't fill with lines
     const k = Math.max(1, this.rig.wupp / 0.0125);
-    if (this.rig.pov) this.renderer.setEdges(0.35, 0.9);
-    else this.renderer.setEdges(0.05 * k, 0.16 * k);
+    if (this.rig.pov) this.renderer.setEdges(0.06, 0.14, 1, 4, 30);
+    else this.renderer.setEdges(0.085 * k, 0.15 * k, clamp(1.45 - 0.45 * k, 0.4, 1), 6, 26);
+    this.renderer.setKeyLight(this.lighting.sunDir());
   }
   render() { if (this.location) this.renderer.render(this.location.scene, this.rig, this.time); }
   start() {

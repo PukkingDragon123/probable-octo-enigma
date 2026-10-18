@@ -6,6 +6,7 @@
 // foxRig.js: 1 voxel = 0.05 units, root at the feet, facing +Z.
 import * as THREE from 'three';
 import { VoxelModel, keyX, keyY, keyZ } from './voxel.js';
+import { OUTLINE } from '../core/materials.js';
 
 export { VoxelModel, keyX, keyY, keyZ };
 export const VS = 0.05; // world units per voxel
@@ -153,12 +154,14 @@ export function geoCache(build) {
 
 // ------------------------------------------------------------------ material
 // Lambert + per-voxel grain aligned to the voxel grid (offset for half-voxel pivots).
+// actor: characters (tagged for the outline pass: finer ink lines + rim light)
 const matCache = new Map();
-export function grainMaterial(scale = VS, off = [0, 0, 0], amount = 0.08, emissive = 0) {
-  const key = `${scale},${off.join(',')},${amount},${emissive}`;
+export function grainMaterial(scale = VS, off = [0, 0, 0], amount = 0.08, emissive = 0, actor = false) {
+  const key = `${scale},${off.join(',')},${amount},${emissive},${actor}`;
   let m = matCache.get(key);
   if (m) return m;
   m = new THREE.MeshLambertMaterial({ vertexColors: true, emissive });
+  if (actor) m.defines = { K_CLASS: OUTLINE.actor };
   const o = new THREE.Vector3(...off);
   const freq = (1 / scale).toFixed(2);
   m.onBeforeCompile = (shader) => {
@@ -186,7 +189,7 @@ float crHash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.3
   return m;
 }
 /** Grain material matching a geometry built with buildGeo. */
-export const matFor = (geo, amount = 0.08, emissive = 0) => grainMaterial(geo.userData.scale || VS, geo.userData.grain || [0, 0, 0], amount, emissive);
+export const matFor = (geo, amount = 0.08, emissive = 0, actor = false) => grainMaterial(geo.userData.scale || VS, geo.userData.grain || [0, 0, 0], amount, emissive, actor);
 /** A standalone voxel prop mesh. */
 export function voxMesh(model, pivot, scale = VS, { shadows = true, amount = 0.08 } = {}) {
   const geo = buildGeo(model, pivot, scale);

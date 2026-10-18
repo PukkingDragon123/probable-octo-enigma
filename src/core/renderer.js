@@ -1,17 +1,21 @@
-// Pixel renderer: the 3D scene is drawn into a small render target, then
-// upscaled with nearest-neighbour filtering through a post pass that adds a
-// depth-based outline, soft bloom, a per-world colour grade, tilt-shift haze,
-// vignette, letterbox bars and an iris wipe. A 1px margin lets the camera snap
-// to whole texels while the leftover sub-pixel offset is applied when blitting
-// (smooth camera motion with no pixel crawl).
+// Pixel renderer: the 3D scene is drawn into a small render target, then a
+// low-res composite pass adds thin anime ink lines, the characters' rim
+// light, soft bloom, a per-world colour grade, tilt-shift haze and vignette,
+// and a screen pass upscales it with nearest-neighbour filtering under
+// flashes, letterbox bars, fades and an iris wipe. A 1px margin lets the
+// camera snap to whole texels while the leftover sub-pixel offset is applied
+// when blitting (smooth camera motion with no pixel crawl).
 //
 // Kodamaya runs a finer grid than The Bear Must Eat (about 960x540 low-res
 // pixels on a 1080p screen instead of 640x360) so faces and painted textures
-// stay readable, while still reading as pixel art.
+// stay readable, while still reading as pixel art. ?px=N (setPixelScale)
+// renders N screen pixels per low-res pixel at the same framing: ?px=1 is
+// full resolution, about 4x the fragment work of the default on 1080p.
 //
 // The cloud sea over unexplored Spirit Realm islands is a raymarched
 // heightfield ("fog") drawn once per low-res pixel into its own target.
 import * as THREE from 'three';
+import { ANIME } from './materials.js';
 
 const FS_VERT = /* glsl */ `
 varying vec2 vUv;
@@ -48,22 +52,45 @@ const POST_VERT = /* glsl */ `
 void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;
 
-const POST_FRAG = /* glsl */ `
+// Low-res composite, one fragment per low-res pixel (so the outline taps cost
+// a quarter of what they would at screen resolution): anime ink lines, the
+// characters' rim light, bloom, the cloud sea, the colour grade, tilt-shift
+// haze and vignette.
+//
+// Ink: 1 low-res pixel (2 with ?px= finer pixels) on the near side of depth
+// discontinuities (the depth Laplacian is positive there; planar ramps
+// cancel out), so silhouettes of characters and props against what is
+// behind them get a clean line while flat walls, floors, painted planes and
+// face planes (polygon-offset onto their surface) get none. The gap has to
+// clear a threshold in world units (relative to distance in first person)
+// sized above a voxel step, so the voxel grid doesn't turn into a mesh of
+// lines; characters (class actor in the colour target's alpha, see
+// materials.js OUTLINE) take a finer threshold so arms in front of bodies
+// still read, pixel sprites only get their big silhouettes and dither-faded
+// cutaways none. A second, wider test finds strong convex creases (box
+// edges, eaves) that hold over a few pixels on both sides. Lines fade out
+// behind the focus and are mixed in perceptual (sqrt) space so they stay
+// light.
+const COMP_FRAG = /* glsl */ `
 uniform sampler2D tColor;
 uniform sampler2D tDepth;
 uniform sampler2D tBloom;
 uniform sampler2D tFog;
 uniform vec2 rtSize;
-uniform vec2 subpixel;
-uniform float pixelScale;
+uniform vec2 lowSize;       // screen size in low-res pixels
 uniform float depthRange;
 uniform float persp;
 uniform vec2 nearFar;
-uniform float outlineAmt;
-uniform vec2 edgeRange;
-uniform vec3 outlineTint;
-uniform float highlightAmt;
-uniform vec2 screenSize;
+uniform vec2 edgeRange;     // silhouette gap thresholds (world units; relative in perspective)
+uniform float lineAmt;      // ink opacity (grade x zoom)
+uniform float lineW;        // line width in low-res pixels (2 when rendering finer pixels, ?px=)
+uniform vec3 inkColor;
+uniform float focusDepth;   // linear depth of the camera target
+uniform vec2 lineFade;      // lines fade out between these depths behind the focus
+uniform vec3 crease;        // x: amount, y: tap radius (px), z: threshold (world units over the radius)
+uniform vec2 rimDir;        // screen direction (low-res px) of the rim-lit side
+uniform vec3 rimColor;
+uniform float rimAmt;
 uniform float vignette;
 uniform vec3 vignetteColor;
 uniform float saturation;
@@ -73,14 +100,7 @@ uniform float contrast;
 uniform float bloomAmt;
 uniform float haze;
 uniform vec3 hazeColor;
-uniform float flash;
-uniform vec3 flashColor;
-uniform vec3 iris;          // x, y (screen px), radius (px); radius < 0 = off
-uniform float letterbox;    // 0..1 cinematic bars
-uniform float fade;         // 0..1 fade to fadeColor (bayer-dithered in chunky pixels)
-uniform vec3 fadeColor;
 uniform float fogOn;
-uniform float time;
 uniform float warmth;       // golden-hour / lantern warmth push
 
 float D(vec2 p) {
@@ -89,47 +109,90 @@ float D(vec2 p) {
   float n = nearFar.x, f = nearFar.y;
   return 2.0 * n * f / (f + n - (z * 2.0 - 1.0) * (f - n));
 }
-vec3 C(vec2 p) { return texture2D(tColor, (p + 0.5) / rtSize).rgb; }
-float bayer2(vec2 a) { a = floor(a); return fract(a.x * 0.5 + a.y * a.y * 0.75); }
-float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
-float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
 
 void main() {
-  vec2 lp = floor(gl_FragCoord.xy / pixelScale + subpixel) + 1.0;
-  vec3 col = C(lp);
+  vec2 lp = floor(gl_FragCoord.xy);
+  vec4 c4 = texture2D(tColor, (lp + 0.5) / rtSize);
+  vec3 col = c4.rgb;
+  float cls = c4.a;
   float d = D(lp);
   float dl = D(lp + vec2(-1.0, 0.0));
   float dr = D(lp + vec2(1.0, 0.0));
   float db = D(lp + vec2(0.0, -1.0));
   float dt = D(lp + vec2(0.0, 1.0));
-  // Laplacian of depth: planar ramps cancel out, silhouettes and creases don't.
-  float lap = (dl + dr + db + dt) - 4.0 * d;
-  if (persp > 0.5) lap = lap / max(d, 0.02); // perspective: relative to how far away it is
-  float edge = smoothstep(edgeRange.x, edgeRange.y, lap);
-  float crease = smoothstep(edgeRange.x * 0.07, edgeRange.x * 0.3, lap) * (1.0 - edge);
-  // tinted inner outline: darker and a little purple, never flat black
-  col = mix(col, col * outlineTint, outlineAmt * edge);
-  col *= 1.0 + highlightAmt * crease;
-  vec2 buv = (lp - 0.5) / rtSize;
-  vec3 bl = texture2D(tBloom, buv).rgb;
+  float sc = persp > 0.5 ? 1.0 / max(d, 0.02) : 1.0;
+  // per-axis depth Laplacian: > 0 on the near side of a step
+  float gap = max(dl + dr - 2.0 * d, db + dt - 2.0 * d);
+  if (lineW > 1.5) gap = max(gap, max(D(lp + vec2(-2.0, 0.0)) + D(lp + vec2(2.0, 0.0)), D(lp + vec2(0.0, -2.0)) + D(lp + vec2(0.0, 2.0))) - 2.0 * d);
+  gap *= sc;
+  bool actor = cls > 0.6 && cls < 0.9;
+  float thr = cls > 0.9 ? 1.0 : actor ? 0.8 : cls > 0.35 ? 2.4 : 1e6;
+  float edge = smoothstep(edgeRange.x * thr, edgeRange.y * thr, gap);
+  if (crease.x > 0.001 && cls > 0.9) {
+    float R = crease.y;
+    float wx = D(lp + vec2(-R, 0.0)) + D(lp + vec2(R, 0.0)) - 2.0 * d;
+    float wy = D(lp + vec2(0.0, -R)) + D(lp + vec2(0.0, R)) - 2.0 * d;
+    float cw = max(wx, wy) * sc;
+    edge = max(edge, crease.x * smoothstep(crease.z, crease.z * 1.6, cw) * step(edgeRange.x * 0.12, gap));
+  }
+  float behind = d - focusDepth;
+  edge *= lineAmt * (cls > 0.35 && cls < 0.6 ? 0.7 : 1.0) * (1.0 - smoothstep(lineFade.x, lineFade.y, behind));
+  // rim light: the pixel just inside a character's silhouette on the side away from the key
+  if (actor && rimAmt > 0.001) {
+    vec2 o2 = floor(rimDir * 2.0 * lineW + 0.5);
+    float g2 = (D(lp + o2) - d) * sc;
+    float rk = smoothstep(edgeRange.x * 0.6, edgeRange.y * 0.6, g2) * (1.0 - step(0.01, edge));
+    col += rimColor * rimAmt * rk;
+  }
+  vec3 bl = texture2D(tBloom, (lp - 0.5) / rtSize).rgb;
   col += bl * bloomAmt;
   if (fogOn > 0.5) {
     vec4 fg = texture2D(tFog, (lp + 0.5) / rtSize);
     col = mix(col, fg.rgb, fg.a);
+    edge *= 1.0 - fg.a;
   }
-  // grade: lifted cool shadows, warm gain, gentle contrast
+  // grade: clean saturation, a whisper of lift in the darks, warm gain
   float l = dot(col, vec3(0.299, 0.587, 0.114));
   col = mix(vec3(l), col, saturation);
   col = col * grade + lift * (1.0 - clamp(l * 1.6, 0.0, 1.0));
   col += warmth * vec3(0.06, 0.025, -0.03) * smoothstep(0.2, 0.9, l);
   col = mix(vec3(0.5), col, contrast);
   col = max(col, 0.0);
-  vec2 uv = gl_FragCoord.xy / screenSize;
+  // ink, mixed in sqrt (roughly perceptual) space
+  vec3 gs = mix(sqrt(col), sqrt(inkColor), clamp(edge, 0.0, 1.0));
+  col = gs * gs;
+  vec2 uv = (lp - 0.5) / lowSize;
   // tilt-shift haze towards the top and bottom (miniature diorama feel)
-  float ts = smoothstep(0.3, 0.52, abs(uv.y - 0.47));
+  float ts = smoothstep(0.32, 0.54, abs(uv.y - 0.47));
   col = mix(col, mix(col, hazeColor, 0.3) + bl * 0.35, ts * haze);
   float v = smoothstep(0.95, 0.35, length((uv - 0.5) * vec2(1.0, 0.9)));
   col = mix(col * mix(vignetteColor, vec3(1.0), 0.35), col, mix(1.0 - vignette, 1.0, v));
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+// Screen pass: nearest-neighbour upscale of the composite with the camera's
+// sub-pixel offset, then flashes, the iris wipe, dithered fades and letterbox.
+const POST_FRAG = /* glsl */ `
+uniform sampler2D tComp;
+uniform vec2 rtSize;
+uniform vec2 subpixel;
+uniform float pixelScale;
+uniform vec2 screenSize;
+uniform float flash;
+uniform vec3 flashColor;
+uniform vec3 iris;          // x, y (screen px), radius (px); radius < 0 = off
+uniform float letterbox;    // 0..1 cinematic bars
+uniform float fade;         // 0..1 fade to fadeColor (bayer-dithered in chunky pixels)
+uniform vec3 fadeColor;
+
+float bayer2(vec2 a) { a = floor(a); return fract(a.x * 0.5 + a.y * a.y * 0.75); }
+float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
+float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
+
+void main() {
+  vec2 lp = floor(gl_FragCoord.xy / pixelScale + subpixel) + 1.0;
+  vec3 col = texture2D(tComp, (lp + 0.5) / rtSize).rgb;
   col = mix(col, flashColor, flash);
   // chunky pixel grid used by the wipes
   float px = pixelScale * 2.0;
@@ -329,23 +392,30 @@ function fogNoiseTexture() {
 }
 
 // Colour-grade presets. The game blends between them (world changes, time of
-// day, story moods).
+// day, story moods). Anime first: clean saturated colour, shade that is a
+// tint rather than a darkening, light ink lines, a soft vignette and only a
+// breath of tilt-shift haze.
+//   shade: linear tint multiplied into the albedo wherever the key light
+//          doesn't reach (materials.js ANIME.kShade)
+//   ink / line: outline colour (sRGB) and opacity
+//   rim / rimAmt: the characters' rim light (sRGB colour, strength)
 export const GRADES = {
-  // The Bear Must Eat's cozy grade is the base for everything: warm gain,
-  // lifted violet shadows, tinted outlines, tilt-shift haze, soft bloom.
-  // Human World: the same warmth, a hair less saturated, slightly cooler lift
-  human: { saturation: 1.32, grade: [1.03, 1.0, 0.96], lift: [0.014, 0.01, 0.036], contrast: 1.08, vignette: 0.3, vignetteColor: [0.55, 0.42, 0.62], haze: 0.15, hazeColor: [1.0, 0.9, 0.8], outlineTint: [0.36, 0.3, 0.42], warmth: 0.05, bloom: 0.42 },
-  humanDusk: { saturation: 1.38, grade: [1.05, 0.99, 0.95], lift: [0.028, 0.014, 0.056], contrast: 1.09, vignette: 0.32, vignetteColor: [0.55, 0.38, 0.6], haze: 0.15, hazeColor: [1.0, 0.8, 0.72], outlineTint: [0.4, 0.3, 0.42], warmth: 0.18, bloom: 0.6 },
-  humanNight: { saturation: 1.3, grade: [0.97, 0.98, 1.06], lift: [0.02, 0.018, 0.07], contrast: 1.06, vignette: 0.42, vignetteColor: [0.3, 0.26, 0.5], haze: 0.24, hazeColor: [0.36, 0.36, 0.6], outlineTint: [0.3, 0.28, 0.44], warmth: 0.0, bloom: 0.62 },
-  // Spirit Realm: warmer, more saturated, golden haze
-  spirit: { saturation: 1.34, grade: [1.05, 1.0, 0.93], lift: [0.03, 0.012, 0.05], contrast: 1.04, vignette: 0.28, vignetteColor: [0.62, 0.45, 0.62], haze: 0.28, hazeColor: [1.0, 0.88, 0.74], outlineTint: [0.42, 0.3, 0.4], warmth: 0.3, bloom: 0.5 },
-  spiritDusk: { saturation: 1.3, grade: [1.08, 0.97, 0.9], lift: [0.04, 0.012, 0.06], contrast: 1.05, vignette: 0.36, vignetteColor: [0.55, 0.35, 0.55], haze: 0.32, hazeColor: [1.0, 0.75, 0.62], outlineTint: [0.42, 0.28, 0.4], warmth: 0.55, bloom: 0.66 },
-  // the sad train ride: still warm and readable, a touch quieter and bluer
-  melancholy: { saturation: 1.12, grade: [1.01, 1.0, 1.0], lift: [0.02, 0.018, 0.048], contrast: 1.06, vignette: 0.36, vignetteColor: [0.42, 0.4, 0.6], haze: 0.14, hazeColor: [0.9, 0.88, 0.92], outlineTint: [0.36, 0.32, 0.44], warmth: 0.0, bloom: 0.4 },
-  // interiors lit by warm bulbs (TBME's homes / lab)
-  cozy: { saturation: 1.22, grade: [1.04, 1.0, 0.94], lift: [0.03, 0.014, 0.05], contrast: 1.05, vignette: 0.34, vignetteColor: [0.55, 0.4, 0.55], haze: 0.18, hazeColor: [1.0, 0.86, 0.72], outlineTint: [0.4, 0.3, 0.38], warmth: 0.3, bloom: 0.48 },
+  // Human World by day: crisp, bright, cool lavender shade
+  human: { saturation: 1.16, grade: [1.02, 1.0, 0.98], lift: [0.004, 0.004, 0.014], contrast: 1.06, vignette: 0.14, vignetteColor: [0.6, 0.52, 0.72], haze: 0.07, hazeColor: [1.0, 0.95, 0.9], warmth: 0.04, bloom: 0.36, shade: [0.72, 0.71, 0.96], ink: [0.11, 0.086, 0.15], line: 0.88, rim: [1.0, 0.96, 0.88], rimAmt: 0.16 },
+  // golden hour: warm light, violet shade
+  humanDusk: { saturation: 1.18, grade: [1.03, 0.995, 0.97], lift: [0.008, 0.004, 0.024], contrast: 1.07, vignette: 0.16, vignetteColor: [0.6, 0.46, 0.68], haze: 0.07, hazeColor: [1.0, 0.88, 0.8], warmth: 0.1, bloom: 0.46, shade: [0.66, 0.6, 0.94], ink: [0.12, 0.08, 0.15], line: 0.88, rim: [1.0, 0.88, 0.74], rimAmt: 0.18 },
+  // night: deep blue shade, lamps carry the colour
+  humanNight: { saturation: 1.2, grade: [0.98, 0.99, 1.04], lift: [0.008, 0.01, 0.03], contrast: 1.05, vignette: 0.22, vignetteColor: [0.34, 0.3, 0.56], haze: 0.1, hazeColor: [0.4, 0.42, 0.66], warmth: 0.0, bloom: 0.58, shade: [0.58, 0.62, 0.98], ink: [0.07, 0.06, 0.13], line: 0.84, rim: [0.74, 0.82, 1.0], rimAmt: 0.16 },
+  // Spirit Realm: warmer, more saturated, rose-violet shade, golden air
+  spirit: { saturation: 1.2, grade: [1.03, 1.0, 0.96], lift: [0.01, 0.004, 0.02], contrast: 1.05, vignette: 0.12, vignetteColor: [0.66, 0.5, 0.68], haze: 0.1, hazeColor: [1.0, 0.9, 0.8], warmth: 0.18, bloom: 0.44, shade: [0.78, 0.66, 0.96], ink: [0.13, 0.08, 0.14], line: 0.86, rim: [1.0, 0.92, 0.76], rimAmt: 0.18 },
+  spiritDusk: { saturation: 1.18, grade: [1.05, 0.98, 0.93], lift: [0.014, 0.004, 0.028], contrast: 1.06, vignette: 0.18, vignetteColor: [0.6, 0.4, 0.62], haze: 0.12, hazeColor: [1.0, 0.8, 0.7], warmth: 0.3, bloom: 0.56, shade: [0.7, 0.56, 0.92], ink: [0.13, 0.07, 0.13], line: 0.86, rim: [1.0, 0.84, 0.66], rimAmt: 0.2 },
+  // the sad train ride: still clean and readable, a touch quieter and bluer
+  melancholy: { saturation: 1.06, grade: [1.0, 1.0, 1.01], lift: [0.008, 0.008, 0.022], contrast: 1.05, vignette: 0.18, vignetteColor: [0.44, 0.42, 0.62], haze: 0.05, hazeColor: [0.9, 0.9, 0.94], warmth: 0.0, bloom: 0.36, shade: [0.66, 0.68, 0.94], ink: [0.1, 0.086, 0.15], line: 0.88, rim: [0.9, 0.94, 1.0], rimAmt: 0.14 },
+  // interiors lit by warm bulbs: honey light, cool violet shade
+  cozy: { saturation: 1.14, grade: [1.03, 1.0, 0.97], lift: [0.01, 0.006, 0.022], contrast: 1.05, vignette: 0.16, vignetteColor: [0.58, 0.46, 0.62], haze: 0.05, hazeColor: [1.0, 0.9, 0.8], warmth: 0.08, bloom: 0.42, shade: [0.72, 0.64, 0.92], ink: [0.12, 0.08, 0.14], line: 0.88, rim: [1.0, 0.9, 0.76], rimAmt: 0.16 },
 };
 
+const _v3 = new THREE.Vector3(), _f3 = new THREE.Vector3(), _r3 = new THREE.Vector3();
 
 export class PixelRenderer {
   constructor(canvas) {
@@ -363,6 +433,13 @@ export class PixelRenderer {
 
     this.pixelScale = 2;
     this.pixelDensity = 1; // user setting: <1 chunkier, >1 finer
+    // finer (or chunkier) pixels at the same framing: ?px=N or setPixelScale(N)
+    // forces N screen pixels per low-res pixel; basePixelScale is what the
+    // game is framed for, fine = basePixelScale / pixelScale (the camera
+    // divides its world-units-per-pixel by it)
+    this.forcePixelScale = Math.max(0, Math.round(+new URLSearchParams(globalThis.location?.search || '').get('px') || 0));
+    this.basePixelScale = 2;
+    this.fine = 1;
     this.lowW = 1; this.lowH = 1;
     this.rtW = 3; this.rtH = 3;
     this.rt = null;
@@ -385,11 +462,13 @@ export class PixelRenderer {
     this.blurPass = mkPass(BLUR_FRAG, { tSrc: { value: null }, dir: { value: new THREE.Vector2() } });
 
     const U = (this.uniforms = {
-      tColor: { value: null }, tDepth: { value: null }, tBloom: { value: null }, tFog: { value: null },
-      rtSize: { value: new THREE.Vector2(1, 1) }, subpixel: { value: new THREE.Vector2() },
+      tColor: { value: null }, tDepth: { value: null }, tBloom: { value: null }, tFog: { value: null }, tComp: { value: null },
+      rtSize: { value: new THREE.Vector2(1, 1) }, lowSize: { value: new THREE.Vector2(1, 1) }, subpixel: { value: new THREE.Vector2() },
       pixelScale: { value: 2 }, depthRange: { value: 1 }, persp: { value: 0 }, nearFar: { value: new THREE.Vector2(1, 600) },
-      outlineAmt: { value: 0.6 }, edgeRange: { value: new THREE.Vector2(0.07, 0.2) },
-      outlineTint: { value: new THREE.Vector3(0.36, 0.32, 0.42) }, highlightAmt: { value: 0.1 },
+      // ink lines (see COMP_FRAG)
+      edgeRange: { value: new THREE.Vector2(0.08, 0.14) }, lineAmt: { value: 0.7 }, lineW: { value: 1 }, inkColor: { value: new THREE.Color(0.012, 0.008, 0.02) },
+      focusDepth: { value: 119 }, lineFade: { value: new THREE.Vector2(8, 30) }, crease: { value: new THREE.Vector3(0, 6, 0.1) },
+      rimDir: { value: new THREE.Vector2(1, 0.3) }, rimColor: { value: new THREE.Color(1, 0.95, 0.85) }, rimAmt: { value: 0.2 },
       screenSize: { value: new THREE.Vector2(1, 1) },
       vignette: { value: 0.3 }, vignetteColor: { value: new THREE.Vector3(0.45, 0.4, 0.55) },
       saturation: { value: 1.05 }, grade: { value: new THREE.Vector3(1.02, 1, 0.97) },
@@ -406,6 +485,13 @@ export class PixelRenderer {
       fogLight: { value: new THREE.Vector3(1.0, 0.97, 0.93) }, fogShade: { value: new THREE.Vector3(0.78, 0.72, 0.84) },
       fogRim: { value: new THREE.Vector3(1, 1, 1) }, fogSun: { value: new THREE.Vector3(0, 1, 0) },
     });
+    // line knobs outside the grade: zoom fade (setEdges), strong-crease
+    // strength, and the key light's direction for the rim side (setKeyLight)
+    this.lineZoom = 1;
+    this.creaseAmt = 0.5;
+    this.keyDir = new THREE.Vector3(-0.4, 0.8, 0.45).normalize();
+    this.compPass = mkPass(COMP_FRAG, U, POST_VERT);
+    this.compRT = null;
     this.postScene = new THREE.Scene();
     this.postMat = new THREE.ShaderMaterial({ vertexShader: POST_VERT, fragmentShader: POST_FRAG, uniforms: U, depthTest: false, depthWrite: false });
     const quad = new THREE.Mesh(quadGeo, this.postMat);
@@ -427,19 +513,26 @@ export class PixelRenderer {
     this.renderer.setSize(W, H, false);
     const diag = Math.sqrt(W * W + H * H);
     const target = 1100 * this.pixelDensity; // low-res diagonal we aim for
-    this.pixelScale = Math.max(2, Math.round(diag / target));
-    if (diag < 900) this.pixelScale = Math.max(1, Math.round(diag / target)); // tiny windows
+    let ps = Math.max(2, Math.round(diag / target));
+    if (diag < 900) ps = Math.max(1, Math.round(diag / target)); // tiny windows
+    this.basePixelScale = ps;
+    this.pixelScale = this.forcePixelScale || ps;
+    this.fine = ps / this.pixelScale;
+    this._size = [cssW, cssH, dpr];
     this.lowW = Math.ceil(W / this.pixelScale);
     this.lowH = Math.ceil(H / this.pixelScale);
     this.rtW = this.lowW + 2;
     this.rtH = this.lowH + 2;
-    if (this.rt) { this.rt.depthTexture.dispose(); this.rt.dispose(); this.bloomA.dispose(); this.bloomB.dispose(); }
+    if (this.rt) { this.rt.depthTexture.dispose(); this.rt.dispose(); this.bloomA.dispose(); this.bloomB.dispose(); this.compRT.dispose(); }
     const depthTexture = new THREE.DepthTexture(this.rtW, this.rtH);
     depthTexture.type = THREE.UnsignedIntType;
     depthTexture.minFilter = depthTexture.magFilter = THREE.NearestFilter;
     this.rt = new THREE.WebGLRenderTarget(this.rtW, this.rtH, {
       type: THREE.HalfFloatType, minFilter: THREE.NearestFilter, magFilter: THREE.LinearFilter,
       generateMipmaps: false, depthBuffer: true, depthTexture,
+    });
+    this.compRT = new THREE.WebGLRenderTarget(this.rtW, this.rtH, {
+      type: THREE.HalfFloatType, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, generateMipmaps: false, depthBuffer: false,
     });
     const bw = Math.max(1, Math.ceil(this.rtW / 2)), bh = Math.max(1, Math.ceil(this.rtH / 2));
     const bopt = { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false, depthBuffer: false };
@@ -450,9 +543,17 @@ export class PixelRenderer {
     u.tColor.value = this.rt.texture;
     u.tDepth.value = this.rt.depthTexture;
     u.tBloom.value = this.bloomA.texture;
+    u.tComp.value = this.compRT.texture;
     u.rtSize.value.set(this.rtW, this.rtH);
+    u.lowSize.value.set(W / this.pixelScale, H / this.pixelScale);
     u.pixelScale.value = this.pixelScale;
     u.screenSize.value.set(W, H);
+  }
+
+  // render N screen pixels per low-res pixel (0 = automatic); same framing
+  setPixelScale(n = 0) {
+    this.forcePixelScale = Math.max(0, Math.round(n));
+    if (this._size) this.resize(...this._size);
   }
 
   // ---- colour grade: blend to a preset over `dur` seconds
@@ -480,9 +581,15 @@ export class PixelRenderer {
     u.vignetteColor.value.fromArray(C.vignetteColor);
     u.haze.value = C.haze;
     u.hazeColor.value.fromArray(C.hazeColor);
-    u.outlineTint.value.fromArray(C.outlineTint);
     u.warmth.value = C.warmth;
     this.bloomStrength = C.bloom;
+    const sh = ANIME.kShade.value, st = C.shade || GRADES.human.shade;
+    sh.x = st[0]; sh.y = st[1]; sh.z = st[2];
+    const ink = C.ink || GRADES.human.ink, rim = C.rim || GRADES.human.rim;
+    u.inkColor.value.setRGB(ink[0], ink[1], ink[2], THREE.SRGBColorSpace);
+    u.rimColor.value.setRGB(rim[0], rim[1], rim[2], THREE.SRGBColorSpace);
+    u.rimAmt.value = C.rimAmt ?? 0.2;
+    this.lineGrade = C.line ?? 0.7;
   }
   updateGrade(dt) {
     if (this.gradeT >= 1 || !this.gradeTo) return;
@@ -522,7 +629,17 @@ export class PixelRenderer {
     const dpr = this.dpr || 1;
     u.set(cssX * dpr, this.H - cssY * dpr, radius * dpr);
   }
-  setEdges(lo, hi) { this.uniforms.edgeRange.value.set(lo, hi); }
+  // ink thresholds (world-unit depth gaps; relative in perspective), line
+  // opacity for this zoom, and how far behind the focus lines fade out
+  setEdges(lo, hi, amt = 1, fadeFrom = 8, fadeTo = 30) {
+    const u = this.uniforms;
+    u.edgeRange.value.set(lo, hi);
+    u.lineFade.value.set(fadeFrom, fadeTo);
+    this.lineZoom = amt;
+  }
+  // the key light's direction (towards the light): the rim light goes on the
+  // characters' far side from it
+  setKeyLight(dir) { this.keyDir.copy(dir); }
 
   render(scene, cameraRig, time) {
     const r = this.renderer;
@@ -533,6 +650,22 @@ export class PixelRenderer {
     u.persp.value = cam.isPerspectiveCamera ? 1 : 0;
     u.nearFar.value.set(cam.near, cam.far);
     u.time.value = time;
+    // ink: focus depth for the distance fade, crease taps sized in world units,
+    // rim side from the key light seen on screen
+    const e = cam.matrixWorld.elements;
+    _f3.set(-e[8], -e[9], -e[10]); _r3.set(e[0], e[1], e[2]);
+    const tgt = cameraRig.pov ? cameraRig.pov.look : cameraRig.target;
+    const fd = _v3.copy(tgt).sub(cam.position).dot(_f3);
+    u.focusDepth.value = cam.isPerspectiveCamera ? fd : fd - cam.near;
+    u.lineAmt.value = (this.lineGrade ?? 0.7) * this.lineZoom;
+    u.lineW.value = this.fine >= 1.5 ? 2 : 1;
+    if (cam.isPerspectiveCamera) u.crease.value.x = 0;
+    else {
+      const wupp = (cam.right - cam.left) / this.rtW;
+      const R = Math.max(3, Math.min(16, Math.round(0.15 / wupp)));
+      u.crease.value.set(this.creaseAmt, R, Math.max(R * wupp * 1.15, 0.12));
+    }
+    u.rimDir.value.set(this.keyDir.dot(_r3) > 0 ? -1 : 1, 0.45).normalize();
     if (u.fogOn.value) {
       u.invVP.value.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse);
       u.camDir.value.set(0, 0, -1).transformDirection(cam.matrixWorld);
@@ -565,6 +698,8 @@ export class PixelRenderer {
       }
       u.bloomAmt.value = this.bloomStrength;
     } else u.bloomAmt.value = 0;
+    r.setRenderTarget(this.compRT);
+    r.render(this.compPass.scene, this.fsCam);
     r.setRenderTarget(null);
     r.render(this.postScene, this.fsCam);
   }

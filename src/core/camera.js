@@ -60,8 +60,10 @@ export class CameraRig {
     return { x: o.x, y: o.y ?? 0, z: o.z };
   }
 
+  // world units per low-res pixel actually rendered (finer with ?px=, same framing)
+  wuppFor(renderer) { return this.wupp / (renderer.fine || 1); }
   panPixels(dx, dy, renderer) {
-    const wuppCss = this.wupp * (renderer.dpr || 1) / renderer.pixelScale;
+    const wuppCss = this.wuppFor(renderer) * (renderer.dpr || 1) / renderer.pixelScale;
     const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);
     const rx = cy, rz = -sy, fx = -sy, fz = -cy;
     const gx = dx * wuppCss, gy = dy * wuppCss / Math.sin(this.pitch);
@@ -208,7 +210,7 @@ export class CameraRig {
     const e = cam.matrixWorld.elements;
     _R.set(e[0], e[1], e[2]);
     _U.set(e[4], e[5], e[6]);
-    const w = this.wupp;
+    const w = this.wuppFor(renderer);
     const px = cam.position.dot(_R) / w, py = cam.position.dot(_U) / w;
     const fx = px - Math.round(px), fy = py - Math.round(py);
     cam.position.addScaledVector(_R, -fx * w).addScaledVector(_U, -fy * w);
@@ -260,6 +262,6 @@ export class CameraRig {
     return out;
   }
   // CSS px per world unit at the current zoom (for sizing DOM bits in-world)
-  cssPerUnit(renderer) { return renderer.pixelScale / (this.wupp * (renderer.dpr || 1)); }
+  cssPerUnit(renderer) { return renderer.pixelScale / (this.wuppFor(renderer) * (renderer.dpr || 1)); }
   viewDir(out = new THREE.Vector3()) { return out.set(0, 0, -1).transformDirection(this.camera.matrixWorld); }
 }
