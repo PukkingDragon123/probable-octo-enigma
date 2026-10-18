@@ -301,7 +301,7 @@ export function folkDesign(def) {
   const extras = [];
   const hat = hatModel(def.hat);
   if (hat) extras.push({ joint: 'head', model: hat, at: [0, def.hat.type === 'straw' ? 11.4 : 11.6, def.hat.type === 'kerchief' ? -0.5 : 0], rot: [-0.06, 0, 0], name: 'hat' });
-  if (def.glasses) extras.push({ joint: 'head', model: roundGlasses({ frame: hex(def.glasses.frame, 0x2a2a2a), dx: 6.5, r: 3.6, temples: 12 }), scale: FV, at: [0, 5.95, 6.6], name: 'glasses', shadow: false });
+  if (def.glasses) extras.push({ joint: 'head', model: roundGlasses({ frame: hex(def.glasses.frame, 0x2a2a2a), dx: 6.5, r: 4.5, temples: 12 }), scale: FV, at: [0, 6.35, 6.6], name: 'glasses', shadow: false });
   if (H.whiskers) { const w = new VoxelModel(); for (const s of [-1, 1]) for (const dy of [0, -2]) line3(w, [s * 5, dy, 0], [s * 10, dy + (dy === 0 ? 1 : -1), -1], 0xe8e0d8); extras.push({ joint: 'head', model: w, scale: FV, at: [-0.5, 2.6, 6.4], name: 'whiskers', shadow: false }); }
   const kid = def.kid || (def.scale ?? 1) < 0.72;
   return {

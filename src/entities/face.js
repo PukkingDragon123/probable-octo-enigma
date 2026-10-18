@@ -101,6 +101,21 @@ export class Face {
       ...style,
     };
     if (typeof this.s.skin === 'number') this.s.skin = '#' + this.s.skin.toString(16).padStart(6, '0');
+    // The Bear Must Eat's villager eyes: big glossy beads, each about a fifth of
+    // the face wide, set well apart, with the brows lifted clear of them and the
+    // blush tucked under. Applies to every face unless a style opts out.
+    if (this.s.tbme !== false) {
+      const S = this.s;
+      S.eyeStyle = 'gloss';
+      S.eyeW = Math.max(S.eyeW, Math.round(S.w * 0.21));
+      S.eyeH = Math.max(S.eyeH, Math.round(S.eyeW * 1.12));
+      S.eyeDX = Math.max(S.eyeDX, Math.ceil(S.eyeW / 2) + 4);
+      S.eyeY = Math.max(S.eyeY, Math.ceil(S.eyeH / 2) + 4);
+      S.browY = Math.min(S.browY, Math.floor(S.eyeY - S.eyeH / 2) - 3);
+      S.blushY = Math.max(S.blushY, Math.ceil(S.eyeY + S.eyeH / 2) + 1);
+      S.blushDX = Math.max(S.blushDX, S.eyeDX + 2);
+      if (S.iris === '#3a2418') { S.iris = '#5a2e1c'; S.irisLight = '#a8602e'; }
+    }
     this.pc = new PixCanvas(this.s.w, this.s.h);
     this.texture = new THREE.CanvasTexture(this.pc.c);
     this.texture.magFilter = THREE.NearestFilter;

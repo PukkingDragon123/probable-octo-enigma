@@ -527,8 +527,26 @@ export function buildMustache(def, faceZ) {
 
 // meshing helpers
 export function geo(model, pivot = [0, 0, 0], scale = VS) { return buildGeo(model, pivot, scale); }
+// The Bear Must Eat's hand-painted voxel look: single voxels a shade darker or
+// lighter, and soft 2x2 patches, so skin, fur and cloth never read as flat plastic
+const MOTTLE = new WeakMap();
+const tint = (c, f) => (Math.min(255, Math.round(((c >> 16) & 255) * f)) << 16) | (Math.min(255, Math.round(((c >> 8) & 255) * f)) << 8) | Math.min(255, Math.round((c & 255) * f));
+function mottled(model) {
+  let m = MOTTLE.get(model);
+  if (m) return m;
+  m = new VoxelModel();
+  for (const [k, c] of model.vox) {
+    const x = keyX(k), y = keyY(k), z = keyZ(k);
+    const h = hash3(x * 3 + 11, y * 5 + 7, z * 7 + 3), q = hash3((x >> 1) + 50, (y >> 1) + 9, (z >> 1) + 31);
+    let f = h < 0.1 ? 0.9 : h > 0.93 ? 1.08 : 1;
+    f *= q < 0.18 ? 0.95 : q > 0.86 ? 1.04 : 1;
+    m.set(x, y, z, f === 1 ? c : tint(c, f));
+  }
+  MOTTLE.set(model, m);
+  return m;
+}
 export function vmesh(model, pivot, { shadow = true, scale = VS } = {}) {
-  const g = geo(model, pivot, scale);
+  const g = geo(mottled(model), pivot, scale);
   const m = new THREE.Mesh(g, matFor(g));
   m.castShadow = shadow;
   m.receiveShadow = true;
