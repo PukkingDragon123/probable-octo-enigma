@@ -187,6 +187,7 @@ export function paintTrack(B, L) {
     if (s.a === 'tunnel' && tunnelCol(B, L, X, 'out', local)) continue;
     const seg = s.b;
     if (seg === 'station') { platform(B, L, X, local); continue; }
+    if (L.bankless) continue; // the voxel embankment stands here instead
     embankment(B, L, X, flowers);
     if ((seg === 'city' && n2(X / 400, 0, 541) > 0.3) || (seg === 'village' && n2(X / 500, 0, 542) > 0.6)) barrier(B, L, X, n2(X / 300, 1, 543));
     anyMast = true;

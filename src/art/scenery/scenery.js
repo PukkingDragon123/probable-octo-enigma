@@ -161,7 +161,9 @@ void main() {
 const col = (hex) => new THREE.Color(hex);
 
 export class Scenery {
-  constructor({ tsz = 0.0068, horizonY = 1.15, z = -1.4, refZ = null, layout = 'window', skyW = 40, skyH = 8, ids = null } = {}) {
+  constructor({ tsz = 0.0068, horizonY = 1.15, z = -1.4, refZ = null, layout = 'window', skyW = 40, skyH = 8, ids = null, sky = true, bankless = false } = {}) {
+    this.hidden = new Set(); // layer ids not drawn (and not painted) right now
+    this.bankless = bankless; // the track layer only paints tunnels and the station
     this.tsz = tsz; this.horizonY = horizonY; this.z = z; this.refZ = refZ ?? z;
     this.view = { x: 0, z: 0, yaw: 0, pitch: 0, halfW: 3 };
     this.group = new THREE.Group();
@@ -184,10 +186,11 @@ export class Scenery {
     });
     this.skyW = skyW; this.skyH = skyH;
     this.sky = new THREE.Mesh(new THREE.PlaneGeometry(skyW, skyH), this.skyMat);
-    this.sky.position.set(0, horizonY + skyH * 0.2, z - 0.2);
+    this.sky.position.set(0, horizonY + skyH * 0.2, z - 0.04);
     this.skyMat.uniforms.horizonV.value = 0.3;
     this.sky.frustumCulled = false;
-    this.group.add(this.sky);
+    if (sky) this.group.add(this.sky);
+    this.hasSky = sky;
     // layers
     this.layers = [];
     const defs = STACK[layout].filter((d) => !ids || ids.includes(d.id));
@@ -207,11 +210,11 @@ export class Scenery {
     const W = RING * this.tsz, Hh = d.H * this.tsz;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, Hh), mat);
     mesh.frustumCulled = false;
-    mesh.position.z = this.z + i * 0.004 + (d.front || 0);
+    mesh.position.z = this.z + i * 0.012 + (d.front || 0);
     this.group.add(mesh);
     const L = {
       ...d, tex, data, mat, mesh, brush: new Brush(data, RING, d.H),
-      scroll: 200000, painted: null, changes: [{ x: -1e9, seg: 'country' }], dy: 0, dyGoal: 0, fujiX: null,
+      scroll: 200000, painted: null, changes: [{ x: -1e9, seg: 'country' }], dy: 0, dyGoal: 0, fujiX: null, bankless: this.bankless,
     };
     L.segAt = (X) => {
       const C = L.changes;
@@ -349,7 +352,7 @@ export class Scenery {
       sm.sunPos.value.set(0.5 + (lk.sunX - 0.5) * 0.12, 0.3 + lk.sunY * 0.7 * 0.4);
     } else {
       this.sky.scale.set(sx, 1, 1);
-      this.sky.position.x = px; this.sky.position.z = this.z - 0.2;
+      this.sky.position.x = px; this.sky.position.z = this.z - 0.04;
       this.sky.position.y = this.horizonY + this.horizonDrop + this.skyH * 0.2;
       const hv = (this.horizonY + this.horizonDrop - (this.sky.position.y - this.skyH / 2)) / this.skyH;
       sm.horizonV.value = hv;
@@ -392,10 +395,11 @@ export class Scenery {
         L.painted = Math.floor((center - half - 32) / L.ch) * L.ch;
       }
       let n = 0;
+      if (this.hidden.has(L.id)) { L.mesh.visible = false; L.painted = null; return; }
       while (L.painted < center + half + 16 && n < 40) { this.paintChunk(L); n++; }
       if (L.dirty) { L.tex.needsUpdate = true; L.dirty = false; }
       L.mat.uniforms.offset.value = center;
-      if (!P) { L.mesh.position.x = px; L.mesh.position.z = this.z + li * 0.004 + (L.front || 0); L.mesh.scale.set(sx, 1, 1); this.placeLayer(L); }
+      if (!P) { L.mesh.position.x = px; L.mesh.position.z = this.z + li * 0.012 + (L.front || 0); L.mesh.scale.set(sx, 1, 1); this.placeLayer(L); }
       if (L.smear) L.mat.uniforms.smear.value = Math.min(24, this.speed * L.spd * (1 / 60) * 1.2);
       if (L.dy !== L.dyGoal) L.dy += Math.sign(L.dyGoal - L.dy) * Math.min(Math.abs(L.dyGoal - L.dy), dt * 6);
       // the other layers vanish while the tunnel covers the view

@@ -9,6 +9,7 @@ import { Location } from '../game/Location.js';
 import { VoxelModel, vm, glowVm, fill, tone, hash3, sh, V5, V25 } from '../world/build.js';
 import { rbox } from '../vox/kit.js';
 import { Scenery } from '../art/scenery/scenery.js';
+import { VoxelBands } from '../art/scenery/voxelBands.js';
 import { shinkansenCar, CAR_LEN } from '../world/shinkansen.js';
 import { PixCanvas, makeTexture } from '../core/pixtex.js';
 import { emitMat } from '../core/materials.js';
@@ -297,14 +298,21 @@ export class TrainLocation extends Location {
     this.rain = 0;
   }
   get speed() { return this.scenery.speed; }
-  set speedGoal(v) { this.scenery.speedGoal = v; if (this.outScenery) this.outScenery.speedGoal = v; }
+  set speedGoal(v) { this.scenery.speedGoal = v; this.fore.speedGoal = v; if (this.outScenery) this.outScenery.speedGoal = v; }
   get speedGoal() { return this.scenery.speedGoal; }
   async build() {
     const S = this.scene;
     S.add(vm(carShell(), V5, [0, 0, 0]));
     // the world outside
-    this.scenery = new Scenery({ tsz: 0.009, horizonY: 1.17, z: -1.45, refZ: CAR.wallZ, skyW: 30, skyH: 7 });
+    // the world outside: real voxel country in three bands (embankment, near
+    // fields and houses, the far plain), the painted hills, mountains and sky
+    // behind, and a painted layer in front that only shows tunnels and the station
+    this.vox = new VoxelBands({ refZ: CAR.wallZ });
+    S.add(this.vox.group);
+    this.scenery = new Scenery({ tsz: 0.009, horizonY: 1.17, z: -8, refZ: CAR.wallZ, skyW: 40, skyH: 9, ids: ['clouds', 'far', 'hills', 'plain', 'near'] });
     S.add(this.scenery.group);
+    this.fore = new Scenery({ tsz: 0.009, horizonY: 1.17, z: -0.92, refZ: CAR.wallZ, ids: ['track'], sky: false, bankless: true });
+    S.add(this.fore.group);
     // outside: the whole Kodama running through the country, for establishing shots
     // (far from the cut-away car; the camera visits it at z ~ OUT.z)
     this.outScenery = new Scenery({ tsz: 0.028, horizonY: OUT.y + 7.5, z: OUT.z - 8, refZ: OUT.z, layout: 'outside', skyW: 90, skyH: 34 });
@@ -418,19 +426,29 @@ export class TrainLocation extends Location {
     Character.faceUpK = 0.1; // the camera is low and side-on here
   }
   exit() { const l = this.game.lighting; l.override = null; l.fixedAzimuth = null; Character.faceUpK = 1; }
-  setTime(name, dur) { this.scenery.setTime(name, dur); this.outScenery.setTime(name, dur); }
-  setSegment(seg, o) { this.scenery.setSegment(seg, o); if (seg !== 'tunnel' && seg !== 'station') this.outScenery.setSegment(seg, { now: true }); }
+  setTime(name, dur) { this.scenery.setTime(name, dur); this.fore.setTime(name, dur); this.outScenery.setTime(name, dur); }
+  setSegment(seg, o) {
+    const covered = this.fore.tunnelK > 0.98;
+    this.scenery.setSegment(seg, o); this.fore.setSegment(seg, o);
+    this.vox.setSegment(seg, { now: !!o?.now || covered });
+    if (seg !== 'tunnel' && seg !== 'station') this.outScenery.setSegment(seg, { now: true });
+  }
   get outside() { return this.game.rig.target.z > OUT.z - 30 && !this.game.rig.pov; }
   update(dt, t) {
     const g = this.game, rig = g.rig, R = g.renderer;
     const sc = this.scenery;
     const pov = rig.pov ? { eye: rig.persp.position, fwd: rig.persp.getWorldDirection(this._fwd || (this._fwd = new THREE.Vector3())) } : null;
-    sc.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wuppFor(R)) / 2, persp: pov });
+    const view = { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wuppFor(R)) / 2, persp: pov };
+    // first person shows the painted fields (the voxel bands are built for the side-on camera)
+    if (pov) sc.hidden.clear(); else if (!sc.hidden.size) { sc.hidden.add('plain'); sc.hidden.add('near'); }
+    sc.update(dt, view);
+    this.fore.update(dt, view);
+    this.vox.update(dt, view, { speed: sc.speed, lights: sc.look.lights, haze: sc.look.haze, visible: !pov && this.fore.tunnelK < 0.999 && !this.outside });
     this.povSide.visible = !!pov || Math.cos(rig.yaw) < -0.2; // reverse shots from the window side see it too
     const out = this.outside;
     this.outScenery.group.visible = out; this.outTrain.visible = out;
     if (out) this.outScenery.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wuppFor(R)) / 2 });
-    const tk = sc.tunnelK, lk = sc.look, sp = sc.speed;
+    const tk = this.fore.tunnelK, lk = sc.look, sp = sc.speed;
     // the glass and the beams
     for (const u of this.glassU) { u.time.value = t; u.rain.value = this.rain; u.speed.value = sp; u.night.value = Math.max(tk, lk.lights * 0.6); }
     this.beamU.time.value = t;
