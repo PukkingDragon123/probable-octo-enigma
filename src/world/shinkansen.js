@@ -45,8 +45,19 @@ export function shinkansenCar({ nose = false, number = 1, panto = false, len = C
   const isDoor = (x) => doorXs.some((d) => x >= d && x < d + DW);
   const color = (x, y, z) => {
     if (y < -12) return DARK; // underframe
-    if (y < 2) return tone(x, y, z, BLUE, BLUE_D, sh(BLUE, 1.1), 0.05, 0.04); // skirt
-    if (y >= YW0 - 2 && y <= YW1 + 2) return BLUE; // window band
+    if (y < 2) { // the blue skirt: louvred vents, a darker lower lip, road grime
+      if (y < -9) return sh(BLUE_D, 0.85);
+      const lv = ((x - x0) % 60 + 60) % 60;
+      if (lv > 6 && lv < 18 && y > -8 && y < -1) return (y & 1) ? sh(BLUE_D, 0.7) : sh(BLUE, 1.12);
+      return tone(x, y, z, BLUE, BLUE_D, sh(BLUE, 1.1), 0.05, 0.04);
+    }
+    if (y >= YW0 - 2 && y <= YW1 + 2) return y === YW0 - 2 ? sh(BLUE, 1.15) : BLUE; // window band, a lit lower edge
+    if (y === 4) return sh(BLUE, 1.05); // the pinstripe over the skirt
+    // panel joints and seams, grime low down, rain streaks under the windows
+    if (((x - x0) % 50 + 50) % 50 === 0 && y > 2 && y < 46) return IVORY_D;
+    if (y === 46 || y === 10) return IVORY_D;
+    if (y < 9 && hash3(x >> 3, y >> 1, 7) < 0.3) return sh(IVORY, 0.93); // road grime in soft patches
+    if (y < YW0 - 2 && y > 12 && ((x - x0) % winPitch + winPitch) % winPitch === 9 && hash3(x, y, 9) < 0.6) return sh(IVORY, 0.94);
     if (y > 46) return tone(x, y, z, IVORY, IVORY_D, 0xfaf8f0, 0.05, 0.05);
     return tone(x, y, z, IVORY, IVORY_D, 0xfaf8f0, 0.04, 0.04);
   };
@@ -62,19 +73,21 @@ export function shinkansenCar({ nose = false, number = 1, panto = false, len = C
     for (let z = -60; z <= sideZ(YTOP); z++) v.set(x, YTOP + (z < -50 ? 0 : 0), z, tone(x, YTOP, z, 0xb8bcc4, 0x9aa0a8, 0xc8ccd4, 0.12, 0.05));
     for (let y = YTOP - 4; y < YTOP; y++) { const z = sideZ(y); v.set(x, y, z, x % 40 === 0 ? IVORY_D : color(x, y, z)); }
   }
-  // windows (dark glass with a sky reflection gradient)
+  // windows: rounded glass holding the sky and the green fields going by, a
+  // bevelled silver frame (lit top / left, shaded bottom / right)
   for (let wx = x0 + 8; wx + winW < x1 - 6; wx += winPitch) {
     if (doorXs.some((d) => wx + winW > d - 3 && wx < d + DW + 3)) continue;
     for (let x = wx; x < wx + winW; x++) for (let y = YW0; y <= YW1; y++) {
-      const corner = (x === wx || x === wx + winW - 1) && (y === YW0 || y === YW1);
-      if (corner) continue;
+      const ex = x === wx || x === wx + winW - 1, ey = y === YW0 || y === YW1;
+      if (ex && ey) continue;
       const k = (y - YW0) / (YW1 - YW0);
-      const refl = (x - wx + (YW1 - y)) % 11 < 2 ? 0x8a9ab8 : k > 0.6 ? GLASS_L : GLASS;
-      v.set(x, y, 0, refl);
+      let c = k > 0.72 ? 0x9ab4d0 : k > 0.5 ? 0x6a86a8 : k > 0.3 ? 0x3e5a54 : GLASS;
+      if ((x - wx + (YW1 - y)) % 11 < 2) c = 0xc8d8ec;
+      v.set(x, y, 0, c);
       v.set(x, y, 1, null);
     }
-    // silver frame
-    for (let x = wx - 1; x <= wx + winW; x++) { v.set(x, YW0 - 1, 1, GREY); v.set(x, YW1 + 1, 1, GREY); }
+    for (let x = wx - 1; x <= wx + winW; x++) { v.set(x, YW0 - 1, 1, 0x6a6e76); v.set(x, YW1 + 1, 1, 0xc4c8d0); }
+    for (let y = YW0; y <= YW1; y++) { v.set(wx - 1, y, 1, 0xb4b8c0); v.set(wx + winW, y, 1, 0x7a7e86); }
   }
   // door openings (holes; the door leaves are separate meshes)
   for (const d of doorXs) {
@@ -89,13 +102,31 @@ export function shinkansenCar({ nose = false, number = 1, panto = false, len = C
   }
   // pantograph + AC boxes on the roof
   if (panto) {
-    for (let x = -12; x <= 12; x++) v.set(x, YTOP + 1, -30, DARK);
-    for (let k = 0; k <= 14; k++) { v.set(-8 + k, YTOP + 2 + k, -30, GREY); v.set(8 - k, YTOP + 2 + k, -30, GREY); }
-    for (let z = -40; z <= -20; z++) v.set(0, YTOP + 16, z, 0x5a5a62);
+    for (let x = -14; x <= 14; x++) v.set(x, YTOP + 1, -30, DARK);
+    for (const ix of [-12, 12]) for (let y = YTOP + 1; y <= YTOP + 4; y++) v.set(ix, y, -30, y & 1 ? 0x8a5a4a : 0xc8a090); // insulators
+    for (let k = 0; k <= 14; k++) { v.set(-8 + k, YTOP + 4 + k, -30, GREY); v.set(8 - k, YTOP + 4 + k, -30, GREY); }
+    for (let z = -40; z <= -20; z++) v.set(0, YTOP + 18, z, 0x5a5a62);
   }
-  for (let ax = x0 + 40; ax < x1 - 40; ax += 120) for (let x = ax; x < ax + 30; x++) for (let z = -44; z <= -16; z++) for (let y = YTOP + 1; y <= YTOP + 3; y++) v.set(x, y, z, y === YTOP + 3 ? 0xc8ccd4 : 0xa8acb4);
-  // bogies peeking under the skirt
-  for (const bx of [x0 + 30, x1 - 30]) for (let x = bx - 14; x <= bx + 14; x++) for (let y = Y0 - 6; y < Y0; y++) v.set(x, y, -2, (x + y) % 5 === 0 ? 0x4a4a52 : DARK);
+  for (let ax = x0 + 40; ax < x1 - 40; ax += 120) for (let x = ax; x < ax + 30; x++) for (let z = -44; z <= -16; z++) for (let y = YTOP + 1; y <= YTOP + 4; y++) {
+    const grille = y === YTOP + 4 && (x - ax) % 6 > 1 && (z % 6 + 6) % 6 > 1;
+    v.set(x, y, z, grille ? 0x6a6e76 : y === YTOP + 4 ? 0xd4d8de : (x - ax) % 10 === 0 ? 0x8a8e96 : 0xa8acb4);
+  }
+  if (!panto) for (let y = YTOP + 1; y <= YTOP + 6; y++) v.set(x0 + 20, y, -24, 0x4a4a52); // a little antenna
+  // underfloor equipment boxes between the bogies (grilles, a darker lid)
+  for (let bx = x0 + 60; bx < x1 - 60; bx += 70) for (let x = bx; x < bx + 44; x++) for (let y = Y0 - 4; y < Y0 + 10; y++) {
+    if (y > -13) continue;
+    v.set(x, y, -3, y === Y0 + 9 || y === -13 ? 0x3a3a42 : ((x - bx) % 4 === 0 && y > Y0) ? 0x2a2a30 : 0x5a5e66);
+  }
+  // bogies: wheels with lit rims and hubs, springs, a frame
+  for (const bx of [x0 + 30, x1 - 30]) {
+    for (let x = bx - 16; x <= bx + 16; x++) for (let y = Y0 - 2; y < Y0 + 2; y++) v.set(x, y, -1, (x + y) % 5 === 0 ? 0x4a4a52 : 0x34343c);
+    for (const wx of [bx - 9, bx + 9]) for (let x = wx - 6; x <= wx + 6; x++) for (let y = Y0 - 13; y <= Y0 - 1; y++) {
+      const d = Math.hypot(x - wx, y - (Y0 - 7));
+      if (d > 6.4) continue;
+      v.set(x, y, 0, d > 5.4 ? 0x9aa0a8 : d < 1.6 ? 0xa8acb4 : d < 2.6 ? 0x3a3a42 : 0x22222a);
+    }
+    for (const sx of [bx - 2, bx + 2]) for (let y = Y0 - 6; y < Y0; y++) v.set(sx, y, 1, y & 1 ? 0x7a7e86 : 0x4a4e56);
+  }
   // gangway bellows at the ends
   for (const ex of nose ? [x0 - 1] : [x0 - 1, x1 + 1]) for (let y = 0; y <= 46; y++) for (let z = -6; z <= -1; z++) v.set(ex, y, z, y % 3 === 0 ? 0x1a1a20 : DARK);
 
