@@ -72,8 +72,8 @@ export async function day4Chapter(g) {
     K.play('wave');
     await D.say(K, 'Mamoru! You came! Welcome to the best island in the sky!', { expr: 'joy', name: 'Kappei' });
     P.setExpr('shy');
-    await D.say(P, '...It\'s really nice.', { expr: 'shy' });
-    await D.say(K, 'Cucumbers over there, my hot spring over there, and the lagoon! Come on!', { expr: 'excited', act: 'point' });
+    await D.say(P, '...It\'s all steam and rocks. It\'s really nice.', { expr: 'shy' });
+    await D.say(K, 'My hut, my hot spring, and the big pool — all hot water, all the way down! Come on!', { expr: 'excited', act: 'point' });
     // ---- the pier
     D.mark('pier');
     const pe = L.pierEnd;
