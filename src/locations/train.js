@@ -303,11 +303,11 @@ export class TrainLocation extends Location {
     const S = this.scene;
     S.add(vm(carShell(), V5, [0, 0, 0]));
     // the world outside
-    this.scenery = new Scenery({ tsz: 0.016, horizonY: 1.18, z: -1.45, refZ: CAR.wallZ, skyW: 30, skyH: 7 });
+    this.scenery = new Scenery({ tsz: 0.009, horizonY: 1.17, z: -1.45, refZ: CAR.wallZ, skyW: 30, skyH: 7 });
     S.add(this.scenery.group);
     // outside: the whole Kodama running through the country, for establishing shots
     // (far from the cut-away car; the camera visits it at z ~ OUT.z)
-    this.outScenery = new Scenery({ tsz: 0.05, horizonY: OUT.y + 7.5, z: OUT.z - 8, refZ: OUT.z, layout: 'outside', skyW: 90, skyH: 34 });
+    this.outScenery = new Scenery({ tsz: 0.028, horizonY: OUT.y + 7.5, z: OUT.z - 8, refZ: OUT.z, layout: 'outside', skyW: 90, skyH: 34 });
     S.add(this.outScenery.group);
     this.outTrain = new THREE.Group();
     const cars = [shinkansenCar({ nose: true, number: 8 }), shinkansenCar({ number: 7, panto: true }), shinkansenCar({ number: 6 })];

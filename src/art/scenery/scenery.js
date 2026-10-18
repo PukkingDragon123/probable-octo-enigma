@@ -13,7 +13,7 @@
 //   S.setSegment('tea'); S.setTime('golden', 8); S.speedGoal = 1;
 //   S.update(dt, camX, viewHalfWidthWorld);
 import * as THREE from 'three';
-import { Brush, SOFT, NOINK, darkenPacked, pk } from './core.js';
+import { Brush, SOFT, NOINK, darkenPacked } from './core.js';
 import { paintClouds, paintFar, paintHills } from './far.js';
 import { paintFarGround, paintNear } from './ground.js';
 import { paintTrack, paintFore } from './track.js';
@@ -21,11 +21,10 @@ import { paintTrack, paintFore } from './track.js';
 const RING = 2048;
 // first person: how far away each layer stands, and the angle one texel spans
 const PERSP_D = { clouds: 1300, far: 950, hills: 520, plain: 210, near: 64, track: 6.5 };
-const ANG = 0.009;
+const ANG = 0.005;
 export const SEGMENTS = ['country', 'farm', 'tea', 'mountain', 'village', 'valley', 'city', 'tunnel', 'station'];
 // old names: the river and the sea are gone from the view (no open water), farmland and a wooded valley stand in
 const ALIAS = { river: 'farm', sea: 'valley' };
-const INK = pk('#141018');
 
 // time-of-day looks
 export const LOOKS = {
@@ -39,25 +38,29 @@ export const LOOKS = {
 
 // layer stack. spd: texels/s at full speed; par: how much camera panning moves it;
 // fog: atmospheric haze; H: rows; hz: horizon row; gy: ground row; ch: chunk width
+// layer stack. spd: texels/s at full speed; par: how much camera panning moves it;
+// fog: atmospheric haze; H: rows; hz: horizon row; gy: ground row; ch: chunk width;
+// k: detail scale the painters size things by (1 = the old 1.6 cm texel);
+// ink: 'obj' outlines objects, 'sil' also rims the land against the sky
 const STACK = {
   window: [
-    { id: 'clouds', H: 96, hz: 92, spd: 1.6, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
-    { id: 'far', H: 110, hz: 100, spd: 3, par: 0.04, fog: 0.2, ch: 64, paint: paintFar, blend: 160, ink: 'sil', silCol: pk('#4a5884') },
-    { id: 'hills', H: 96, hz: 88, spd: 10, par: 0.1, fog: 0.1, ch: 64, paint: paintHills, blend: 100, ink: 'sil', silCol: pk('#10241a'), inkCol: INK },
-    { id: 'plain', H: 56, hz: 22, spd: 28, par: 0.25, fog: 0.04, ch: 128, paint: paintFarGround, blend: 40, ink: 'obj', inkCol: pk('#1c1a24') },
-    { id: 'near', H: 140, hz: 76, gy: 84, spd: 95, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 30, ink: 'obj', inkCol: INK },
-    { id: 'track', H: 110, hz: 60, gy: 86, mastTop: 0, wireY: 6, masts: false, spd: 280, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1, ink: 'obj', inkCol: INK },
+    { id: 'clouds', H: 170, hz: 164, k: 1.78, spd: 2.8, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
+    { id: 'far', H: 190, hz: 178, k: 1.78, spd: 5.3, par: 0.04, fog: 0.2, ch: 64, paint: paintFar, blend: 280, ink: 'sil', inkK: 0.5 },
+    { id: 'hills', H: 170, hz: 156, k: 1.78, spd: 18, par: 0.1, fog: 0.1, ch: 64, paint: paintHills, blend: 180, ink: 'sil', inkK: 0.75 },
+    { id: 'plain', H: 100, hz: 36, k: 1.78, spd: 50, par: 0.25, fog: 0.04, ch: 128, paint: paintFarGround, blend: 70, ink: 'obj', inkK: 0.8 },
+    { id: 'near', H: 250, hz: 130, gy: 144, k: 1.78, spd: 169, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 50, ink: 'obj', inkK: 1 },
+    { id: 'track', H: 200, hz: 100, gy: 141, k: 1.78, mastTop: 0, wireY: 6, masts: false, spd: 500, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1, ink: 'obj', inkK: 1 },
   ],
   // outside the train: the same country at a wider scale, plus a fast bank of
   // grass and flowers in front of the train
   outside: [
-    { id: 'clouds', H: 160, hz: 156, spd: 2.7, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
-    { id: 'far', H: 120, hz: 106, spd: 5.4, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 200, ink: 'sil', silCol: pk('#4a5884') },
-    { id: 'hills', H: 96, hz: 88, spd: 18, par: 0.1, fog: 0.2, ch: 64, paint: paintHills, blend: 120, ink: 'sil', silCol: pk('#10241a'), inkCol: INK },
-    { id: 'plain', H: 64, hz: 22, spd: 48, par: 0.25, fog: 0.08, ch: 128, paint: paintFarGround, blend: 40, ink: 'obj', inkCol: pk('#1c1a24') },
-    { id: 'near', H: 220, hz: 76, gy: 92, spd: 143, par: 0.55, fog: 0.03, ch: 128, paint: paintNear, blend: 30, ink: 'obj', inkCol: INK },
-    { id: 'track', H: 170, hz: 15, gy: 160, mastTop: 12, wireY: 30, masts: false, spd: 354, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
-    { id: 'fore', H: 90, hz: -140, gy: 16, spd: 612, par: 1.2, fog: 0.0, ch: 256, paint: paintFore, blend: 1, smear: 1, front: 9.5 },
+    { id: 'clouds', H: 285, hz: 278, k: 1.78, spd: 4.8, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
+    { id: 'far', H: 214, hz: 189, k: 1.78, spd: 9.6, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 280, ink: 'sil', inkK: 0.5 },
+    { id: 'hills', H: 171, hz: 157, k: 1.78, spd: 32, par: 0.1, fog: 0.2, ch: 64, paint: paintHills, blend: 180, ink: 'sil', inkK: 0.75 },
+    { id: 'plain', H: 114, hz: 39, k: 1.78, spd: 85, par: 0.25, fog: 0.08, ch: 128, paint: paintFarGround, blend: 70, ink: 'obj', inkK: 0.8 },
+    { id: 'near', H: 392, hz: 135, gy: 164, k: 1.78, spd: 255, par: 0.55, fog: 0.03, ch: 128, paint: paintNear, blend: 50, ink: 'obj', inkK: 1 },
+    { id: 'track', H: 303, hz: 27, gy: 285, k: 1.78, mastTop: 21, wireY: 53, masts: false, spd: 630, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
+    { id: 'fore', H: 160, hz: -249, gy: 28, k: 1.78, spd: 1090, par: 1.2, fog: 0.0, ch: 256, paint: paintFore, blend: 1, smear: 1, front: 9.5 },
   ],
 };
 
@@ -246,7 +249,7 @@ export class Scenery {
       if (cur === seg && !covered) continue;
       if (covered || now) { L.changes = [{ x: -1e9, seg }]; L.painted = null; }
       else L.changes.push({ x: L.painted ?? 0, seg });
-      if (seg === 'tea' && L.id === 'far') L.fujiX = (covered || now) ? (L._c ?? L.scroll) + 24 : (L.painted ?? 0) + 40;
+      if (seg === 'tea' && L.id === 'far') L.fujiX = (covered || now) ? (L._c ?? L.scroll) + 40 : (L.painted ?? 0) + 70;
     }
     for (const L of this.layers) if (L.id === 'far') L.dyGoal = 0;
   }
@@ -271,11 +274,13 @@ export class Scenery {
     if (L.ink) this.inkPass(L, Math.max(L.inkLo, X0 - 1), L.painted - 1);
     L.dirty = true;
   }
-  // bold outlines: an object's edge texel goes dark where it meets the ground,
-  // the empty sky, or an object painted before it (behind it)
+  // outlines, "sel-out" style: an object's edge texel takes a darker shade of
+  // its own colour where it meets the ground, the empty sky, or an object
+  // painted before it (behind it); lightest along the sunlit top, darkest
+  // under and to the left. The land's rim against the sky gets a softer line.
   inkPass(L, xa, xb) {
     const B = L.brush, d = B.d, ids = B.ids, dep = B.dep, W = RING, H = L.H;
-    const ink = L.inkCol, sil = L.ink === 'sil', silCol = L.silCol;
+    const sil = L.ink === 'sil', kk = L.inkK ?? 1;
     const lo = L.inkLo;
     for (let X = xa; X < xb; X++) {
       const c = ((X % W) + W) % W, cl = X - 1 >= lo ? ((c - 1 + W) % W) : -1, cr = (c + 1) % W;
@@ -283,13 +288,12 @@ export class Scenery {
         const i = y * W + c, v = d[i];
         if ((v >>> 24) < 100) continue;
         const a = ids[i];
-        let hit = false;
         if (a === 0) {
           if (!sil) continue;
-          if (y > 0 && (d[i - W] >>> 24) < 100) hit = true;
-          else if (cl >= 0 && (d[y * W + cl] >>> 24) < 100) hit = true;
-          else if ((d[y * W + cr] >>> 24) < 100) hit = true;
-          if (hit) d[i] = silCol ?? darkenPacked(v, 0.5);
+          let k = 0;
+          if (y > 0 && (d[i - W] >>> 24) < 100) k = 0.34;
+          else if ((cl >= 0 && (d[y * W + cl] >>> 24) < 100) || (d[y * W + cr] >>> 24) < 100) k = 0.28;
+          if (k) d[i] = darkenPacked(v, k * kk);
           continue;
         }
         if (a & NOINK) continue;
@@ -300,12 +304,16 @@ export class Scenery {
           if ((d[j] >>> 24) < 100 || b === 0) return true;
           return ((me - dep[j]) & 0xffff) < 0x8000;
         };
-        if ((y > 0 && test(i - W)) || (y < H - 1 && test(i + W)) || (cl >= 0 && test(y * W + cl)) || test(y * W + cr)) {
-          d[i] = (a & SOFT) ? darkenPacked(v, 0.62) : ink;
-        }
+        let k = 0;
+        if (y < H - 1 && test(i + W)) k = 0.6;
+        if (cl >= 0 && test(y * W + cl)) k = Math.max(k, 0.58);
+        if (test(y * W + cr)) k = Math.max(k, 0.48);
+        if (y > 0 && test(i - W)) k = Math.max(k, 0.4);
+        if (k) d[i] = darkenPacked(v, ((a & SOFT) ? k * 0.7 : k) * kk);
       }
     }
   }
+
   update(dt, view) {
     this.view = view;
     const camX = view.x, halfW = view.halfW;
@@ -358,7 +366,8 @@ export class Scenery {
       for (let i = 0; i <= 8; i++) {
         const X = c + (i / 8 - 0.5) * hw * 2;
         const s = track.segAt(X);
-        if ((s.b === 'tunnel' && X - s.x0 > 100) || (s.a === 'tunnel' && s.b !== 'tunnel' && X - s.x0 < 10)) n++;
+        const tK = track.k ?? 1;
+        if ((s.b === 'tunnel' && X - s.x0 > 100 * tK) || (s.a === 'tunnel' && s.b !== 'tunnel' && X - s.x0 < 10 * tK)) n++;
       }
       tk = n / 9;
     }

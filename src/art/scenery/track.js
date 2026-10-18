@@ -44,40 +44,42 @@ function wires(B, L) {
   }
 }
 function embankment(B, L, X, flowers) {
-  const gy = L.gy;
+  const gy = L.gy, K = L.k ?? 1;
   B.col(X, gy, B.H - 1, (x, y) => {
     const d = y - gy;
-    if (d < 4) return d === 0 ? CONC[4] : CONC[2 - (x % 9 === 0 ? 1 : 0)]; // cable trough lid
-    if (d < 6) return CONC[0];
-    let c = rampPick(GRASS, 0.75 - d * 0.012 + (n2(x / 3, y / 2, 501) - 0.5) * 0.7, x, y);
-    if (flowers && h2(x >> 1, y >> 1, 502) > 0.992) c = pk(['#f4f0ff', '#ffe060'][(x + y) % 2]);
+    if (d < 4 * K) return d === 0 ? CONC[4] : CONC[2 - (x % Math.round(9 * K) === 0 ? 1 : 0)]; // cable trough lid
+    if (d < 6 * K) return CONC[0];
+    let c = rampPick(GRASS, 0.75 - d * 0.012 / K + (n2(x / (3 * K), y / (2 * K), 501) - 0.5) * 0.7, x, y);
+    if (flowers && h2(Math.floor(x / (2 * K)), Math.floor(y / (2 * K)), 502) > 0.992) c = pk(['#f4f0ff', '#ffe060'][(x + y) % 2]);
     return c;
   });
   // tall grass and weeds leaning in the train's wind
-  if (h1(X, 503) > 0.55) { const hgt = 4 + Math.floor(h1(X, 504) * 12); for (let k = 0; k < hgt; k++) B.set(X - (k >> 2), gy - k, GRASS[2 + (k % 2)]); }
+  if (h1(X, 503) > 0.82) { const hgt = Math.round((3 + Math.floor(h1(X, 504) * 8)) * K); for (let k = 0; k < hgt; k++) B.set(X - Math.floor(k / (4 * K)), gy - k, GRASS[2 + (k % 2)]); }
 }
 function barrier(B, L, X, k) {
-  const gy = L.gy, top = gy - 16;
+  const K = L.k ?? 1, gy = L.gy, top = Math.round(gy - 16 * K), P = Math.round(48 * K);
   B.col(X, top, gy - 1, (x, y) => {
     if (y === top) return CONC[4];
     if (y < top + 3) return CONC[3];
-    if ((x % 48) === 0) return CONC[0];
-    if (k > 0.5 && y < top + 10 && y > top + 3) return (x % 48) < 2 ? CONC[1] : pk('#9ab8c8'); // clear panels
+    if ((x % P) === 0) return CONC[0];
+    if (k > 0.5 && y < top + 10 * K && y > top + 3) return (x % P) < 2 ? CONC[1] : pk('#9ab8c8'); // clear panels
     return rampPick(CONC, 0.5 + (n2(x / 6, y / 10, 511) - 0.5) * 0.5 - (y - top) * 0.004, x, y);
   });
 }
 function tunnelCol(B, L, X, mode, local) {
   // mode 'in': hillside rising to the portal then darkness; 'out': portal then hillside falling away
-  const H = B.H;
-  const hill = (k) => B.col(X, Math.round(L.gy - k), H - 1, (x, y) => {
+  const H = B.H, K = L.k ?? 1;
+  local /= K;
+  const hill = (k) => B.col(X, Math.round(L.gy - k * K), H - 1, (x, y) => {
     const d = y - (L.gy - k);
     if (d < 2) return GRASS[4];
     return rampPick(GRASS, 0.55 - d * 0.004 + (n2(x / 4, y / 4, 521) - 0.5) * 0.7, x, y);
   });
+  const LP = Math.round(220 * K), ly = Math.round(L.hz - 34 * K);
   const dark = () => B.col(X, 0, H - 1, (x, y) => {
-    if (y === L.hz - 20 || y === L.hz - 17) return TUN[3];
-    if ((x % 220) < 26 && Math.abs(y - (L.hz - 34)) < 3) return emit(Math.abs(y - (L.hz - 34)) < 2 ? '#fff2c0' : '#ffb050');
-    if ((x % 220) < 30 && Math.abs(y - (L.hz - 34)) < 5) return TUN[3];
+    if (y === Math.round(L.hz - 20 * K) || y === Math.round(L.hz - 17 * K)) return TUN[3];
+    if ((x % LP) < 26 * K && Math.abs(y - ly) < 3 * K) return emit(Math.abs(y - ly) < 2 * K ? '#fff2c0' : '#ffb050');
+    if ((x % LP) < 30 * K && Math.abs(y - ly) < 5 * K) return TUN[3];
     return rampPick(TUN, 0.4 + (n2(x / 9, y / 7, 522) - 0.5) * 0.5, x, y);
   });
   const portal = () => B.col(X, 0, H - 1, (x, y) => rampPick(CONC, 0.55 + (n2(x / 2, y / 6, 523) - 0.5) * 0.4, x, y));
@@ -116,7 +118,7 @@ export function person(B, X, gy, seed, o = {}) {
   const sp = SPECIES[Math.floor(r(1) * SPECIES.length)];
   const skin = pk(sp.skin), skinD = darkenPacked(skin, 0.25);
   const top = pk(CLOTHES[Math.floor(r(2) * CLOTHES.length)]), pants = pk(CLOTHES[Math.floor(r(3) * CLOTHES.length)]);
-  const kid = r(4) < 0.18, s = kid ? 0.7 : 1;
+  const kid = r(4) < 0.18, s = (kid ? 0.7 : 1) * (o.k ?? 1);
   const face = r(5) < 0.5 ? 1 : -1;
   const lh = Math.round(7 * s), bh = Math.round(9 * s), hw = Math.round(9 * s), hh = Math.round(8 * s);
   const y0 = gy - lh;
@@ -151,8 +153,9 @@ export function person(B, X, gy, seed, o = {}) {
   if (o.wave) { B.set(X - 6, by - 1, skin); B.set(X - 6, by - 2, skin); }
 }
 function platform(B, L, X, local) {
-  const pf = L.gy - 30; // platform surface row
-  const roof = L.hz - 100;
+  const K = L.k ?? 1;
+  const pf = Math.round(L.hz + 22 * K); // platform surface row
+  const roof = Math.round(L.hz - 100 * K);
   // platform body and surface (the yellow tactile line, the white edge)
   B.col(X, pf, B.H - 1, (x, y) => {
     const d = y - pf;
@@ -168,7 +171,7 @@ function platform(B, L, X, local) {
     if (y < roof + 6) return y === roof ? CONC[4] : pk('#7a7e88');
     if (y < roof + 8) return pk('#4a4e58');
     if (y === roof + 8 && x % 30 < 18) return emit('#f8fbff');
-    if (y > pf - 50) return (x % 64 < 1) ? CONC[0] : rampPick(pks(['#c8c4ba', '#d4d0c6', '#dedad0']), 0.5 + (n2(x / 9, y / 9, 532) - 0.5) * 0.3, x, y);
+    if (y > pf - 50 * K) return (x % Math.round(64 * K) < 1) ? CONC[0] : rampPick(pks(['#c8c4ba', '#d4d0c6', '#dedad0']), 0.5 + (n2(x / 9, y / 9, 532) - 0.5) * 0.3, x, y);
     return 0;
   });
   const u = ((local % 200) + 200) % 200;
@@ -196,18 +199,21 @@ export function paintTrack(B, L) {
     mast(B, sx, L);
   });
   // the station: name boards, benches, vending machines and people waiting
-  B.slots(200, 120, 561, (i, sx) => {
+  const K = L.k ?? 1;
+  B.slots(Math.round(200 * K), Math.round(120 * K), 561, (i, sx) => {
     const s = L.segAt(sx);
     if (s.b !== 'station') return;
-    const pf = L.gy - 30;
-    if (i % 3 === 0) { const nb = nameBoard(); B.blit(nb, sx + 40, L.hz - 82); B.vline(sx + 48, L.hz - 92, L.hz - 82, pk('#5a5e66')); B.vline(sx + 128, L.hz - 92, L.hz - 82, pk('#5a5e66')); }
+    const pf = Math.round(L.hz + 22 * K), by = Math.round(L.hz - 52);
+    B.obj(sx * 3 + i);
+    if (i % 3 === 0) { const nb = nameBoard(); B.blit(nb, sx + 40, by); B.vline(sx + 48, by - 12, by, pk('#5a5e66')); B.vline(sx + 128, by - 12, by, pk('#5a5e66')); }
     else if (i % 3 === 1) { // bench and vending machines
       B.rect(sx + 30, pf - 7, 30, 2, pk('#3a9a8a')); B.rect(sx + 30, pf - 12, 30, 2, pk('#3a9a8a')); B.vline(sx + 32, pf - 5, pf - 1, BLACK); B.vline(sx + 57, pf - 5, pf - 1, BLACK);
       for (let k = 0; k < 2; k++) { const vx = sx + 120 + k * 13; B.rect(vx, pf - 26, 12, 26, pk(k ? '#e8403a' : '#2a6ad8')); B.rect(vx + 1, pf - 25, 10, 11, emit('#f4f8ff')); for (let q = 0; q < 4; q++) B.set(vx + 2 + q * 2, pf - 22, emit(['#ff6a5a', '#5ab0ff', '#ffd050', '#7ae07a'][q])); }
     } else { // clock
-      B.ellipse(sx + 100, L.hz - 70, 8, 8, WHITE); B.ellipse(sx + 100, L.hz - 70, 6, 6, pk('#f8f8f4')); B.vline(sx + 100, L.hz - 75, L.hz - 70, BLACK); B.hline(sx + 100, sx + 104, L.hz - 70, BLACK);
+      B.ellipse(sx + 100, by + 10, 9, 9, WHITE); B.ellipse(sx + 100, by + 10, 7, 7, pk('#f8f8f4')); B.vline(sx + 100, by + 4, by + 10, BLACK); B.hline(sx + 100, sx + 105, by + 10, BLACK);
     }
-    for (let k = 0; k < 4; k++) if (h1(i * 4 + k, 562) < 0.75) person(B, sx + 14 + k * 46 + Math.floor(h1(i * 4 + k, 563) * 20), pf, i * 4 + k);
+    for (let k = 0; k < 4; k++) if (h1(i * 4 + k, 562) < 0.75) { B.obj(sx * 3 + 50 + k); person(B, sx + 14 + k * 70 + Math.floor(h1(i * 4 + k, 563) * 30), pf, i * 4 + k, { k: K }); }
+    B.obj(null);
   });
 }
 
