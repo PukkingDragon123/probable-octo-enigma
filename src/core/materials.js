@@ -1,6 +1,7 @@
 // Stylized materials. One lit material family (Lambert under the hood) with
 // shader hooks for the Kodamaya look:
-//   - soft cel bands on direct light (facets still read as low-poly)
+//   - anime cel lighting, shared by every Lambert material in the game (see
+//     ANIME below): a crisp lit / shade step with tinted shade
 //   - drifting cloud shadows sampled in world space
 //   - wind sway weighted per vertex (aWind attribute from the GeoBuilder)
 //   - rim light for characters
@@ -24,9 +25,88 @@ export const WORLD = {
   uRain: { value: 0 },
   uSkyTint: { value: new THREE.Color(0.6, 0.7, 0.9) },
   uNight: { value: 0 },
-  uCel: { value: 0.55 },
   uPixel: { value: 1 },
 };
+
+// --------------------------------------------------------------- anime cel lighting
+// Every Lambert material (litMat, the voxel grain materials, lit sprites, sign
+// and face planes) shares one lighting model, patched into three's Lambert
+// chunks so nothing has to opt in:
+//   - the key light (sun, moon, an interior's window key) is a crisp two-tone
+//     step with a narrow soft terminator; the shadow map and cloud shadows
+//     fold into the same step, plus a faint third band on faces that take
+//     the key square on (voxel tops at noon, fronts in the morning)
+//   - shade is not "less light" but a tinted multiply of the albedo: a share
+//     of the key stays bounced into it so shadows stay luminous, the albedo
+//     is pushed more saturated there and the tint comes from the colour
+//     grade (cool violet by day, deeper blue at night, rose in the Spirit
+//     Realm) - never grey mud
+//   - the hemisphere fill keeps only part of its chroma (no olive murk on
+//     side faces), lamps (point lights) get a softer step of their own
+// The values are plain {x,y,z(,w)} objects: three's cloneUniforms copies
+// anything that isn't a Color / Vector / Texture by reference, so every
+// program compiled from ShaderLib.lambert shares these and the renderer can
+// tween them with the grade.
+export const ANIME = {
+  kShade: { value: { x: 0.74, y: 0.7, z: 0.94 } }, // shade tint (linear, multiplies the albedo)
+  kCel: { value: { x: 0.04, y: 0.035, z: 0.1, w: 0.66 } }, // terminator N.L, half-width, highlight gain, highlight N.L
+  kTone: { value: { x: 0.5, y: 0.28, z: 0.45, w: 0 } }, // key bounced into shade, shade saturation push, fill chroma kept
+};
+
+const ANIME_LAMBERT = /* glsl */ `
+varying vec3 vViewPosition;
+uniform vec3 kShade;
+uniform vec4 kCel;
+uniform vec4 kTone;
+float gCloud = 1.0;          // cloud shadow on the key (litMat)
+float gLit = 0.0;            // key light that reached this fragment: 0 shade .. 1 lit
+float gKeyOn = 0.0;          // 1 while three walks the directional lights
+vec3 gKeyFull = vec3(0.0);   // the key before its shadow map
+struct LambertMaterial { vec3 diffuseColor; float specularStrength; };
+float kLum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+// albedo as it reads in shade: more saturated, multiplied by the grade's tint
+vec3 kShadeAlbedo(vec3 a) { return max(mix(vec3(kLum(a)), a, 1.0 + kTone.y), 0.0) * kShade; }
+void RE_Direct_Lambert( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
+  float nl = dot( geometryNormal, directLight.direction );
+  vec3 a = material.diffuseColor;
+  if (gKeyOn > 0.5) {
+    float vis = kLum(directLight.color) / max(kLum(gKeyFull), 1e-5);
+    float lit = smoothstep(kCel.x - kCel.y, kCel.x + kCel.y, nl) * vis * gCloud;
+    float hi = smoothstep(kCel.w - kCel.y, kCel.w + kCel.y, nl) * kCel.z;
+    gLit = max(gLit, lit);
+    reflectedLight.directDiffuse += gKeyFull * BRDF_Lambert( a ) * lit * (1.0 + hi);
+    reflectedLight.directDiffuse += gKeyFull * (kTone.x * (1.0 - lit)) * BRDF_Lambert( kShadeAlbedo(a) );
+  } else {
+    float c = smoothstep(0.0, 0.16, nl) * 0.8 + 0.2 * saturate(nl);
+    reflectedLight.directDiffuse += c * directLight.color * BRDF_Lambert( a );
+  }
+}
+void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
+  vec3 e = mix(vec3(kLum(irradiance)), irradiance, kTone.z);
+  vec3 a = material.diffuseColor;
+  reflectedLight.indirectDiffuse += e * BRDF_Lambert( mix(kShadeAlbedo(a), a, gLit) );
+}
+#define RE_Direct RE_Direct_Lambert
+#define RE_IndirectDiffuse RE_IndirectDiffuse_Lambert
+`;
+{
+  const C = THREE.ShaderChunk;
+  C.lights_lambert_pars_fragment = ANIME_LAMBERT;
+  // flag the directional lights (they come last, after points and spots) and
+  // keep their colour from before the shadow map
+  const DIR = 'getDirectionalLightInfo( directionalLight, directLight );';
+  if (C.lights_fragment_begin.includes(DIR)) {
+    C.lights_fragment_begin = C.lights_fragment_begin.replace(DIR, DIR + '\n\t\t#ifdef LAMBERT\n\t\tgKeyOn = 1.0; gKeyFull = directLight.color;\n\t\t#endif');
+  }
+  // outline class (read by the renderer's outline pass from the colour
+  // target's alpha): opaque materials can carry K_CLASS in their defines
+  C.opaque_fragment += '\n#if defined( K_CLASS ) && defined( OPAQUE )\ngl_FragColor.a = K_CLASS;\n#endif\n';
+  Object.assign(THREE.ShaderLib.lambert.uniforms, ANIME);
+}
+// outline classes (alpha of the colour target): 1 = scenery, OUTLINE.actor =
+// characters (finer lines + rim light), OUTLINE.sprite = pixel sprites (only
+// big silhouettes, lighter), OUTLINE.none = no lines (dither-faded cutaways)
+export const OUTLINE = { actor: '0.75', sprite: '0.5', none: '0.2' };
 
 // tiling cloud-shadow noise (soft blobs), generated once
 function cloudTexture() {
@@ -67,7 +147,6 @@ uniform float uWet;
 uniform float uRain;
 uniform vec3 uSkyTint;
 uniform float uNight;
-uniform float uCel;
 uniform float uFade;
 uniform float uClipY;
 uniform vec3 uRim;
@@ -103,32 +182,10 @@ const VERT_WIND = /* glsl */ `
   }
 `;
 
+// (the cel lighting itself and gCloud live in the shared ANIME_LAMBERT chunk)
 const FRAG_HEAD = /* glsl */ `
 float kBayer2(vec2 a) { a = floor(a); return fract(a.x * 0.5 + a.y * a.y * 0.75); }
 float kBayer4(vec2 a) { return kBayer2(0.5 * a) * 0.25 + kBayer2(a); }
-float gCloud = 1.0;
-float celNL(float d) {
-  float a = smoothstep(0.0, 0.07, d);
-  float b = smoothstep(0.3, 0.42, d);
-  float banded = a * 0.68 + b * 0.32;
-  return mix(d, banded, uCel);
-}
-`;
-
-// modified Lambert direct term: cel bands + cloud shadow
-const LAMBERT_PARS = /* glsl */ `
-varying vec3 vViewPosition;
-struct LambertMaterial { vec3 diffuseColor; float specularStrength; };
-void RE_Direct_Lambert( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
-  float dotNL = celNL(saturate( dot( geometryNormal, directLight.direction ) ));
-  vec3 irradiance = dotNL * directLight.color * gCloud;
-  reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
-}
-void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
-  reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
-}
-#define RE_Direct RE_Direct_Lambert
-#define RE_IndirectDiffuse RE_IndirectDiffuse_Lambert
 `;
 
 const FRAG_PRE_LIGHT = /* glsl */ `
@@ -162,10 +219,10 @@ const FRAG_POST_LIGHT = /* glsl */ `
     vec3 refl = uSkyTint * (0.55 + 0.25 * uNight) + rip * 0.35;
     outgoingLight = mix(outgoingLight, refl * 0.6 + outgoingLight * 0.4, kPud * 0.75);
   }
-  // rim light (characters)
+  // rim light (characters): brighter where the key reaches
   if (uRimAmt > 0.001) {
     float fr = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 3.0);
-    outgoingLight += uRim * fr * uRimAmt;
+    outgoingLight += uRim * fr * uRimAmt * (0.45 + 0.55 * gLit);
   }
 `;
 
@@ -206,10 +263,11 @@ export function litMat({ map = null, color = 0xffffff, vertexColors = true, tran
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + VERT_WIND);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + COMMON_PARS + FRAG_HEAD)
-      .replace('#include <lights_lambert_pars_fragment>', LAMBERT_PARS)
       .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + FRAG_DISCARD)
       .replace('#include <lights_lambert_fragment>', FRAG_PRE_LIGHT + '\n#include <lights_lambert_fragment>')
-      .replace('#include <envmap_fragment>', FRAG_POST_LIGHT + '\n#include <envmap_fragment>');
+      .replace('#include <envmap_fragment>', FRAG_POST_LIGHT + '\n#include <envmap_fragment>')
+      // dither-faded cutaways: no outlines on the holes' rims
+      .replace('#include <opaque_fragment>', '#include <opaque_fragment>\n#ifdef OPAQUE\nif (uFade > 0.001) gl_FragColor.a = ' + OUTLINE.none + ';\n#endif');
   };
   m.customProgramCacheKey = () => 'kodama-lit';
   m.userData.lid = ++_lid;

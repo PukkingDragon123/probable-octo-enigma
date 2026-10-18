@@ -547,7 +547,7 @@ function mottled(model) {
 }
 export function vmesh(model, pivot, { shadow = true, scale = VS } = {}) {
   const g = geo(mottled(model), pivot, scale);
-  const m = new THREE.Mesh(g, matFor(g));
+  const m = new THREE.Mesh(g, matFor(g, 0.08, 0, true));
   m.castShadow = shadow;
   m.receiveShadow = true;
   return m;

@@ -33,7 +33,10 @@ const FACES = [
   { n: [0, 0, 1], c: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
   { n: [0, 0, -1], c: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] },
 ];
-const AO_CURVE = [0.56, 0.72, 0.86, 1.0];
+// soft but present: corners settle into a cool violet (blue keeps more of its
+// light than red / green), the anime shade colour rather than grey
+const AO_CURVE = [0.6, 0.75, 0.88, 1.0];
+const AO_TINT = [1.0, 1.06, 0.78]; // per-channel exponent on the AO factor
 
 // Shade multipliers baked per face direction on top of real lighting; keeps
 // voxel silhouettes readable even in flat light.
@@ -167,8 +170,8 @@ export class VoxelModel {
         p[va] = o3[va] + c[va] * h;
         pos.push((p[0] - pivot[0]) * s, (p[1] - pivot[1]) * s, (p[2] - pivot[2]) * s);
         nor.push(F.n[0], F.n[1], F.n[2]);
-        const k = b[ci] * tint;
-        col.push(rgb[0] * k, rgb[1] * k, rgb[2] * k);
+        const a = b[ci];
+        col.push(rgb[0] * tint * a, rgb[1] * tint * a ** AO_TINT[1], rgb[2] * tint * a ** AO_TINT[2]);
       }
       if (b[0] + b[2] > b[1] + b[3]) idx.push(vi + 1, vi + 2, vi + 3, vi + 1, vi + 3, vi);
       else idx.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3);

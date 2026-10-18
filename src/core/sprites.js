@@ -13,7 +13,7 @@
 //        1 = flat on the ground (decals, shadows, light pools),
 //        2 = fully camera-facing (particles, text).
 import * as THREE from 'three';
-import { WORLD } from './materials.js';
+import { WORLD, OUTLINE } from './materials.js';
 import { PixCanvas } from './pixtex.js';
 
 export const SPRITE_UNIFORMS = {
@@ -167,6 +167,8 @@ export function makeSpriteMaterials(texture, { lit = true, additive = false } = 
   const mat = lit
     ? new THREE.MeshLambertMaterial({ map: texture, side: THREE.DoubleSide })
     : new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: additive, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: !additive });
+  // pixel sprites draw their own outlines: the ink pass only rings big silhouettes
+  if (!additive) mat.defines = { K_CLASS: OUTLINE.sprite };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, SPRITE_UNIFORMS);
     shader.uniforms.uTime = WORLD.uTime;
