@@ -13,7 +13,7 @@
 //   S.setSegment('tea'); S.setTime('golden', 8); S.speedGoal = 1;
 //   S.update(dt, camX, viewHalfWidthWorld);
 import * as THREE from 'three';
-import { Brush } from './core.js';
+import { Brush, SOFT, NOINK, darkenPacked, pk } from './core.js';
 import { paintClouds, paintFar, paintHills } from './far.js';
 import { paintFarGround, paintNear } from './ground.js';
 import { paintTrack, paintFore } from './track.js';
@@ -21,8 +21,11 @@ import { paintTrack, paintFore } from './track.js';
 const RING = 2048;
 // first person: how far away each layer stands, and the angle one texel spans
 const PERSP_D = { clouds: 1300, far: 950, hills: 520, plain: 210, near: 64, track: 6.5 };
-const ANG = 0.0042;
-export const SEGMENTS = ['country', 'river', 'tea', 'mountain', 'village', 'sea', 'city', 'tunnel', 'station'];
+const ANG = 0.009;
+export const SEGMENTS = ['country', 'farm', 'tea', 'mountain', 'village', 'valley', 'city', 'tunnel', 'station'];
+// old names: the river and the sea are gone from the view (no open water), farmland and a wooded valley stand in
+const ALIAS = { river: 'farm', sea: 'valley' };
+const INK = pk('#141018');
 
 // time-of-day looks
 export const LOOKS = {
@@ -38,23 +41,23 @@ export const LOOKS = {
 // fog: atmospheric haze; H: rows; hz: horizon row; gy: ground row; ch: chunk width
 const STACK = {
   window: [
-    { id: 'clouds', H: 150, hz: 146, spd: 3, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
-    { id: 'far', H: 150, hz: 136, spd: 6, par: 0.04, fog: 0.3, ch: 64, paint: paintFar, blend: 260 },
-    { id: 'hills', H: 96, hz: 88, spd: 20, par: 0.1, fog: 0.12, ch: 64, paint: paintHills, blend: 160 },
-    { id: 'plain', H: 74, hz: 22, spd: 58, par: 0.25, fog: 0.05, ch: 128, paint: paintFarGround, blend: 40 },
-    { id: 'near', H: 176, hz: 76, gy: 104, spd: 190, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 30 },
-    { id: 'track', H: 250, hz: 130, gy: 182, mastTop: 0, wireY: 6, masts: false, spd: 560, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
+    { id: 'clouds', H: 96, hz: 92, spd: 1.6, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
+    { id: 'far', H: 110, hz: 100, spd: 3, par: 0.04, fog: 0.3, ch: 64, paint: paintFar, blend: 160, ink: 'sil', silCol: pk('#4a5884') },
+    { id: 'hills', H: 96, hz: 88, spd: 10, par: 0.1, fog: 0.1, ch: 64, paint: paintHills, blend: 100, ink: 'sil', silCol: pk('#10241a'), inkCol: INK },
+    { id: 'plain', H: 56, hz: 22, spd: 28, par: 0.25, fog: 0.04, ch: 128, paint: paintFarGround, blend: 40, ink: 'obj', inkCol: pk('#1c1a24') },
+    { id: 'near', H: 140, hz: 76, gy: 84, spd: 95, par: 0.55, fog: 0.0, ch: 128, paint: paintNear, blend: 30, ink: 'obj', inkCol: INK },
+    { id: 'track', H: 110, hz: 60, gy: 86, mastTop: 0, wireY: 6, masts: false, spd: 280, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1, ink: 'obj', inkCol: INK },
   ],
   // outside the train: the same country at a wider scale, plus a fast bank of
   // grass and flowers in front of the train
   outside: [
-    { id: 'clouds', H: 200, hz: 196, spd: 4, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
-    { id: 'far', H: 150, hz: 136, spd: 8, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 260 },
-    { id: 'hills', H: 96, hz: 88, spd: 26, par: 0.1, fog: 0.22, ch: 64, paint: paintHills, blend: 160 },
-    { id: 'plain', H: 74, hz: 22, spd: 70, par: 0.25, fog: 0.1, ch: 128, paint: paintFarGround, blend: 40 },
-    { id: 'near', H: 300, hz: 76, gy: 104, spd: 210, par: 0.55, fog: 0.04, ch: 128, paint: paintNear, blend: 30 },
-    { id: 'track', H: 240, hz: 15, gy: 230, mastTop: 12, wireY: 36, spd: 520, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
-    { id: 'fore', H: 120, hz: -193, gy: 20, spd: 900, par: 1.2, fog: 0.0, ch: 256, paint: paintFore, blend: 1, smear: 1, front: 9.5 },
+    { id: 'clouds', H: 160, hz: 156, spd: 2.7, par: 0.02, fog: 0.08, ch: 64, paint: paintClouds, mode: 1, blend: 1 },
+    { id: 'far', H: 120, hz: 106, spd: 5.4, par: 0.04, fog: 0.42, ch: 64, paint: paintFar, blend: 200, ink: 'sil', silCol: pk('#4a5884') },
+    { id: 'hills', H: 96, hz: 88, spd: 18, par: 0.1, fog: 0.2, ch: 64, paint: paintHills, blend: 120, ink: 'sil', silCol: pk('#10241a'), inkCol: INK },
+    { id: 'plain', H: 64, hz: 22, spd: 48, par: 0.25, fog: 0.08, ch: 128, paint: paintFarGround, blend: 40, ink: 'obj', inkCol: pk('#1c1a24') },
+    { id: 'near', H: 220, hz: 76, gy: 92, spd: 143, par: 0.55, fog: 0.03, ch: 128, paint: paintNear, blend: 30, ink: 'obj', inkCol: INK },
+    { id: 'track', H: 170, hz: 15, gy: 160, mastTop: 12, wireY: 30, masts: false, spd: 354, par: 0.9, fog: 0.0, ch: 256, paint: paintTrack, blend: 1, smear: 1 },
+    { id: 'fore', H: 90, hz: -140, gy: 16, spd: 612, par: 1.2, fog: 0.0, ch: 256, paint: paintFore, blend: 1, smear: 1, front: 9.5 },
   ],
 };
 
@@ -233,6 +236,7 @@ export class Scenery {
   // ------------------------------------------------------------ control
   // switch to a new stretch of country; it rolls in from ahead on each layer
   setSegment(seg, { now = false } = {}) {
+    seg = ALIAS[seg] || seg;
     const track = this.layer('track');
     const covered = this.tunnelK > 0.98;
     for (const L of this.layers) {
@@ -244,7 +248,7 @@ export class Scenery {
       else L.changes.push({ x: L.painted ?? 0, seg });
       if (seg === 'tea' && L.id === 'far') L.fujiX = (covered || now) ? (L._c ?? L.scroll) + 170 : (L.painted ?? 0) + 300;
     }
-    for (const L of this.layers) if (L.id === 'far') L.dyGoal = seg === 'tea' ? -34 : 0;
+    for (const L of this.layers) if (L.id === 'far') L.dyGoal = 0;
   }
   setTime(name, dur = 6) {
     this.lookFrom = { ...this.look }; this.lookTo = LOOKS[name] || LOOKS.day; this.lookK = dur <= 0 ? 1 : 0; this.lookDur = dur; this.timeName = name;
@@ -257,10 +261,50 @@ export class Scenery {
   paintChunk(L) {
     const X0 = L.painted;
     const c0 = ((X0 % RING) + RING) % RING;
+    if (L.inkLo == null || X0 !== L.inkNext) L.inkLo = X0; // a fresh run: nothing valid to the left
     L.brush.begin(X0, c0, L.ch);
     L.paint(L.brush, L);
     L.painted += L.ch;
+    L.inkNext = L.painted;
+    // ink the previous chunk's last column and all of this one but its last
+    // (that one waits for its right-hand neighbour)
+    if (L.ink) this.inkPass(L, Math.max(L.inkLo, X0 - 1), L.painted - 1);
     L.dirty = true;
+  }
+  // bold outlines: an object's edge texel goes dark where it meets the ground,
+  // the empty sky, or an object painted before it (behind it)
+  inkPass(L, xa, xb) {
+    const B = L.brush, d = B.d, ids = B.ids, dep = B.dep, W = RING, H = L.H;
+    const ink = L.inkCol, sil = L.ink === 'sil', silCol = L.silCol;
+    const lo = L.inkLo;
+    for (let X = xa; X < xb; X++) {
+      const c = ((X % W) + W) % W, cl = X - 1 >= lo ? ((c - 1 + W) % W) : -1, cr = (c + 1) % W;
+      for (let y = 0; y < H; y++) {
+        const i = y * W + c, v = d[i];
+        if ((v >>> 24) < 100) continue;
+        const a = ids[i];
+        let hit = false;
+        if (a === 0) {
+          if (!sil) continue;
+          if (y > 0 && (d[i - W] >>> 24) < 100) hit = true;
+          else if (cl >= 0 && (d[y * W + cl] >>> 24) < 100) hit = true;
+          else if ((d[y * W + cr] >>> 24) < 100) hit = true;
+          if (hit) d[i] = silCol ?? darkenPacked(v, 0.5);
+          continue;
+        }
+        if (a & NOINK) continue;
+        const me = dep[i];
+        const test = (j) => {
+          const b = ids[j];
+          if (b === a) return false;
+          if ((d[j] >>> 24) < 100 || b === 0) return true;
+          return ((me - dep[j]) & 0xffff) < 0x8000;
+        };
+        if ((y > 0 && test(i - W)) || (y < H - 1 && test(i + W)) || (cl >= 0 && test(y * W + cl)) || test(y * W + cr)) {
+          d[i] = (a & SOFT) ? darkenPacked(v, 0.62) : ink;
+        }
+      }
+    }
   }
   update(dt, view) {
     this.view = view;

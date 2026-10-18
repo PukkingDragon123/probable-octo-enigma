@@ -2,9 +2,10 @@
 // Fuji in the tea country), and the forested hills in front of them.
 // Every painter works on absolute texel x, so the endless strip is seamless.
 // Rows: y = 0 at the top of the layer; L.hz is the horizon row.
-import { pk, pks, h1, h2, n1, n2, fbm1, bayer, rampPick, cloudPx, win, emit, WATER } from './core.js';
+import { pk, pks, h1, h2, n1, n2, fbm1, bayer, rampPick, cloudPx, win, emit, NOINK } from './core.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
+const flat = (R, v) => R[Math.max(0, Math.min(R.length - 1, Math.floor(v * R.length)))];
 const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // ---------------------------------------------------------------- clouds
@@ -18,17 +19,17 @@ export function paintClouds(B, L) {
   B.slots(150, 160, 701, (i, sx, r) => {
     if (r < 0.28) return;
     const n = 3 + Math.floor(h1(i, 702) * 6), big = h1(i, 703);
-    const cx = sx + h1(i, 704) * 80, base = 34 + h1(i, 705) * (H - 60);
-    const w = 30 + big * 90;
+    const cx = sx + h1(i, 704) * 60, base = H - 44 + h1(i, 705) * 30;
+    const w = 24 + big * 64;
     const lobes = [];
     for (let k = 0; k < n; k++) {
       const t = n === 1 ? 0.5 : k / (n - 1);
       const lx = cx - w / 2 + t * w + (h1(i * 13 + k, 706) - 0.5) * 10;
-      const rr = (7 + big * 14) * (0.55 + 0.6 * Math.sin(Math.PI * (0.15 + t * 0.7))) * (0.75 + h1(i * 7 + k, 707) * 0.5);
+      const rr = (5 + big * 10) * (0.55 + 0.6 * Math.sin(Math.PI * (0.15 + t * 0.7))) * (0.75 + h1(i * 7 + k, 707) * 0.5);
       lobes.push({ x: lx, y: base - rr * 0.55, r: rr });
     }
     // a crown lobe or two on top
-    if (big > 0.45) lobes.push({ x: cx + (h1(i, 708) - 0.5) * w * 0.3, y: base - (14 + big * 18), r: 9 + big * 12 });
+    if (big > 0.45) lobes.push({ x: cx + (h1(i, 708) - 0.5) * w * 0.3, y: base - (10 + big * 13), r: 7 + big * 9 });
     clouds.push({ base, lobes, w, cx });
   });
   // high cirrus streaks
@@ -77,33 +78,33 @@ const CITY_FAR = pks(['#7a86a6', '#8892b0', '#96a0bc']);
 
 function backH(seg, X) {
   switch (seg) {
-    case 'mountain': return 46 + 46 * fbm1(X / 200, 11, 4);
-    case 'river': return 30 + 30 * fbm1(X / 240, 12, 4);
-    case 'tea': return 14 + 16 * fbm1(X / 260, 13, 3);
-    case 'sea': return Math.max(0, 16 * (fbm1(X / 160, 14, 3) - 0.55)) * 2;
-    case 'city': case 'station': return 8 + 10 * fbm1(X / 300, 15, 3);
-    case 'village': return 26 + 28 * fbm1(X / 220, 16, 4);
-    default: return 22 + 30 * fbm1(X / 230, 17, 4);
+    case 'mountain': return 22 + 20 * fbm1(X / 140, 11, 4);
+    case 'farm': return 12 + 13 * fbm1(X / 160, 12, 4);
+    case 'tea': return 7 + 8 * fbm1(X / 180, 13, 3);
+    case 'valley': return 20 + 16 * fbm1(X / 130, 14, 4);
+    case 'city': case 'station': return 4 + 5 * fbm1(X / 200, 15, 3);
+    case 'village': return 12 + 13 * fbm1(X / 150, 16, 4);
+    default: return 11 + 14 * fbm1(X / 155, 17, 4);
   }
 }
 function frontH(seg, X) {
   switch (seg) {
-    case 'mountain': return 30 + 30 * fbm1(X / 130, 21, 4);
-    case 'sea': return 0;
+    case 'mountain': return 14 + 13 * fbm1(X / 90, 21, 4);
     case 'city': case 'station': return 0;
-    case 'tea': return 6 + 10 * fbm1(X / 150, 22, 3);
-    default: return 12 + 20 * fbm1(X / 150, 23, 4);
+    case 'tea': return 3 + 5 * fbm1(X / 100, 22, 3);
+    case 'valley': return 12 + 10 * fbm1(X / 95, 24, 4);
+    default: return 6 + 9 * fbm1(X / 100, 23, 4);
   }
 }
 // Fuji: one grand cone placed shortly after the tea country begins
 function fujiH(L, X) {
   const fx = L.fujiX;
   if (fx == null) return 0;
-  const d = Math.abs(X - fx), R = 330;
+  const d = Math.abs(X - fx), R = 150;
   if (d > R) return 0;
-  let h = 96 * Math.pow(1 - d / R, 1.55);
-  if (d < 10) h = 96 * Math.pow(1 - 10 / R, 1.55) - (d < 6 ? 1.5 : 0);
-  return h + 4;
+  let h = 40 * Math.pow(1 - d / R, 1.55);
+  if (d < 5) h = 40 * Math.pow(1 - 5 / R, 1.55) - (d < 3 ? 1 : 0);
+  return h + 3;
 }
 
 export function paintFar(B, L) {
@@ -123,20 +124,20 @@ export function paintFar(B, L) {
       if (isFuji) {
         const d = X - L.fujiX;
         // snow cap with streaks down the gullies
-        const snowLine = 50 + 18 * n1(X / 5, 31) * (1 - Math.abs(d) / 330) + (h1(X >> 1, 32) > 0.7 ? 9 * h1(X, 33) : 0);
+        const snowLine = 21 + 8 * n1(X / 4, 31) * (1 - Math.abs(d) / 150) + (h1(X >> 1, 32) > 0.7 ? 5 * h1(X, 33) : 0);
         const fromTop = (hz - y);
         const lit = d < 0 ? 0.72 : 0.32;
-        if (fromTop > Math.max(0, fu - snowLine) && fromTop > fu - 58) return rampPick(SNOW, lit + 0.18 - depth * 0.25 + (n2(X / 3, y / 2, 34) - 0.5) * 0.2, x, y);
+        if (fromTop > Math.max(0, fu - snowLine) && fromTop > fu - 25) return flat(SNOW, lit + 0.18 - depth * 0.25 + (n2(X / 3, y / 2, 34) - 0.5) * 0.2);
         const v = lit - depth * 0.35 + (n2(X / 4, y / 3, 35) - 0.5) * 0.25;
-        if (fromTop < 18) return bayer(x, y) < (18 - fromTop) / 18 * 0.85 ? MIST : rampPick(FAR_BACK, v, x, y);
-        return rampPick(FAR_BACK, v, x, y);
+        if (fromTop < 6) return MIST;
+        return flat(FAR_BACK, v);
       }
       const v = 0.45 + (slope > 0 ? 0.35 : -0.25) * Math.min(1, Math.abs(slope) / 2) - depth * 0.3 + (n2(X / 5 + y * 0.2, y / 4, 36) - 0.5) * 0.3;
       const fromTop = (hz - y);
       // snow on the high peaks
-      if (top > 70 && fromTop > top - (top - 66) * 0.9 - 3 * n1(X / 4, 37)) return rampPick(SNOW, v + 0.2, x, y);
-      if (fromTop < 10) return bayer(x, y) < (10 - fromTop) / 10 * 0.7 ? MIST : rampPick(FAR_BACK, v, x, y);
-      return rampPick(FAR_BACK, v, x, y);
+      if (top > 36 && fromTop > top - (top - 33) * 0.9 - 2 * n1(X / 4, 37)) return flat(SNOW, v + 0.2);
+      if (fromTop < 4) return MIST;
+      return flat(FAR_BACK, v);
     });
     // front ridge
     if (hf > 0.5) {
@@ -145,15 +146,15 @@ export function paintFar(B, L) {
       B.col(X, yf, hz + 2, (x, y) => {
         const fromTop = hz - y;
         const v = 0.5 + (sl > 0 ? 0.32 : -0.28) * Math.min(1, Math.abs(sl) / 2) - (y - yf) / Math.max(4, hf) * 0.25 + (n2(X / 4 + y * 0.3, y / 3, 41) - 0.5) * 0.35;
-        if (fromTop < 8) return bayer(x, y) < (8 - fromTop) / 8 * 0.8 ? MIST : rampPick(FAR_FRONT, v, x, y);
-        return rampPick(FAR_FRONT, v, x, y);
+        if (fromTop < 3) return MIST;
+        return flat(FAR_FRONT, v);
       });
     }
     // the faraway city skyline
     if (s.b === 'city' || s.b === 'station') {
       const bw = 7 + Math.floor(h1(X >> 3, 51) * 6);
       const cell = Math.floor(X / bw);
-      const bh = 8 + h1(cell, 52) ** 2 * 46 + (h1(cell, 53) > 0.93 ? 30 : 0);
+      const bh = 6 + h1(cell, 52) ** 2 * 28 + (h1(cell, 53) > 0.93 ? 18 : 0);
       const yt = Math.round(hz - bh * (s.a === s.b ? 1 : s.k));
       const tone = Math.floor(h1(cell, 54) * 3);
       B.col(X, yt, hz + 2, (x, y) => {
@@ -163,8 +164,8 @@ export function paintFar(B, L) {
       });
       // a radio tower with a red light
       if (h1(X >> 9, 56) > 0.6 && (X & 511) === 200) {
-        for (let y = hz - 84; y < hz - 20; y++) { const w = Math.round((y - (hz - 84)) / 14); B.set(X - w, y, CITY_FAR[0]); B.set(X + w, y, CITY_FAR[0]); if (y % 6 === 0) for (let k = -w; k <= w; k++) B.set(X + k, y, CITY_FAR[1]); }
-        B.set(X, hz - 86, emit('#ff4040')); B.set(X, hz - 85, emit('#ff4040'));
+        for (let y = hz - 52; y < hz - 12; y++) { const w = Math.round((y - (hz - 52)) / 10); B.set(X - w, y, CITY_FAR[0]); B.set(X + w, y, CITY_FAR[0]); if (y % 6 === 0) for (let k = -w; k <= w; k++) B.set(X + k, y, CITY_FAR[1]); }
+        B.set(X, hz - 54, emit('#ff4040')); B.set(X, hz - 53, emit('#ff4040'));
       }
     }
   }
@@ -176,34 +177,42 @@ export function paintFar(B, L) {
 // sagging lines, a pagoda, a shrine gate, terraced tea rows.
 const WOOD = pks(['#24452f', '#2e5638', '#3a6a40', '#4c7f48', '#649552', '#7eaa5c']);
 const WOOD_FAR = pks(['#3d6050', '#4a6e57', '#587d5e', '#6a8d66']);
-const CEDAR = pks(['#1c3428', '#234032', '#2c4e3a', '#3a5e44']);
+const CEDAR = pks(['#183026', '#213c2e', '#2a4a38', '#365a42', '#46704e']);
 const TEA_ROW = pks(['#5a9a3a', '#78b448', '#98cc5a', '#b4dc6a']);
 const PYLON = pk('#c8ccd4'), PYLON_D = pk('#8a909c'), WIRE = pk('#5a6070');
 
 function hillH(seg, X) {
   switch (seg) {
-    case 'mountain': return 30 + 34 * fbm1(X / 110, 61, 4);
-    case 'river': return 14 + 18 * fbm1(X / 140, 62, 4);
-    case 'tea': return 10 + 18 * fbm1(X / 160, 63, 3);
-    case 'sea': return 6 + 26 * Math.max(0, fbm1(X / 120, 64, 3) - 0.35) * 1.6;
-    case 'city': case 'station': return 4 + 6 * fbm1(X / 100, 65, 3);
-    case 'village': return 16 + 16 * fbm1(X / 120, 66, 4);
-    default: return 14 + 22 * fbm1(X / 130, 67, 4);
+    case 'mountain': return 26 + 20 * fbm1(X / 90, 61, 4);
+    case 'farm': return 9 + 12 * fbm1(X / 110, 62, 4);
+    case 'tea': return 8 + 12 * fbm1(X / 120, 63, 3);
+    case 'valley': return 18 + 14 * fbm1(X / 80, 64, 4);
+    case 'city': case 'station': return 3 + 5 * fbm1(X / 90, 65, 3);
+    case 'village': return 13 + 12 * fbm1(X / 95, 66, 4);
+    default: return 12 + 16 * fbm1(X / 100, 67, 4);
   }
 }
-const isCedar = (seg, X) => (seg === 'mountain' ? n1(X / 60, 71) > 0.35 : n1(X / 80, 72) > 0.72);
+const isCedar = (seg, X) => (seg === 'mountain' || seg === 'valley' ? n1(X / 60, 71) > 0.4 : n1(X / 80, 72) > 0.7);
 
-// crown cell texture: lit upper-left of each blob, shadowed lower-right
+// crown texture: packed round lumps of foliage (broccoli) of varied size,
+// the nearest-in-front lump wins; lit from the upper right, dark gaps between
 function crown(x, y, R, s = 0) {
-  const cw = 5, ch = 4;
-  const row = Math.floor(y / ch);
-  const xo = x + (row & 1) * 2.5 + h1(row, s) * 3;
-  const cx = Math.floor(xo / cw);
-  const lx = (xo - cx * cw) / cw, ly = (y - row * ch) / ch;
-  const j = h2(cx, row, s + 1);
-  let v = 0.55 + (0.5 - lx) * 0.45 + (0.5 - ly) * 0.55 + (j - 0.5) * 0.35;
-  if (lx > 0.85 || ly > 0.85) v -= 0.35;
-  return rampPick(R, v, x, y);
+  const cw = 8, ch = 6;
+  const gx = Math.floor(x / cw), gy = Math.floor(y / ch);
+  let best = -9, bx = 0, by = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const cx = gx + i, cy = gy + j;
+    const ox = (cx + 0.5 + (h2(cx, cy, s + 3) - 0.5) * 0.8) * cw, oy = (cy + 0.5 + (h2(cx, cy, s + 4) - 0.5) * 0.7) * ch;
+    const r = (0.62 + h2(cx, cy, s + 5) * 0.35) * cw;
+    const px = (x + 0.5 - ox) / r, py = (y + 0.5 - oy) / (r * 0.8);
+    const d = px * px + py * py;
+    if (d > 1) continue;
+    const front = 1 - d + cy * 0.08; // lower lumps stand in front
+    if (front > best) { best = front; bx = px; by = py; }
+  }
+  if (best === -9) return R[0];
+  const v = 0.58 + bx * 0.28 - by * 0.4 - (bx * bx + by * by) * 0.18;
+  return flat(R, v);
 }
 
 export function paintHills(B, L) {
@@ -216,7 +225,7 @@ export function paintHills(B, L) {
     const bump = Math.round(2.2 * Math.abs(Math.sin(X * 0.7 + h1(X >> 2, 81) * 3)) + (h1(X >> 1, 82) > 0.8 ? 1 : 0));
     const cedar = isCedar(seg, X);
     let yt = Math.round(hz - h - bump);
-    if (cedar) { const k = X % 6; yt = Math.round(hz - h - 2 - (k < 3 ? k * 2.2 : (6 - k) * 2.2) - h1(Math.floor(X / 6), 83) * 4); }
+    if (cedar) { const k = X % 7; yt = Math.round(hz - h - 2 - (3 - Math.abs(k - 3)) * 2.4 - h1(Math.floor(X / 7), 83) * 4); }
     if (seg === 'city' || seg === 'station') {
       // low suburbs on a plain: mid-rise blocks instead of woods
       const cell = Math.floor((X + 3) / 13);
@@ -236,20 +245,23 @@ export function paintHills(B, L) {
       const fromBase = hz - y;
       let c;
       if (cedar) {
-        const k = (x % 6);
-        const v = 0.55 - (k > 2 ? 0.3 : 0) + (fromTop < 3 ? 0.2 : 0) - fromTop / 80;
-        c = rampPick(CEDAR, v + (n2(x / 3, y / 5, 88) - 0.5) * 0.3, x, y);
+        // a row of sugi spires: lit on the right, layered tiers of branches, dark gaps
+        const k = x % 7, e = Math.abs(k - 3);
+        let v = 0.55 + (k > 3 ? 0.25 : k < 3 ? -0.15 : 0.1) - fromTop / 100;
+        if ((fromTop + e) % 4 === 3) v -= 0.3;
+        if (k === 0) v -= 0.3;
+        c = flat(CEDAR, v);
       } else {
         c = crown(x, y, h > 26 ? WOOD : WOOD, 89);
-        if (fromTop < 2) c = rampPick(WOOD, 0.85, x, y);
+        if (fromTop < 1) c = WOOD[4];
       }
       // terraced tea rows on the gentle tea-country slopes
       if (seg === 'tea' && fromBase < h * 0.7 && fromBase > 2 && n1(X / 70, 90) > 0.45) {
         const row = (y + Math.floor(X / 24)) % 3;
-        c = row === 0 ? TEA_ROW[0] : rampPick(TEA_ROW, 0.55 + (row === 1 ? 0.3 : 0) + (n2(x / 3, y, 91) - 0.5) * 0.3, x, y);
+        c = row === 0 ? TEA_ROW[0] : row === 1 ? TEA_ROW[3] : TEA_ROW[2];
       }
       // misty hollow at the foot
-      if (fromBase < 9 && bayer(x, y) < (9 - fromBase) / 9 * 0.75) c = MIST;
+      if (fromBase < 2) c = WOOD_FAR[3];
       return c;
     });
   }
@@ -257,10 +269,11 @@ export function paintHills(B, L) {
   const segAt = (X) => { const s = L.segAt(X); return s.k > 0.5 ? s.b : s.a; };
   // pylons and their sagging lines
   const PSP = 260;
-  const pyl = (i) => { const sg = segAt(i * PSP); return (sg === 'country' || sg === 'mountain' || sg === 'river' || sg === 'tea') && h1(i, 92) < 0.3; };
-  const ptop = (i) => Math.round(hz - hAt(i * PSP + 40) - 34);
+  const pyl = (i) => { const sg = segAt(i * PSP); return (sg === 'country' || sg === 'mountain' || sg === 'farm' || sg === 'tea') && h1(i, 92) < 0.25; };
+  const ptop = (i) => Math.round(hz - hAt(i * PSP + 40) - 20);
   B.slots(PSP, 40, 93, (i, sx) => {
     if (!pyl(i)) return;
+    B.obj(i * 7 + 1, 'none');
     const X = sx + 40, top = ptop(i), base = Math.round(hz - hAt(X) + 2);
     for (let y = top; y <= base; y++) {
       const w = Math.round(1 + (y - top) / 7);
@@ -278,27 +291,27 @@ export function paintHills(B, L) {
         for (let x = Math.max(ax, B.x0); x <= Math.min(bx, B.x1 - 1); x++) { const t = (x - ax) / (bx - ax); B.set(x, Math.round(lerp(ay, by, t) + Math.sin(t * Math.PI) * 9), WIRE); }
       }
     }
+    B.obj(null);
   });
   // a five-storey pagoda poking out of the woods, a vermilion torii
   B.slots(900, 40, 94, (i, sx, r) => {
     const X = sx + 300, sg = segAt(X);
-    if (!(sg === 'village' || sg === 'country' || sg === 'mountain') || r < 0.4) return;
+    if (sg !== 'village' || r < 0.5) return;
     const base = Math.round(hz - hAt(X) + 6);
+    B.obj(X * 5 + 3);
     if (r < 0.75) {
       const ROOF = pk('#3a3a4a'), ROOFL = pk('#5a5a6c'), RED = pk('#b8402e'), REDD = pk('#8a2e22'), GOLD = pk('#c8a040');
       for (let k = 0; k < 5; k++) {
-        const y = base - 6 - k * 7, w = 9 - k;
-        B.rect(X - w + 2, y - 4, (w - 2) * 2 + 1, 4, k % 2 ? REDD : RED);
-        B.rect(X - w + 3, y - 3, 1, 2, pk('#f0e0c0'));
-        B.rect(X - w - 1, y - 6, w * 2 + 3, 2, ROOF); B.hline(X - w, X + w, y - 7, ROOFL);
-        B.set(X - w - 2, y - 7, ROOF); B.set(X + w + 2, y - 7, ROOF);
+        const y = base - 4 - k * 5, w = 6 - Math.floor(k * 0.7);
+        B.rect(X - w + 2, y - 3, (w - 2) * 2 + 1, 3, k % 2 ? REDD : RED);
+        B.rect(X - w - 1, y - 4, w * 2 + 3, 1, ROOF); B.hline(X - w, X + w, y - 5, ROOFL);
       }
-      for (let y = base - 52; y < base - 41; y++) B.set(X, y, GOLD);
-      for (let k = 0; k < 4; k++) B.hline(X - 1, X + 1, base - 50 + k * 2, GOLD);
+      for (let y = base - 36; y < base - 28; y++) B.set(X, y, GOLD);
     } else {
       const RED = pk('#d8462e'), DK = pk('#2a2228');
-      B.rect(X - 7, base - 16, 2, 16, RED); B.rect(X + 5, base - 16, 2, 16, RED);
-      B.rect(X - 10, base - 18, 20, 2, DK); B.hline(X - 9, X + 9, base - 16, RED); B.rect(X - 8, base - 13, 16, 1, RED);
+      B.rect(X - 5, base - 11, 2, 11, RED); B.rect(X + 4, base - 11, 2, 11, RED);
+      B.rect(X - 7, base - 13, 15, 2, DK); B.rect(X - 6, base - 9, 13, 1, RED);
     }
+    B.obj(null);
   });
 }

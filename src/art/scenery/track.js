@@ -1,7 +1,7 @@
 // The layer right outside the window: catenary masts and wires flicking past,
-// the grassy embankment, noise barriers in town, the truss girders of a river
-// bridge, tunnels (portal, darkness, lamps streaking by) and, at the end, the
-// platform of Kodama-machi station with people waiting.
+// the grassy embankment, noise barriers in town, tunnels (portal, darkness,
+// lamps streaking by) and, at the end, the platform of Kodama-machi station
+// with people waiting.
 // Rows: y = 0 at the top; L.hz is the horizon row, L.gy the embankment top.
 import { pk, pks, h1, h2, n2, rampPick, emit, win, sprite, fromCanvas, darkenPacked } from './core.js';
 import { PixCanvas } from '../../core/pixtex.js';
@@ -11,7 +11,6 @@ const MAST = pks(['#4a4e58', '#5e636e', '#767c88', '#9aa0aa']);
 const WIRE = pk('#2a2c34'), WIRE_L = pk('#4a4c56');
 const GRASS = pks(['#2e5a28', '#3c6e30', '#4c8238', '#5e9842', '#78ae4e']);
 const CONC = pks(['#8a8a86', '#9a9a94', '#aaa9a2', '#bab8b0', '#cac8c0']);
-const TRUSS = pks(['#2e4a44', '#3a5a52', '#4a6c62', '#5e8074']);
 const TUN = pks(['#121218', '#18181f', '#1e1e26', '#262630']);
 const BLACK = pk('#1e1a22'), WHITE = pk('#f4f2ec');
 
@@ -58,31 +57,14 @@ function embankment(B, L, X, flowers) {
   if (h1(X, 503) > 0.55) { const hgt = 4 + Math.floor(h1(X, 504) * 12); for (let k = 0; k < hgt; k++) B.set(X - (k >> 2), gy - k, GRASS[2 + (k % 2)]); }
 }
 function barrier(B, L, X, k) {
-  const gy = L.gy, top = gy - 46;
+  const gy = L.gy, top = gy - 16;
   B.col(X, top, gy - 1, (x, y) => {
     if (y === top) return CONC[4];
     if (y < top + 3) return CONC[3];
     if ((x % 48) === 0) return CONC[0];
-    if (k > 0.5 && y < top + 22 && y > top + 4) return (x % 48) < 2 ? CONC[1] : pk('#9ab8c8'); // clear panels
+    if (k > 0.5 && y < top + 10 && y > top + 3) return (x % 48) < 2 ? CONC[1] : pk('#9ab8c8'); // clear panels
     return rampPick(CONC, 0.5 + (n2(x / 6, y / 10, 511) - 0.5) * 0.5 - (y - top) * 0.004, x, y);
   });
-}
-function truss(B, L, X, local) {
-  const top = L.hz - 98, bot = L.gy - 6, P = 96;
-  const u = ((local % P) + P) % P;
-  const deck = (y) => y >= bot - 8;
-  B.col(X, top, bot, (x, y) => {
-    if (y < top + 9) return TRUSS[y - top < 2 ? 3 : 1];
-    if (deck(y)) return y < bot - 5 ? TRUSS[3] : TRUSS[1];
-    if (u < 7) return TRUSS[u < 2 ? 3 : u > 5 ? 0 : 2];
-    // diagonals
-    const d1 = (y - top) / (bot - top) * P;
-    if (Math.abs(u - d1) < 3.5) return TRUSS[Math.abs(u - d1) < 1 ? 3 : 2];
-    if (Math.abs(u - (P - d1)) < 2.5) return TRUSS[1];
-    // rivet strips along the chords
-    return 0;
-  });
-  if (u % 8 === 0) { B.set(X, top + 4, TRUSS[0]); B.set(X, bot - 7, TRUSS[0]); }
 }
 function tunnelCol(B, L, X, mode, local) {
   // mode 'in': hillside rising to the portal then darkness; 'out': portal then hillside falling away
@@ -203,7 +185,6 @@ export function paintTrack(B, L) {
     const seg = s.b;
     if (seg === 'station') { platform(B, L, X, local); continue; }
     embankment(B, L, X, flowers);
-    if (seg === 'river' && local > 60) truss(B, L, X, local);
     if ((seg === 'city' && n2(X / 400, 0, 541) > 0.3) || (seg === 'village' && n2(X / 500, 0, 542) > 0.6)) barrier(B, L, X, n2(X / 300, 1, 543));
     anyMast = true;
   }
@@ -211,7 +192,7 @@ export function paintTrack(B, L) {
   wires(B, L);
   B.slots(MAST_SP, 70, 551, (i, sx) => {
     const s = L.segAt(sx);
-    if (s.b === 'tunnel' || s.a === 'tunnel' && sx - s.x0 < 120 || s.b === 'station' || (s.b === 'river' && sx - s.x0 > 60)) return;
+    if (s.b === 'tunnel' || s.a === 'tunnel' && sx - s.x0 < 120 || s.b === 'station') return;
     mast(B, sx, L);
   });
   // the station: name boards, benches, vending machines and people waiting

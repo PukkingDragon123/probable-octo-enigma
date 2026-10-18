@@ -64,20 +64,39 @@ export function rampPick(R, v, x, y) {
 export const pks = (arr, a = 255) => arr.map((c) => pk(c, a));
 
 // ---------------------------------------------------------------- the brush
+// Every write also stamps the current object (B.obj) into an id buffer, so a
+// later ink pass can draw the bold dark outlines round each house, tree and
+// pole: ids are stable per object (straddling chunks get the same id), and a
+// running depth number says which of two touching objects is in front.
+export const SOFT = 0x8000; // obj flag: outline in a dark shade of its own colour, not black
+export const NOINK = 0x4000; // obj flag: no outline of its own (thin things: pylons, wires)
 export class Brush {
   constructor(data, W, H) {
     this.d = new Uint32Array(data.buffer);
+    this.ids = new Uint16Array(W * H);
+    this.dep = new Uint16Array(W * H);
     this.W = W; this.H = H;
     this.ox = 0; this.c0 = 0; this.cw = 0;
+    this.cur = 0; this.curD = 0; this.seq = 0;
   }
   // paint absolute columns [ox, ox + cw) into ring columns [c0, c0 + cw)
-  begin(ox, c0, cw) { this.ox = ox; this.c0 = c0; this.cw = cw; for (let y = 0; y < this.H; y++) this.d.fill(0, y * this.W + c0, y * this.W + c0 + cw); }
+  begin(ox, c0, cw) {
+    this.ox = ox; this.c0 = c0; this.cw = cw; this.cur = 0; this.curD = 0;
+    for (let y = 0; y < this.H; y++) { const a = y * this.W + c0; this.d.fill(0, a, a + cw); this.ids.fill(0, a, a + cw); }
+  }
+  // start a new object (key: any number, the same for the same object in every chunk); null = ground
+  obj(key, soft = false) {
+    if (key == null) { this.cur = 0; this.curD = 0; return; }
+    this.cur = ((Math.floor(h1(Math.floor(key * 997) | 0, 0x51ab) * 0x3ffe) + 1) | (soft === 'none' ? NOINK : soft ? SOFT : 0));
+    this.curD = (++this.seq) & 0xffff;
+  }
   get x0() { return this.ox; }
   get x1() { return this.ox + this.cw; }
   set(X, y, c) {
     const cx = (X | 0) - this.ox; y |= 0;
     if (cx < 0 || cx >= this.cw || y < 0 || y >= this.H) return;
-    this.d[y * this.W + this.c0 + cx] = c;
+    const i = y * this.W + this.c0 + cx;
+    this.d[i] = c; this.ids[i] = this.cur; this.dep[i] = this.curD;
   }
   get(X, y) {
     const cx = (X | 0) - this.ox; y |= 0;
@@ -90,7 +109,7 @@ export class Brush {
     const ya = Math.max(0, y), yb = Math.min(this.H, y + h);
     if (a >= b || ya >= yb) return;
     a = a - this.ox + this.c0; b = b - this.ox + this.c0;
-    for (let yy = ya; yy < yb; yy++) this.d.fill(c, yy * this.W + a, yy * this.W + b);
+    for (let yy = ya; yy < yb; yy++) { const r = yy * this.W; this.d.fill(c, r + a, r + b); this.ids.fill(this.cur, r + a, r + b); this.dep.fill(this.curD, r + a, r + b); }
   }
   hline(X0, X1, y, c) { this.rect(Math.min(X0, X1), y, Math.abs(X1 - X0) + 1, 1, c); }
   vline(X, y0, y1, c) { this.rect(X, Math.min(y0, y1), 1, Math.abs(y1 - y0) + 1, c); }
@@ -100,7 +119,7 @@ export class Brush {
     if (cx < 0 || cx >= this.cw) return;
     const a = Math.max(0, Math.ceil(y0)), b = Math.min(this.H - 1, Math.floor(y1));
     const base = this.c0 + cx;
-    for (let y = a; y <= b; y++) { const c = fn(X, y); if (c) this.d[y * this.W + base] = c; }
+    for (let y = a; y <= b; y++) { const c = fn(X, y); if (c) { const i = y * this.W + base; this.d[i] = c; this.ids[i] = this.cur; this.dep[i] = this.curD; } }
   }
   line(x0, y0, x1, y1, c) {
     x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);

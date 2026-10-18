@@ -44,23 +44,26 @@ function head() {
   return v;
 }
 
-// hood up: a soft shell around the head, open at the front with a darker
-// lining, a little peak at the top, drawstrings hanging from the corners
+// hood up: a soft shell over the crown, back and sides of the head, its front
+// edge set back so the face and snout show (from the side too), with a dark
+// lining rim, a lip over the forehead and drawstrings at the jaw
 function hoodUp() {
   const v = new VoxelModel();
   const lin = HOOD.dd, fold = HOOD.d;
-  rbox(v, -9, 8, 2, 14, -8, 6, 3.4, (x, y, z) => {
-    if (x >= -7 && x <= 6 && y <= 12 && z >= -7 && z <= 5) return null; // the head inside
-    if (z >= 5 && y <= 12 && x >= -6 && x <= 5) return null; // face opening
-    if (z >= 5) return lin;
-    if (y >= 13 && hash3(x, y, z) < 0.3) return HOOD.l;
+  rbox(v, -8, 7, 3, 13, -7, 3, 2.6, (x, y, z) => {
+    if (x >= -7 && x <= 6 && y <= 11 && z >= -6) return null; // the head inside
+    if (z === 3) return y >= 12 || x <= -8 || x >= 7 ? lin : null; // the lining at the front edge
+    if (y >= 12 && hash3(x, y, z) < 0.3) return HOOD.l;
     if ((x + y * 2 + z) % 9 === 0) return fold;
     return tone(x, y, z, HOOD.b, HOOD.d, HOOD.l, 0.08, 0.1);
   });
+  // the lip over the forehead, a shade darker underneath
+  for (let x = -7; x <= 6; x++) { v.set(x, 12, 4, HOOD.l); v.set(x, 11, 4, x <= -6 || x >= 5 ? lin : null); }
+  for (const x of [-7, 6]) for (let y = 4; y <= 11; y++) v.set(x + (x < 0 ? -1 : 1), y, 4, lin);
   // seam over the crown (front to back)
-  for (let z = -7; z <= 5; z++) { const y = (() => { for (let yy = 16; yy >= 0; yy--) if (v.has(0, yy, z)) return yy; return null; })(); if (y != null) v.set(0, y, z, HOOD.d); }
+  for (let z = -7; z <= 4; z++) { const y = (() => { for (let yy = 16; yy >= 0; yy--) if (v.has(0, yy, z)) return yy; return null; })(); if (y != null) v.set(0, y, z, HOOD.d); }
   // drawstrings from the bottom front corners
-  for (const x of [-5, 4]) for (let k = 0; k < 5; k++) v.set(x, 1 - k, 6, k === 4 ? STRING_D : STRING);
+  for (const x of [-7, 6]) for (let k = 0; k < 5; k++) v.set(x, 3 - k, 5, k === 4 ? STRING_D : STRING);
   return v;
 }
 

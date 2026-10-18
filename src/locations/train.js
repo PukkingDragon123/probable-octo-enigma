@@ -211,8 +211,8 @@ void main() {
   vec2 p = vUv * vec2(86.0, 80.0); // ~1 cell per centimetre
   // a soft diagonal reflection band and a fainter second one
   float d = vUv.x * 0.9 + vUv.y * 0.55 + seed;
-  float band = smoothstep(0.06, 0.0, abs(fract(d * 0.8) - 0.3)) * 0.07 + smoothstep(0.03, 0.0, abs(fract(d * 0.8 + 0.37) - 0.5)) * 0.04;
-  float a = 0.035 + band;
+  float band = smoothstep(0.06, 0.0, abs(fract(d * 0.8) - 0.3)) * 0.035 + smoothstep(0.03, 0.0, abs(fract(d * 0.8 + 0.37) - 0.5)) * 0.02;
+  float a = 0.02 + band;
   vec3 c = vec3(0.85, 0.92, 1.0);
   // rain: beads that crawl back along the glass in the wind of the train
   if (rain > 0.01) {
@@ -303,11 +303,11 @@ export class TrainLocation extends Location {
     const S = this.scene;
     S.add(vm(carShell(), V5, [0, 0, 0]));
     // the world outside
-    this.scenery = new Scenery({ tsz: 0.0075, horizonY: 1.14, z: -1.45, refZ: CAR.wallZ, skyW: 30, skyH: 7 });
+    this.scenery = new Scenery({ tsz: 0.016, horizonY: 1.18, z: -1.45, refZ: CAR.wallZ, skyW: 30, skyH: 7 });
     S.add(this.scenery.group);
     // outside: the whole Kodama running through the country, for establishing shots
     // (far from the cut-away car; the camera visits it at z ~ OUT.z)
-    this.outScenery = new Scenery({ tsz: 0.034, horizonY: OUT.y + 7.5, z: OUT.z - 8, refZ: OUT.z, layout: 'outside', skyW: 90, skyH: 34 });
+    this.outScenery = new Scenery({ tsz: 0.05, horizonY: OUT.y + 7.5, z: OUT.z - 8, refZ: OUT.z, layout: 'outside', skyW: 90, skyH: 34 });
     S.add(this.outScenery.group);
     this.outTrain = new THREE.Group();
     const cars = [shinkansenCar({ nose: true, number: 8 }), shinkansenCar({ number: 7, panto: true }), shinkansenCar({ number: 6 })];
@@ -426,7 +426,7 @@ export class TrainLocation extends Location {
     const sc = this.scenery;
     const pov = rig.pov ? { eye: rig.persp.position, fwd: rig.persp.getWorldDirection(this._fwd || (this._fwd = new THREE.Vector3())) } : null;
     sc.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2, persp: pov });
-    this.povSide.visible = !!pov;
+    this.povSide.visible = !!pov || Math.cos(rig.yaw) < -0.2; // reverse shots from the window side see it too
     const out = this.outside;
     this.outScenery.group.visible = out; this.outTrain.visible = out;
     if (out) this.outScenery.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2 });

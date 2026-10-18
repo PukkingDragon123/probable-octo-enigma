@@ -1,7 +1,8 @@
 // Chapter 1 — the Kodama, bound for Kodama-machi.
-// A side-on cinematic through the car's big windows: paddies, old farmhouses,
-// an iron bridge, a tunnel that comes out on the tea country and Fuji, the sea
-// at sunset, rain, the town lights at dusk. Mamo rides alone, hood up, earbuds
+// A side-on cinematic through the car's big windows: green rice fields, old
+// farmhouses behind their hedges, greenhouses and farm lanes, a tunnel that
+// comes out on the tea country and Fuji, a wooded valley at sunset, rain, the
+// town lights at dusk. Mamo rides alone, hood up, earbuds
 // in. No word from Mom yet. He takes out his phone — and we're in his eyes:
 // his own hands, the little sudoku app. Solve it and the attendant comes by
 // with her cart and the last bento. Then a photo of Dad, and the arrival.
@@ -77,11 +78,11 @@ const ANN = [
 // camera shots (side-on carriage; Mamo's window seat is row 0)
 const MX = ROWX(0) + 0.02;
 const SHOT = {
-  wide: { x: MX + 0.2, y: 1.3, z: -0.2, wupp: 0.0075, pitch: 4, yaw: 0 },
-  mamo: { x: MX + 0.42, y: 0.92, z: -0.5, wupp: 0.0042, pitch: 6, yaw: 30 },
-  window: { x: MX + 0.35, y: 1.12, z: -0.62, wupp: 0.0054, pitch: 3, yaw: 10 },
-  face: { x: MX + 0.3, y: 0.95, z: -0.55, wupp: 0.0028, pitch: 4, yaw: 40 },
-  talk: { x: MX + 0.28, y: 0.95, z: -0.12, wupp: 0.0052, pitch: 6, yaw: 58 },
+  wide: { x: MX + 0.2, y: 1.3, z: -0.2, wupp: 0.0075, pitch: 4, yaw: 0, clip: 0 },
+  // three-quarter front: his face under the hood, the country behind him (the seat ahead is cut away)
+  mamo: { x: MX + 0.1, y: 0.95, z: -0.55, wupp: 0.0038, pitch: 10, yaw: 55, clip: 0.7 },
+  window: { x: MX + 0.35, y: 1.12, z: -0.62, wupp: 0.0054, pitch: 3, yaw: 10, clip: 0 },
+  face: { x: MX + 0.1, y: 0.97, z: -0.55, wupp: 0.0027, pitch: 8, yaw: 60, clip: 0.7 },
 };
 // the eyes, for first person
 const EYE = { x: MX + 0.05, y: 0.98, z: -0.56 };
@@ -151,12 +152,12 @@ export async function trainChapter(g) {
     // the little one in row 2, nose on the glass
     D.say(L.kid, 'Mama, look! The rice fields go on forever!', { ambient: true, auto: 2.4, name: '' });
     await D.wait(2.6);
-    // ---- the first announcement, then the river
+    // ---- the first announcement, then farmland: greenhouses, sheds, kei trucks
     const a1 = g.audio?.announce?.({ ja: ANN[0].ja, en: ANN[0].en });
     D.caption('“We will soon make a brief stop at Shizuoka.”', { dur: 4, kind: 'subtitle' });
     await Promise.race([a1, D.wait(6)]);
-    D.mark('river');
-    L.setSegment('river');
+    D.mark('farm');
+    L.setSegment('farm');
     D.cam({ ...SHOT.wide, x: MX + 1.6, dur: 3.5, ease: 'inOutSine' });
     await D.wait(6.5);
     // ---- a tunnel, and out into the tea country with Fuji
@@ -217,25 +218,35 @@ export async function trainChapter(g) {
     g.rig.setPov({ eye: EYE, look: { x: hd.x, y: hd.y - 0.1, z: hd.z }, fov: 52, ease: 2.5 });
     await D.wait(0.6);
     await D.say(att, 'Excuse me, young man? Would you like a bento?', { expr: 'smile', act: 'wave' });
-    // back out of his eyes
+    // back out of his eyes: his face under the hood, then her, shot and reverse shot
     await D.fadeOut(0.3);
     g.fp.stop();
     P.root.visible = true;
     D.letterbox(true);
-    D.cam({ ...SHOT.talk, dur: 0 });
-    await D.fadeIn(0.35);
     P.stopAction();
+    P.faceTo(att.x, att.z); P.faceNow(P.yawGoal);
+    att.faceTo(P.x, P.z); att.faceNow(att.yawGoal);
+    const deg = (r) => r * 180 / Math.PI;
+    // his face, turned up toward her (she is cut away by the clip plane)
+    const hisClose = { x: P.x + 0.04, y: 0.97, z: P.z + 0.06, wupp: 0.0032, pitch: 8, yaw: deg(P.yawGoal) + 12, clip: 0.7, dur: 0 };
+    D.cam(hisClose);
+    await D.fadeIn(0.35);
     P.setExpr('surprised');
     D.emote(P, 'excl');
     P.squash(-0.2);
     await D.wait(0.4);
-    P.faceTo(att.x, att.z);
     await D.say(P, "Huh? Oh— um. No... no thanks.", { expr: 'awkward' });
     g.audio?.play?.('growl', { pitch: 2.4, volume: 0.35 });
     D.emote(P, 'sweat');
     P.setExpr('embarrassed');
     await D.wait(0.9);
+    // the reverse: her face, from the window side (the far wall of the car behind her)
+    att.headPos(hd);
+    const herClose = { x: hd.x, y: hd.y - 0.04, z: hd.z, wupp: 0.0034, pitch: 4, yaw: deg(att.yawGoal) + 20, clip: 0.6, dur: 0 };
+    const twoShot = { x: MX + 0.33, y: 1.05, z: 0.2, wupp: 0.005, pitch: 6, yaw: 165, clip: 0.95, dur: 0 };
+    D.cam(herClose);
     await D.say(att, 'Ufufu~ your tummy says otherwise!', { expr: 'laugh' });
+    D.cam(twoShot);
     await D.say(att, "Here. The 'Fuji Sunrise' ekiben — it's my last one. On the house.", { expr: 'happy' });
     const bento = makeBento();
     att.hold(bento, 'both');
@@ -249,15 +260,18 @@ export async function trainChapter(g) {
     P.play('carry', { loop: true });
     g.audio?.play?.('boxLift', { volume: 0.4 });
     await D.wait(0.5);
+    D.cam(hisClose);
     await D.say(P, '...Thank you.', { expr: 'shy' });
+    D.cam(herClose);
     await D.say(att, "Eat it while it's warm! Have a lovely trip~", { expr: 'joy', act: 'wave' });
+    D.cam({ ...SHOT.wide, x: MX + 0.6, dur: 0 });
     clearInterval(tick);
     const leaving = D.walk(att, MX - 4.5, L.aisleZ, { free: true });
     const tick2 = setInterval(cartFollow, 16);
     leaving.then(() => { clearInterval(tick2); L.remove(att); L.scene.remove(cart); });
-    // ---- the sea at sunset, and the bento
+    // ---- a wooded valley at sunset, and the bento
     D.mark('bento');
-    L.setSegment('sea');
+    L.setSegment('valley');
     L.setTime('sunset', 10);
     P.faceNow(Math.PI / 2);
     await D.cam({ x: MX + 0.3, y: 0.58, z: -0.42, wupp: 0.0031, pitch: 38, yaw: 34, dur: 1.8, clip: 1.0 });
