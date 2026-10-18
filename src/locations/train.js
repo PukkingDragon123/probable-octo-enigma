@@ -425,11 +425,11 @@ export class TrainLocation extends Location {
     const g = this.game, rig = g.rig, R = g.renderer;
     const sc = this.scenery;
     const pov = rig.pov ? { eye: rig.persp.position, fwd: rig.persp.getWorldDirection(this._fwd || (this._fwd = new THREE.Vector3())) } : null;
-    sc.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2, persp: pov });
+    sc.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wuppFor(R)) / 2, persp: pov });
     this.povSide.visible = !!pov || Math.cos(rig.yaw) < -0.2; // reverse shots from the window side see it too
     const out = this.outside;
     this.outScenery.group.visible = out; this.outTrain.visible = out;
-    if (out) this.outScenery.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wupp) / 2 });
+    if (out) this.outScenery.update(dt, { x: rig.target.x, z: rig.target.z, yaw: rig.yaw, pitch: rig.pitch, halfW: (R.rtW * rig.wuppFor(R)) / 2 });
     const tk = sc.tunnelK, lk = sc.look, sp = sc.speed;
     // the glass and the beams
     for (const u of this.glassU) { u.time.value = t; u.rain.value = this.rain; u.speed.value = sp; u.night.value = Math.max(tk, lk.lights * 0.6); }
