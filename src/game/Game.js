@@ -11,12 +11,13 @@ import { Lighting } from '../world/lighting.js';
 import { Bubbles, Captions } from '../ui/bubbles.js';
 import { Emotes } from '../ui/emotes.js';
 import { Transitions } from '../ui/transitions.js';
+import { titleCard } from '../ui/cards.js';
 import { Director } from './Director.js';
 import { Character } from '../entities/rig.js';
 import { CHARACTERS } from '../data/characters.js';
 import { Emitter, clamp, damp } from '../core/util.js';
 import { newState, loadState, saveState } from './state.js';
-import '../ui/game.css';
+import { Settings } from '../ui/settings.js';
 
 // optional modules (exist once written; the game runs without them)
 const AUDIO = import.meta.glob('../audio/audio.js', { eager: true })['../audio/audio.js'];
@@ -31,8 +32,9 @@ export class Game extends Emitter {
     this.rig = new CameraRig();
     this.input = new Input(canvas);
     this.audio = AUDIO?.Audio ? new AUDIO.Audio() : null;
+    this.settings = new Settings(this.audio);
     this.bubbles = new Bubbles(this, uiRoot);
-    this.captions = new Captions(uiRoot);
+    this.captions = new Captions(uiRoot, this);
     this.transitions = new Transitions(this, uiRoot);
     this.director = new Director(this);
     this.locations = {}; // id -> Location instance
@@ -43,6 +45,7 @@ export class Game extends Emitter {
     this.time = 0;
     this.timeScale = 1;
     this.inputLocked = false;
+    this.paused = false; // pause menu open: game time, characters and cutscenes all hold
     this.letterbox = 0; this.letterboxGoal = 0;
     this.state = newState();
     this.player = new Character(CHARACTERS.mamoru);
@@ -129,6 +132,8 @@ export class Game extends Emitter {
     I.on('move', (e) => this.onHover(e));
     I.on('key', (e) => {
       if (!e.down) { if (e.key === ' ' || e.key === 'Shift') this.director.skipping = false; return; }
+      if (this.paused) return;
+      if (this.bubbles.onKey(e.key)) return; // choices: arrows / Enter / number keys
       if (e.key === ' ' || e.key === 'Enter') { if (this.bubbles.active) this.bubbles.tapAdvance(); }
       if (e.key === 'Shift' && this.director.inCutscene) { this.director.skipping = true; }
       if (e.key === 'q') this.rig.rotate(1);
@@ -137,6 +142,7 @@ export class Game extends Emitter {
     });
   }
   onTap(e) {
+    if (this.paused) return;
     if (this.bubbles.active) { this.bubbles.tapAdvance(); return; }
     if (this.inputLocked || !this.location || this.transitions.busy) return;
     const L = this.location;
@@ -189,16 +195,20 @@ export class Game extends Emitter {
   set hour(h) { this.state.hour = ((h % 24) + 24) % 24; }
 
   // ---------------------------------------------------------------- overlays
-  async titleCard(text, sub = '', dur = 2.6) {
-    const el = document.createElement('div');
-    el.className = 'title-card';
-    el.innerHTML = `<div class="tc-main">${text}</div>${sub ? `<div class="tc-sub">${sub}</div>` : ''}`;
-    this.uiRoot.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('in'));
-    await this.director.wait(dur);
-    el.classList.remove('in'); el.classList.add('out');
-    await this.director.wait(0.6);
-    el.remove();
+  // big animated card (a calendar page for "Day N")
+  titleCard(text, sub = '', dur = 2.6) { return titleCard(this, text, sub, dur); }
+  // ---------------------------------------------------------------- pause
+  setPaused(on) {
+    on = !!on;
+    if (on === this.paused) return;
+    this.paused = on;
+    if (on) {
+      this.director.skipping = false;
+      this.input.keys.clear();
+      // babble is scheduled ahead on the audio clock: hush it, typing goes on with blips
+      for (const b of this.bubbles.list) if (b.voice) { try { b.voice.stop(); } catch { /* */ } b.voice = null; }
+    }
+    this.emit('pause', on);
   }
 
   // ---------------------------------------------------------------- save
@@ -213,6 +223,7 @@ export class Game extends Emitter {
     this.canvas.style.height = `${window.innerHeight}px`;
   }
   update(rawDt) {
+    if (this.paused) return;
     const fast = this.director.skipping ? 6 : (this.fastForward || 1);
     const dt = rawDt * this.timeScale * fast;
     this.time += dt;

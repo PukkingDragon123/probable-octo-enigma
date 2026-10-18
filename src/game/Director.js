@@ -92,7 +92,7 @@ export class Director {
     if ((o.pitch ?? c.pitch) != null) r.pitchGoal = ((o.pitch ?? c.pitch) * Math.PI) / 180;
     if (c.yaw != null) r.yawGoal = (c.yaw * Math.PI) / 180;
   }
-  shake(k = 0.6) { this.g.rig.shake = Math.max(this.g.rig.shake, k); }
+  shake(k = 0.6) { if (this.g.settings?.shake === false) return; this.g.rig.shake = Math.max(this.g.rig.shake, k); }
   letterbox(on) { this.g.letterboxGoal = on ? 1 : 0; }
   // ---------------------------------------------------------------- screen
   async fadeOut(dur = 0.8, color = 0x0e0812) { this.g.renderer.uniforms.fadeColor.value.setHex(color); await this.tween((k) => { this.g.renderer.uniforms.fade.value = k; }, dur); }

@@ -1,0 +1,171 @@
+/* Kodamaya UI kit: palette, painted type, jagged menu items, settings rows,
+   panels and the slash shutter. Ink / cream / vermilion / gold / indigo with
+   hard offset shadows, skewed slabs and snappy overshooting motion. */
+:root {
+  --k-ink: #141018; --k-ink2: #241c2e; --k-cream: #fff3dc; --k-cream2: #e8d2a8;
+  --k-red: #e8443a; --k-red2: #a8261f; --k-gold: #ffd060; --k-gold2: #c8901c;
+  --k-indigo: #23264a; --k-indigo2: #3a4080; --k-teal: #5ad8b8;
+  --k-snap: cubic-bezier(.18, 1.65, .36, 1); --k-out: cubic-bezier(.16, 1, .3, 1); --k-in: cubic-bezier(.6, 0, .9, .3);
+  --ts: 3; /* painted type scale (texels -> css px) */
+}
+@media (max-width: 1000px), (max-height: 640px) { :root { --ts: 2; } }
+
+.ptype { display: block; width: calc(var(--w) * var(--ts) * 1px); height: calc(var(--h) * var(--ts) * 1px); image-rendering: pixelated; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.k-kbd { display: inline-block; min-width: 1.9em; padding: 2px 6px 1px; margin: 0 3px; font: 400 12px/1.2 'Galmuri9', monospace; color: var(--k-ink); background: var(--k-cream); border-radius: 2px; box-shadow: 0 3px 0 var(--k-cream2), 0 3px 0 2px var(--k-ink); text-align: center; vertical-align: 1px; }
+
+/* a skewed slab behind unskewed (pixel) text: set --sk-bg / --sk-sh */
+.k-sk { position: relative; isolation: isolate; }
+.k-sk::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--sk-bg, var(--k-ink)); transform: skewX(var(--sk, -12deg)); box-shadow: var(--sk-sh, none); }
+
+/* ---------------------------------------------------------------- jagged menu items */
+.k-item {
+  position: relative; display: flex; align-items: center; gap: 14px; border: 0; margin: 0; background: none; cursor: pointer;
+  padding: 7px 26px 7px 30px; font: inherit; color: var(--k-cream); outline: none; -webkit-tap-highlight-color: transparent;
+  translate: var(--ix, 0px) 0; transition: translate .2s var(--k-out), scale .2s var(--k-out), opacity .2s;
+}
+.k-item .k-slab { position: absolute; inset: 3px -10px 1px 4px; transform: skewX(-16deg) scaleX(0); transform-origin: 0 50%; transition: transform .14s var(--k-in); z-index: 0; }
+.k-item .k-slab::before { content: ''; position: absolute; inset: 0; background: var(--k-ink); transform: translate(9px, 7px); z-index: -2; }
+.k-item .k-slab::after { content: ''; position: absolute; inset: -4px -6px -3px -5px; background: var(--k-cream); transform: rotate(-2.2deg); z-index: -1; }
+.k-item .k-slab > i { position: absolute; inset: 0; background: var(--k-red); background-image: linear-gradient(100deg, transparent 62%, rgba(255, 208, 96, .5) 62% 66%, transparent 66%); }
+.k-item .k-word { position: relative; z-index: 1; display: block; transition: translate .18s var(--k-out); }
+.k-item .k-on { display: none; }
+.k-item .k-ja { position: relative; z-index: 1; font: 400 13px/1 'Mochiy Pop One', 'Galmuri11', sans-serif; color: var(--k-gold); text-shadow: 2px 2px 0 var(--k-ink); rotate: -5deg; translate: 0 -8px; opacity: .85; transition: color .15s; white-space: nowrap; }
+.k-item .k-cur { position: absolute; left: -10px; top: 50%; width: 30px; height: 30px; margin-top: -15px; z-index: 2; background: var(--cap) center / contain no-repeat; image-rendering: pixelated; scale: 0; transition: scale .15s var(--k-snap); }
+.k-item.sel { translate: calc(var(--ix, 0px) - 16px) 0; scale: 1.07; z-index: 2; }
+.k-item.sel .k-slab { transform: skewX(-16deg) scaleX(1); transition: transform .22s var(--k-snap); }
+.k-item.sel .k-on { display: block; }
+.k-item.sel .k-off { display: none; }
+.k-item.sel .k-word { translate: 8px 0; animation: kBreathe 1.8s ease-in-out .3s infinite; }
+.k-item.sel .k-ja { color: var(--k-cream); }
+.k-item.sel .k-cur { scale: 1; animation: kCapsule 1.2s ease-in-out infinite; }
+.k-item.snap .k-slab { animation: kSlab .3s var(--k-snap); }
+.k-item.picked .k-slab > i { animation: kFlash .32s steps(2) 2; }
+.k-item.picked { animation: kPunch .3s var(--k-out); }
+.k-item.off { opacity: .38; cursor: default; filter: saturate(.2); }
+@keyframes kSlab { 0% { transform: skewX(-16deg) scaleX(.05) translateX(-30px); } 100% { transform: skewX(-16deg) scaleX(1); } }
+@keyframes kBreathe { 50% { scale: 1.035; } }
+@keyframes kCapsule { 0%, 100% { translate: 0 0; rotate: -12deg; } 50% { translate: -3px -3px; rotate: 10deg; } }
+@keyframes kFlash { 50% { background-color: var(--k-gold); } }
+@keyframes kPunch { 30% { scale: 1.16; } }
+
+/* ---------------------------------------------------------------- panels (settings, credits, chapters, confirm) */
+.k-panel { position: fixed; inset: 0; z-index: 70; pointer-events: auto; display: flex; align-items: center; justify-content: center; overflow: hidden; font-family: 'Galmuri11', monospace; color: var(--k-cream); }
+.k-panel .k-pbg { position: absolute; inset: 0; background: rgba(20, 16, 24, .72); }
+.k-panel .k-pbg::after { content: ''; position: absolute; inset: 0; background: var(--pat-dots) 0 0 / 8px 8px; opacity: .07; image-rendering: pixelated; }
+.k-panel .k-pband { position: absolute; left: -10%; right: -10%; top: 50%; height: 64%; translate: 0 -50%; rotate: -9deg; background: var(--k-red); box-shadow: 0 -10px 0 var(--k-ink), 0 14px 0 var(--k-gold); }
+.k-panel .k-pband::after { content: ''; position: absolute; inset: 0; background: var(--pat-hatch) 0 0 / 12px 12px; opacity: .12; image-rendering: pixelated; animation: kSlide 6s linear infinite; }
+.k-panel .k-pkanji { position: absolute; right: 2vw; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: 6px; opacity: .3; --ts: 7; }
+@keyframes kSlide { to { background-position: 120px 0; } }
+.k-pcard { position: relative; width: min(640px, 92vw); max-height: 88vh; display: flex; flex-direction: column; padding: 22px 26px 16px; }
+.k-pcard::before { content: ''; position: absolute; inset: 0; background: var(--k-ink); transform: skewX(-5deg); box-shadow: 0 0 0 4px var(--k-cream), 12px 12px 0 4px var(--k-ink); z-index: -1; }
+.k-phead { position: relative; display: flex; align-items: flex-end; gap: 14px; margin: -54px 0 10px -18px; }
+.k-phead .k-pja { font: 400 15px/1 'Mochiy Pop One', sans-serif; color: var(--k-ink); background: var(--k-gold); padding: 6px 10px 5px; transform: skewX(-12deg) rotate(-4deg); box-shadow: 4px 4px 0 var(--k-ink); margin-bottom: 8px; white-space: nowrap; }
+.k-pbody { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden; padding: 6px 16px 10px 24px; margin: 0 -16px 0 -24px; scrollbar-width: thin; scrollbar-color: var(--k-red) transparent; }
+.k-pfoot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; margin-top: 10px; font: 400 12px/1.4 'Galmuri9', monospace; color: rgba(255, 243, 220, .7); }
+.k-panel.in .k-pcard { animation: kCardIn .42s var(--k-snap) both; }
+.k-panel.in .k-pband { animation: kBandIn .36s var(--k-out) both; }
+.k-panel.in .k-pbg { animation: kFade .25s both; }
+.k-panel.in .k-pbody > * { animation: kRowIn .34s var(--k-snap) both; animation-delay: calc(var(--n, 0) * 40ms + 120ms); }
+.k-panel.out { pointer-events: none; }
+.k-panel.out .k-pcard { animation: kCardOut .2s var(--k-in) both; }
+.k-panel.out .k-pband { animation: kBandOut .24s var(--k-in) both; }
+.k-panel.out .k-pbg, .k-panel.out .k-pkanji { animation: kFade .24s reverse both; }
+@keyframes kFade { from { opacity: 0; } }
+@keyframes kCardIn { from { transform: translateX(60vw) skewX(-12deg); opacity: 0; } }
+@keyframes kCardOut { to { transform: translateX(-60vw) skewX(12deg); opacity: 0; } }
+@keyframes kBandIn { from { translate: 110% -50%; } }
+@keyframes kBandOut { to { translate: -110% -50%; } }
+@keyframes kRowIn { from { transform: translateX(80px); opacity: 0; } }
+
+/* rows inside panels (settings, chapters) */
+.k-row, .k-panel .k-item { --ts: 2; }
+.k-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 6px 12px 6px 20px; cursor: pointer; }
+.k-row .k-slab { position: absolute; inset: 2px -4px 2px 6px; transform: skewX(-16deg) scaleX(0); transform-origin: 0 50%; transition: transform .14s var(--k-in); }
+.k-row .k-slab::before { content: ''; position: absolute; inset: 0; background: var(--k-cream); transform: translate(6px, 5px); z-index: -1; }
+.k-row .k-slab > i { position: absolute; inset: 0; background: var(--k-red); }
+.k-row.sel .k-slab { transform: skewX(-16deg) scaleX(1); transition: transform .22s var(--k-snap); }
+.k-row.snap .k-slab { animation: kSlab .28s var(--k-snap); }
+.k-row.sel { translate: -8px 0; }
+.k-row > *:not(.k-slab) { position: relative; }
+.k-rl { flex: 0 0 auto; transition: translate .18s var(--k-out); }
+.k-row.sel .k-rl { translate: 6px 0; }
+.k-rv { display: flex; align-items: center; gap: 8px; font: 700 18px/1 'Galmuri11', monospace; }
+.k-arr { width: 30px; height: 30px; border: 0; padding: 0; background: var(--k-ink); color: var(--k-cream); font: 400 12px/1 'Galmuri9', monospace; clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%); cursor: pointer; transition: background .12s, color .12s; }
+.k-arr:hover { background: var(--k-gold); color: var(--k-ink); }
+.k-row.sel .k-arr { background: var(--k-ink); }
+.k-cells { display: flex; gap: 3px; }
+.k-cells i { width: 13px; height: 22px; background: rgba(255, 243, 220, .16); transform: skewX(-14deg); transition: background .12s, height .12s; cursor: pointer; }
+.k-cells i.on { background: var(--k-cream); }
+.k-row.sel .k-cells i { background: rgba(20, 16, 24, .45); }
+.k-row.sel .k-cells i.on { background: var(--k-cream); box-shadow: 2px 2px 0 var(--k-ink); }
+.k-num { min-width: 3ch; text-align: right; color: var(--k-gold); white-space: pre; }
+.k-row.sel .k-num { color: var(--k-ink); }
+.k-row.bump .k-cells { animation: kBump .2s var(--k-snap); }
+@keyframes kBump { 40% { transform: scale(1.06, 1.18); } }
+.k-opt { display: inline-block; min-width: 7.5ch; text-align: center; color: var(--k-cream); letter-spacing: 1px; }
+.k-opt.flip { animation: kFlip .24s var(--k-snap); }
+@keyframes kFlip { from { transform: translateY(-14px) skewX(-20deg); opacity: 0; } }
+.k-pips { display: flex; flex-direction: column; gap: 2px; }
+.k-pips i { width: 5px; height: 5px; background: rgba(255, 243, 220, .25); }
+.k-pips i.on { background: var(--k-gold); }
+.k-row.sel .k-pips i.on { background: var(--k-ink); }
+.k-panel .k-item { padding: 6px 20px 6px 26px; align-self: flex-start; }
+.k-panel .k-item .k-cur { width: 22px; height: 22px; margin-top: -11px; left: -6px; }
+
+/* chapter list */
+.k-chap { gap: 14px; justify-content: flex-start; }
+.k-chap .k-cn { font: 400 22px/1 'Dela Gothic One', sans-serif; color: var(--k-gold); width: 2.2ch; text-shadow: 3px 3px 0 var(--k-red2); transform: skewX(-10deg); }
+.k-chap .k-cja { margin-left: auto; font: 400 15px/1 'Mochiy Pop One', sans-serif; color: rgba(255, 243, 220, .55); }
+.k-chap.sel .k-cn { color: var(--k-cream); text-shadow: 3px 3px 0 var(--k-ink); }
+.k-chap.sel .k-cja { color: var(--k-ink); }
+.k-chap.cur::after { content: 'NOW'; position: absolute; right: -6px; top: -4px; font: 400 10px/1 'Galmuri9', monospace; color: var(--k-ink); background: var(--k-gold); padding: 2px 5px; transform: rotate(6deg); }
+
+/* confirm + credits */
+.k-msg { font: 400 15px/1.55 'Galmuri11', monospace; color: rgba(255, 243, 220, .85); padding: 4px 6px 10px 4px; }
+.k-msg b { color: var(--k-gold); font-weight: 400; }
+.k-yesno { display: flex; gap: 46px; justify-content: center; margin-top: 4px; }
+.k-credits { font: 400 14px/1.6 'Galmuri11', monospace; color: rgba(255, 243, 220, .9); }
+.k-credits h4 { position: relative; isolation: isolate; margin: 10px 0 2px; font: 400 12px/1 'Galmuri9', monospace; color: var(--k-ink); display: inline-block; padding: 3px 8px 2px; }
+.k-credits h4::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--k-gold); transform: skewX(-12deg); }
+.k-credits p { margin: 2px 0 4px; }
+.k-credits em { font-style: normal; color: var(--k-gold); }
+
+/* ---------------------------------------------------------------- shutter */
+.k-shutter { position: fixed; inset: 0; z-index: 95; pointer-events: auto; overflow: hidden; }
+.k-shutter i { position: absolute; top: -30%; bottom: -30%; left: 0; width: 180vw; transform: translateX(115vw) skewX(-20deg); transition: transform .5s var(--k-in); }
+.k-shutter .s1 { background: var(--k-gold); transition-delay: 0s; }
+.k-shutter .s2 { background: var(--k-red); transition-delay: .05s; }
+.k-shutter .s3 { background: var(--k-cream); transition-delay: .1s; width: 175vw; }
+.k-shutter .s4 { background: var(--k-ink); transition-delay: .13s; width: 172vw; }
+.k-shutter.in i { transform: translateX(-38vw) skewX(-20deg); }
+.k-shutter.in .s2 { transform: translateX(-36vw) skewX(-20deg); }
+.k-shutter.in .s3 { transform: translateX(-33vw) skewX(-20deg); }
+.k-shutter.in .s4 { transform: translateX(-30vw) skewX(-20deg); }
+.k-shutter.out i { transform: translateX(-240vw) skewX(-20deg); transition: transform .55s var(--k-in); }
+.k-shutter.out .s4 { transition-delay: 0s; } .k-shutter.out .s3 { transition-delay: .04s; } .k-shutter.out .s2 { transition-delay: .08s; } .k-shutter.out .s1 { transition-delay: .12s; }
+.k-shutter b { position: absolute; left: 50%; top: 50%; translate: -50% -50%; font: 400 min(18vw, 140px)/1 'Dela Gothic One', sans-serif; color: transparent; -webkit-text-stroke: 2px rgba(255, 243, 220, .16); opacity: 0; transition: opacity .2s .4s; white-space: nowrap; }
+.k-shutter.in b { opacity: 1; }
+.k-shutter.out b { opacity: 0; transition-delay: 0s; }
+
+@media (max-width: 760px), (max-height: 640px) {
+  .k-item { padding: 5px 18px 5px 22px; gap: 10px; }
+  .k-item .k-ja { font-size: 11px; }
+  .k-item .k-cur { width: 22px; height: 22px; margin-top: -11px; left: -6px; }
+  .k-pcard { padding: 18px 16px 12px; }
+  .k-phead { margin: -44px 0 6px -10px; }
+  .k-row { min-height: 40px; padding: 4px 8px 4px 14px; }
+  .k-cells { gap: 2px; } .k-cells i { width: 8px; height: 18px; }
+  .k-rv { font-size: 15px; gap: 5px; }
+  .k-arr { width: 24px; height: 26px; }
+  .k-chap .k-cja { display: none; }
+}
+@media (max-width: 480px) {
+  .k-phead { --ts: 1.5; margin-left: -6px; }
+  .k-phead .k-pja { font-size: 12px; }
+  .k-row { flex-wrap: wrap; row-gap: 2px; }
+  .k-row .k-rv { margin-left: auto; }
+  .k-pbody { padding-right: 10px; margin-right: -10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-item.sel .k-word, .k-item.sel .k-cur, .k-panel .k-pband::after { animation: none; }
+}
