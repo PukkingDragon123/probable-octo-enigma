@@ -24,7 +24,7 @@ export class Bubbles {
   // phone's text drops under ~15 css px (kept on whole device pixels)
   get scale() {
     const R = this.game.renderer, dpr = R.dpr || 1;
-    let s = Math.max(1, R.pixelScale / dpr);
+    let s = Math.max(1, (R.basePixelScale ?? R.pixelScale) / dpr);
     if (11 * s < 15) s = Math.ceil((15 * dpr) / 11) / dpr;
     return s;
   }
