@@ -5,6 +5,9 @@ import { Phone } from './ui/phone.js';
 import { FirstPerson } from './game/firstPerson.js';
 import { RotateButtons } from './ui/rotateButtons.js';
 import { TitleScreen } from './ui/title.js';
+import { setMenuAudio } from './ui/menu.js';
+import { Hud } from './ui/hud.js';
+import { PauseMenu } from './ui/pause.js';
 import { hasSave } from './game/state.js';
 import { registerLocations } from './locations/index.js';
 import { Story } from './story/story.js';
@@ -13,9 +16,12 @@ await loadFonts();
 const canvas = document.getElementById('game');
 const ui = document.getElementById('ui');
 const game = new Game(canvas, ui);
+setMenuAudio(game.audio);
 game.phone = new Phone(game, ui);
 game.fp = new FirstPerson(game);
 game.rotBtns = new RotateButtons(game, ui);
+game.hud = new Hud(game, ui);
+game.pause = new PauseMenu(game);
 registerLocations(game);
 game.story = new Story(game);
 game.resize();
@@ -40,10 +46,14 @@ if (viewLoc) {
   game.story.start(startChapter);
 } else {
   // title: the train speeding through the fields at golden hour behind the logo
+  game.hud.on = false;
   await game.story.titleBackdrop();
   new TitleScreen(ui, {
     hasSave: hasSave(),
+    settings: game.settings,
     onStart: (choice) => {
+      game.renderer.uniforms.fade.value = 1; // every chapter fades in from black
+      game.hud.on = true;
       game.audio?.unlock?.();
       if (choice === 'continue' && game.load()) game.story.resume();
       else game.story.start('train');

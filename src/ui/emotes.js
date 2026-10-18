@@ -6,14 +6,24 @@ import * as THREE from 'three';
 import { Atlas, SpriteBatch } from '../core/sprites.js';
 import { clamp, EASE } from '../core/util.js';
 
-const K = '#2a1828', W = '#fffaf0';
+// UI palette: ink, cream, vermilion, gold
+const K = '#141018', W = '#fff3dc', R = '#e8443a', G = '#ffd060';
 function buildAtlas() {
   const A = new Atlas(256, 128);
-  const bubble = (p, w, h, fill = W) => { p.rrect(0, 0, w, h - 3, 4, K); p.rrect(1, 1, w - 2, h - 5, 3, fill); p.poly([[w / 2 - 3, h - 4], [w / 2 + 3, h - 4], [w / 2 - 1, h]], K); p.rect(w / 2 - 2, h - 5, 3, 1, fill); };
-  A.add('excl', 13, 17, (p) => { bubble(p, 13, 17); p.rect(5, 3, 3, 6, '#e8443a'); p.rect(5, 10, 3, 2, '#e8443a'); });
-  A.add('quest', 13, 17, (p) => { bubble(p, 13, 17); p.stamp(['.ooo.', 'o...o', '...o.', '..o..', '.....', '..o..'], { o: '#3a7ad8' }, 4, 3); });
-  A.add('interro', 15, 17, (p) => { bubble(p, 15, 17); p.rect(4, 3, 2, 6, '#e8443a'); p.rect(4, 10, 2, 2, '#e8443a'); p.stamp(['ooo.', '...o', '..o.', '.o..', '....', '.o..'], { o: '#3a7ad8' }, 7, 3); });
-  for (let i = 0; i < 4; i++) A.add('dots' + i, 17, 13, (p) => { bubble(p, 17, 13); for (let k = 0; k < Math.min(3, i); k++) p.rect(4 + k * 4, 4, 2, 2, K); });
+  // ink speech box with a cream rim and a slanted tail (the dialogue boxes in miniature)
+  const bubble = (p, w, h, fill = K) => {
+    p.rect(1, 0, w - 1, h - 4, K); p.rect(0, 1, w, h - 6, K);
+    p.rect(1, 1, w - 2, h - 6, W);
+    p.rect(2, 2, w - 4, h - 8, fill);
+    p.poly([[w / 2 - 3, h - 5], [w / 2 + 3, h - 5], [w / 2 - 2, h]], K);
+    p.poly([[w / 2 - 2, h - 5], [w / 2 + 1.6, h - 5], [w / 2 - 1.4, h - 2]], W);
+    p.rect(w / 2 - 1, h - 6, 2, 1, fill);
+    p.rect(w - 4, 0, 4, 1, R); // vermilion corner tab
+  };
+  A.add('excl', 13, 17, (p) => { bubble(p, 13, 17); p.rect(5, 3, 3, 5, R); p.rect(6, 8, 1, 1, R); p.rect(5, 9, 3, 2, G); });
+  A.add('quest', 13, 17, (p) => { bubble(p, 13, 17); p.stamp(['.ooo.', 'o...o', '...o.', '..o..', '.....', '..o..'], { o: G }, 4, 3); });
+  A.add('interro', 15, 17, (p) => { bubble(p, 15, 17); p.rect(4, 3, 2, 6, R); p.rect(4, 10, 2, 2, R); p.stamp(['ooo.', '...o', '..o.', '.o..', '....', '.o..'], { o: G }, 7, 3); });
+  for (let i = 0; i < 4; i++) A.add('dots' + i, 17, 13, (p) => { bubble(p, 17, 13); for (let k = 0; k < Math.min(3, i); k++) p.rect(4 + k * 4, 4, 2, 2, W); });
   A.add('heart', 13, 12, (p) => { p.stamp(['.kk.kk.', 'kHHkHHk', 'kHhHHHk', 'kHHHHHk', '.kHHHk.', '..kHk..', '...k...'], { k: K, H: '#ff4a78', h: '#ffd0dc' }, 3, 2); });
   A.add('bigheart', 17, 15, (p) => { p.stamp(['..kkk.kkk..', '.kHHHkHHHk.', 'kHhhHHHHHHk', 'kHhHHHHHHHk', 'kHHHHHHHHHk', '.kHHHHHHHk.', '..kHHHHHk..', '...kHHHk...', '....kHk....', '.....k.....'], { k: K, H: '#ff4a78', h: '#ffd0dc' }, 3, 2); });
   A.add('sweat', 9, 13, (p) => { p.stamp(['...k...', '..kbk..', '.kbbbk.', 'kbbwbbk', 'kbwbbbk', 'kbbbbbk', '.kbbbk.', '..kkk..'], { k: '#2a4a8a', b: '#8fd0ff', w: '#ffffff' }, 1, 2); });
@@ -24,12 +34,12 @@ function buildAtlas() {
   A.add('sparkle', 11, 11, (p) => { p.rect(5, 0, 1, 11, '#fff4b0'); p.rect(0, 5, 11, 1, '#fff4b0'); p.rect(4, 4, 3, 3, '#ffffff'); p.px(2, 2, '#fff4b0'); p.px(8, 8, '#fff4b0'); });
   A.add('zzz', 13, 11, (p) => { p.stamp(['kkkk', '..k.', '.k..', 'kkkk'], { k: '#a8b0ff' }, 1, 5); p.stamp(['kkk', '.k.', 'kkk'], { k: '#c8ccff' }, 7, 1); });
   A.add('swirl', 11, 11, (p) => { p.ring(5.5, 5.5, 5, '#8a7aa8'); p.ring(5.5, 5.5, 2.6, '#8a7aa8'); });
-  // hint markers: a little bobbing "tap me" hand and a soft diamond
+  // hint markers: a bobbing "tap me" glove with a vermilion cuff, a gold diamond, a talk box
   A.add('hintHand', 11, 13, (p) => {
-    p.stamp(['...kk......', '..kwwk.....', '..kwwk.....', '..kwwkkk...', '..kwwkwwkk.', 'kkkwwkwwkwk', 'kwwwwwwwwwk', 'kwwwwwwwwwk', '.kwwwwwwwk.', '..kwwwwwk..', '..kkkkkkk..'], { k: K, w: W }, 0, 1);
+    p.stamp(['...kk......', '..kwwk.....', '..kwwk.....', '..kwwkkk...', '..kwwkwwkk.', 'kkkwwkwwkwk', 'kwwwwwwwwwk', 'kwswwwwwwsk', '.kwwwwwwsk.', '..krrrrrk..', '..kkkkkkk..'], { k: K, w: W, s: '#e8cfa4', r: R }, 0, 1);
   });
-  A.add('hintDiamond', 9, 9, (p) => { p.poly([[4.5, 0], [9, 4.5], [4.5, 9], [0, 4.5]], K); p.poly([[4.5, 1.5], [7.5, 4.5], [4.5, 7.5], [1.5, 4.5]], '#ffd84a'); p.px(4, 3, '#ffffff'); });
-  A.add('hintTalk', 13, 12, (p) => { bubble(p, 13, 12); for (let k = 0; k < 3; k++) p.rect(3 + k * 3, 3, 2, 2, K); });
+  A.add('hintDiamond', 9, 9, (p) => { p.poly([[4.5, 0], [9, 4.5], [4.5, 9], [0, 4.5]], K); p.poly([[4.5, 1.2], [7.8, 4.5], [4.5, 7.8], [1.2, 4.5]], R); p.poly([[4.5, 2.4], [6.6, 4.5], [4.5, 6.6], [2.4, 4.5]], G); p.px(4, 3, '#ffffff'); });
+  A.add('hintTalk', 13, 12, (p) => { bubble(p, 13, 12); for (let k = 0; k < 3; k++) p.rect(3 + k * 3, 3, 2, 2, k === 1 ? R : W); });
   return A.finish();
 }
 

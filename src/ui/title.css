@@ -1,13 +1,97 @@
-.title { position: fixed; inset: 0; z-index: 38; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vh; pointer-events: auto; background: radial-gradient(ellipse at 50% 40%, rgba(20,10,30,0) 40%, rgba(20,10,30,0.45) 100%); transition: opacity 0.9s; }
-.title.out { opacity: 0; pointer-events: none; }
-.t-logo { width: min(780px, 92vw); image-rendering: pixelated; filter: drop-shadow(0 6px 0 rgba(30,14,40,0.35)); animation: tBob 4s ease-in-out infinite; }
-@keyframes tBob { 50% { transform: translateY(-6px); } }
-.t-buttons { display: flex; gap: 18px; }
-.t-ema { position: relative; border: none; cursor: pointer; padding: 18px 26px 14px; font-family: 'Galmuri11', monospace; font-size: 22px; color: #3a1e10;
-  background: #e8c890; clip-path: polygon(14% 0, 86% 0, 100% 26%, 100% 100%, 0 100%, 0 26%);
-  box-shadow: inset 0 -6px 0 #c89a5a, inset 0 4px 0 #f8e0b0; transition: transform 0.12s; }
-.t-ema::before { content: ''; position: absolute; left: 50%; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #c8342e; transform: translateX(-50%); }
-.t-ema:hover { transform: translateY(-3px) rotate(-1.5deg); }
-.t-ema span { display: block; margin-top: 4px; }
-.t-foot { font-family: 'Galmuri9', monospace; font-size: 15px; color: #fff3dccc; text-shadow: 2px 2px 0 #2a1828; animation: tBlink 2.4s ease-in-out infinite; }
-@keyframes tBlink { 50% { opacity: 0.45; } }
+.title { position: fixed; inset: 0; z-index: 38; pointer-events: auto; overflow: hidden; }
+.t-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 16, 24, .25), rgba(20, 16, 24, 0) 30%, rgba(20, 16, 24, 0) 70%, rgba(20, 16, 24, .45)); }
+
+/* the slanted band on the right: gold + vermilion edges, an ink body with halftone */
+.t-band { position: absolute; top: 0; bottom: 0; right: 0; width: 56%; }
+.t-band > i { position: absolute; inset: 0; clip-path: polygon(34% 0, 100% 0, 100% 100%, 0 100%); }
+.t-band .b-gold { background: var(--k-gold); translate: -38px 0; }
+.t-band .b-red { background: var(--k-red); translate: -20px 0; }
+.t-band .b-ink { background: rgba(20, 16, 24, .9); }
+.t-band .b-ink::after { content: ''; position: absolute; inset: 0; background: var(--pat-dots) 0 0 / 8px 8px; image-rendering: pixelated; opacity: .08; animation: kSlide 9s linear infinite; }
+.t-kanji { position: absolute; right: 1.5vw; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: 4px; opacity: .22; --ts: 8; animation: tDrift 7s ease-in-out infinite; }
+@keyframes tDrift { 50% { translate: 0 calc(-50% - 14px); } }
+.t-float { position: absolute; inset: 0; overflow: hidden; clip-path: polygon(34% 0, 100% 0, 100% 100%, 0 100%); }
+.t-float i { position: absolute; left: calc(var(--x) * 1%); bottom: -40px; width: calc(11px * var(--ts) * var(--s) / 2); height: calc(11px * var(--ts) * var(--s) / 2); background: center / contain no-repeat; image-rendering: pixelated; opacity: .5; animation: tFloat var(--d) linear infinite; animation-delay: calc(var(--i) * -1.7s); }
+@keyframes tFloat { from { translate: 0 0; rotate: 0deg; } to { translate: -60px -115vh; rotate: 360deg; } }
+
+/* logo: mascot + 木霊屋 + vermilion KODAMAYA slab + tagline */
+.t-logo { position: absolute; left: 5vw; top: 9vh; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto; align-items: end; column-gap: 6px; animation: tBob 4.5s ease-in-out 1.6s infinite; }
+@keyframes tBob { 50% { translate: 0 -6px; } }
+.t-mascot { grid-row: 1 / span 2; align-self: center; }
+.t-mascot img { display: block; width: calc(40px * var(--ts)); height: calc(44px * var(--ts)); image-rendering: pixelated; filter: drop-shadow(6px 6px 0 rgba(20, 16, 24, .55)); animation: tSway 3s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes tSway { 0%, 100% { rotate: -6deg; } 50% { rotate: 5deg; } }
+.t-name { position: relative; grid-column: 2; filter: drop-shadow(6px 7px 0 rgba(20, 16, 24, .5)); }
+.t-glint { position: absolute; inset: 0; background: linear-gradient(105deg, transparent 42%, rgba(255, 250, 230, .85) 46%, transparent 50%) 0 0 / 300% 100% no-repeat; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; animation: tGlint 5.5s ease-in-out 2.2s infinite; }
+@keyframes tGlint { 0%, 72% { background-position: 100% 0; } 100% { background-position: 0% 0; } }
+.t-slab { position: relative; grid-column: 2; justify-self: start; margin: -6px 0 0 18px; padding: 10px 26px 10px 22px; }
+.t-slab > i { position: absolute; inset: 0; background: var(--k-red); transform: skewX(-18deg); box-shadow: 0 0 0 4px var(--k-ink), 9px 9px 0 4px var(--k-ink); }
+.t-slab > i::after { content: ''; position: absolute; right: 12px; top: -10px; bottom: -10px; width: 10px; background: var(--k-gold); box-shadow: 0 0 0 3px var(--k-ink); }
+.t-slab .ptype { position: relative; }
+.t-tag { grid-column: 1 / span 2; justify-self: start; margin: 18px 0 0 calc(40px * var(--ts) - 10px); font: 400 15px/1 'Galmuri11', monospace; color: var(--k-cream); padding: 6px 14px 5px; white-space: nowrap; --sk-sh: 4px 4px 0 var(--k-red); }
+
+/* menu on the band, stepping left with its slant */
+.t-logo, .t-menu, .t-float { transition: transform .5s var(--k-out); }
+.t-logo { transform: translate(calc(var(--mx, 0) * -16px), calc(var(--my, 0) * -10px)); }
+.t-menu { transform: translate(calc(var(--mx, 0) * 8px), calc(var(--my, 0) * 6px)); }
+.t-float { transform: translate(calc(var(--mx, 0) * 24px), calc(var(--my, 0) * 16px)); }
+.t-menu { position: absolute; right: 4vw; bottom: 15vh; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.t-foot { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 22px; align-items: center; justify-content: flex-end; padding: 10px 22px; font: 400 12px/1 'Galmuri9', monospace; color: rgba(255, 243, 220, .85); background: linear-gradient(90deg, transparent, rgba(20, 16, 24, .85) 40%); }
+.t-snd { color: var(--k-gold); }
+.t-flash { position: absolute; inset: 0; background: var(--k-cream); opacity: 0; pointer-events: none; }
+
+/* entrance */
+.title .t-band > i, .title .t-float, .title .t-kanji, .title .t-mascot, .title .t-name, .title .t-slab, .title .t-tag, .title .t-menu > *, .title .t-foot { opacity: 0; }
+.title.in .t-band > i { animation: tBandIn .5s var(--k-out) both; }
+.title.in .t-band .b-gold { animation-delay: 0s; } .title.in .t-band .b-red { animation-delay: .05s; } .title.in .t-band .b-ink { animation-delay: .1s; }
+.title.in .t-float { animation: tFadeIn .8s .6s both; }
+.title.in .t-kanji { animation: tKanjiIn .7s var(--k-out) .3s both, tDrift 7s ease-in-out 1s infinite; }
+.title.in .t-mascot { animation: tDrop .55s var(--k-snap) .35s both; }
+.title.in .t-name { animation: tSlam .4s var(--k-snap) .45s both; }
+.title.in .t-slab { animation: tSwipe .35s var(--k-out) .62s both; }
+.title.in .t-tag { animation: tSwipe .35s var(--k-out) .75s both; }
+.title.in .t-menu > * { animation: tItemIn .45s var(--k-snap) both; animation-delay: calc(.5s + var(--n) * 70ms); }
+.title.in .t-menu > .off { animation-name: tItemInOff; }
+.title.in .t-foot { animation: tFadeIn .5s 1s both; }
+@keyframes tFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tBandIn { from { opacity: 1; transform: translateX(105%); } to { opacity: 1; } }
+@keyframes tKanjiIn { from { opacity: 0; transform: translateY(40px); } to { opacity: .22; } }
+@keyframes tDrop { from { opacity: 0; transform: translateY(-60vh) rotate(-30deg); } to { opacity: 1; } }
+@keyframes tSlam { from { opacity: 0; transform: scale(2.6) rotate(-6deg); } 60% { opacity: 1; } to { opacity: 1; } }
+@keyframes tSwipe { from { opacity: 1; clip-path: inset(-20px 100% -20px -20px); transform: translateX(-30px); } to { opacity: 1; clip-path: inset(-20px -40px -20px -20px); } }
+@keyframes tItemIn { from { opacity: 0; transform: translateX(70vw) skewX(-20deg); } to { opacity: 1; } }
+@keyframes tItemInOff { from { opacity: 0; transform: translateX(70vw); } to { opacity: .38; } }
+
+/* a panel is open on top */
+.title.dim .t-menu, .title.dim .t-logo { opacity: .25; transition: opacity .2s, transform .5s var(--k-out); }
+/* confirm: flash, menu flies off, logo pops */
+.title.go .t-flash { animation: tFlash .35s ease-out; }
+.title.go .t-menu > :not(.sel) { animation: tItemOut .3s var(--k-in) both !important; }
+.title.go .t-menu > .sel { animation: tSelGo .5s var(--k-out) both !important; }
+.title.go .t-logo { animation: tLogoGo .5s var(--k-in) .1s both; }
+@keyframes tFlash { 0% { opacity: .55; } 100% { opacity: 0; } }
+@keyframes tItemOut { to { opacity: 0; transform: translateX(60vw); } }
+@keyframes tSelGo { 0% { opacity: 1; } 30% { opacity: 1; transform: scale(1.18); } 100% { opacity: 0; transform: translateX(-30vw) scale(1.3); } }
+@keyframes tLogoGo { to { opacity: 0; transform: translateY(-30vh) scale(.9); } }
+
+/* portrait phones: logo on top, the band across the bottom half */
+@media (max-aspect-ratio: 1/1) {
+  .t-band { width: auto; left: 0; top: 46%; }
+  .t-band > i, .t-float { clip-path: polygon(0 16%, 100% 0, 100% 100%, 0 100%); }
+  .t-band .b-gold { translate: 0 -30px; } .t-band .b-red { translate: 0 -16px; }
+  .t-kanji { --ts: 5; right: 3vw; top: 58%; }
+  .t-logo { left: 50%; top: 9vh; translate: -50% 0; grid-template-columns: auto; justify-items: center; animation: none; }
+  .t-mascot { grid-row: 1; grid-column: 1; }
+  .t-name, .t-slab { grid-column: 1; }
+  .t-slab { justify-self: center; margin: -4px 0 0; }
+  .t-tag { grid-column: 1; justify-self: center; margin: 14px 0 0; font-size: 12px; }
+  .t-menu { right: auto; left: 50%; translate: -42% 0; bottom: 12vh; align-items: center; }
+  .t-menu > .k-item { --ix: 0px !important; }
+  .t-foot { justify-content: center; background: rgba(20, 16, 24, .85); }
+}
+/* short landscape (phones on their side) */
+@media (max-height: 640px) and (min-aspect-ratio: 1/1) {
+  .t-logo { top: 6vh; left: 4vw; }
+  .t-menu { bottom: 12vh; right: 5vw; gap: 0; }
+  .t-tag { margin-top: 10px; font-size: 12px; }
+  .t-kanji { --ts: 5; }
+}
